@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>Browser Display</title>
+
+		<link id="displayFont" rel="stylesheet" type="text/css" />
+
+		<style>
+			body {
+				margin: 0px;
+				border: 0px;
+				padding: 0px;
+			}
+			#container {
+				width: 100vw;
+				height: 100vh;
+				position: relative;
+			}
+			#gradientDisplay {
+				position: absolute;
+				top: 50%;
+				left: 50%;
+				transform: translate(-50%, -50%);
+			}
+			#backgroundDisplay {
+				position: absolute;
+				top: 50%;
+				left: 50%;
+				transform: translate(-50%, -50%);
+			}
+			#test {
+				font-size: 100px;
+				display: flex;
+			}
+		</style>
+	</head>
+	<body id="bodyChange">
+		<div id="container">
+			<div id="backgroundDisplay"></div>
+			<div id="gradientDisplay"></div>
+		</div>
+		<script>
+			const testDisplay = document.querySelector('#testDisplay')
+			const backgroundDisplay = document.querySelector('#backgroundDisplay')
+			const gradientDisplay = document.getElementById('gradientDisplay')
+			const bodyChange = document.querySelector('#bodyChange')
+			const container = document.querySelector('#container')
+			const allFont = document.querySelector('#displayFont')
+			const test = document.querySelector('#test')
+			let tag = 'storage:',
+				tag2 = 'display:',
+				tag3 = 'storage2:',
+				tag4 = 'browser2:',
+				secFinish,
+				secFinishYN,
+				timeColor = '#ffffff',
+				messBT = '',
+				messBTYN = false,
+				messBTcolor = '#ffffff',
+				messAT = '',
+				messATYN = false,
+				messATcolor = '#ffffff',
+				messF = '',
+				messFYN = false,
+				messFcolor = '#ffffff',
+				zeroIsReached = false,
+				fontUrl = 'https://fonts.googleapis.com/css2?family=Poetsen+One&display=swap',
+				fontName = 'Poetsen One, sans-serif',
+				displaySize = 100,
+				displaySize1 = 101,
+				messSize = 80,
+				displayFont = 100,
+				finishSize = 80,
+				shadowWidth = 20,
+				shadowYN = false,
+				shadowColor = '#000000',
+				shadowNum = 1,
+				shadowNumber = 1,
+				strokeYN = true,
+				strokeWidth = 1,
+				strokeColor = '#000000',
+				year = 0,
+				month = 0,
+				day = 0,
+				hour = 0,
+				min = 0,
+				sec = 0,
+				timeHS = 3,
+				hAlign = 'left',
+				vAlign = 'flex-start',
+				textColor = '#ffffff',
+				storageInfo,
+				browserD,
+				message,
+				secFinishTime,
+				displayNone,
+				displayNoneFinish,
+				displayOffOn = true,
+				cancelFinish = false,
+				finishOn = false,
+				settingsChoice,
+				finishRun = false,
+				finishDisplayOff = false,
+				ampmStorage,
+				graidientInfo = [90, '#ffffff', '#ffffff', '#ffffff', '#ffffff', '#ffffff', 1],
+				deg = graidientInfo[0],
+				textName = '',
+				displayColor1 = graidientInfo[1],
+				displayColor2 = graidientInfo[2],
+				displayColor3 = graidientInfo[3],
+				displayColor4 = graidientInfo[4],
+				displayColor5 = graidientInfo[5],
+				gradientColorNumber = graidientInfo[6],
+				fSettingsInfo = [90, '#ffffff', '#ffffff', '#ffffff', '#ffffff', '#ffffff', 1, false, false, '#000000', 1, 1, false, '#000000', 1, 100],
+				fDeg = fSettingsInfo[0],
+				fDisplayColor1 = fSettingsInfo[1],
+				fDisplayColor2 = fSettingsInfo[2],
+				fDisplayColor3 = fSettingsInfo[3],
+				fDisplayColor4 = fSettingsInfo[4],
+				fDisplayColor5 = fSettingsInfo[5],
+				fColorNum = fSettingsInfo[6],
+				fPreview = fSettingsInfo[7],
+				fShadowYN = fSettingsInfo[8],
+				fShadowColor = fSettingsInfo[9],
+				fShadowNum = fSettingsInfo[10],
+				fShadowWidth = fSettingsInfo[11],
+				fStrokeYN = fSettingsInfo[12],
+				fStrokeColor = fSettingsInfo[13],
+				fStrokeWidth = fSettingsInfo[14],
+				fSize = fSettingsInfo[15],
+				browserDisplay = '',
+				bDisplay = ''
+			const channel = new BroadcastChannel('obsTimer')
+			setSettings()
+			if (tag3 in localStorage && tag4 in localStorage) getSavedSettings()
+			else defaultSettings()
+			allFont.setAttribute('href', fontUrl)
+			bodyChange.style = 'font-family: ' + fontName + ';'
+			displayOnScreen()
+			channel.onmessage = (ev) => {
+				message = ev.data
+				storageInfo = message[0]
+				browserD = message[1]
+				//console.log('Message received')
+				applyMessage()
+				//console.log(storageInfo)
+				//console.log(browserD)
+				//console.log(graidientInfo)
+				//console.log(fSettingsInfo)
+				allFont.setAttribute('href', fontUrl)
+				displayOnScreen()
+			}
+			function displayOnScreen() {
+				//console.log('displayOnScreen Function run')
+				if (zeroIsReached) {
+					//console.log('zeroIsReached ' + zeroIsReached)
+					if (messFYN) {
+						gradientDisplay.innerHTML = messF
+						backgroundDisplay.innerHTML = messF
+						if (secFinishYN) {
+							finishTime()
+							return
+						} else return
+					}
+					if (secFinishYN) {
+						finishTime()
+						return
+					}
+					gradientDisplay.style.display = 'none'
+					backgroundDisplay.style.display = 'none'
+					return
+				}
+				bodyChange.style = 'font-family: ' + fontName + ';'
+				if (sec > 9) sec = sec
+				else sec = ('0' + sec).slice(-2)
+				if (timeHS == 1) timeDisplay = day + ':' + hour + ':' + min + ':' + sec
+				if (timeHS == 2) timeDisplay = hour + ':' + min + ':' + sec
+				if (timeHS == 3) timeDisplay = min + ':' + sec
+				if (timeHS == 4) timeDisplay = sec
+				if (messBTYN && !messATYN) timeDisplay = messBT + '&nbsp&nbsp' + timeDisplay
+				if (messATYN && !messBTYN) timeDisplay = timeDisplay + '&nbsp&nbsp' + messAT
+				if (messBTYN && messATYN) timeDisplay = messBT + '&nbsp&nbsp' + timeDisplay + '&nbsp&nbsp' + messAT
+				if (displayOffOn) {
+					gradientDisplay.innerHTML = timeDisplay
+					backgroundDisplay.innerHTML = timeDisplay
+					browserDisplay = 'time'
+				} else {
+					gradientDisplay.innerHTML = ''
+					backgroundDisplay.innerHTML = ''
+					browserDisplay = 'off'
+				}
+				if (fPreview) {
+					gradientDisplay.innerHTML = messF
+					backgroundDisplay.innerHTML = messF
+					browserDisplay = 'finish'
+				}
+
+				setDisplaySettings(browserDisplay)
+				gradientDisplayFunction()
+				shadowStrokeFunction()
+			}
+			function setDisplaySettings(bDisplay) {
+				//console.log(bDisplay)
+				if (bDisplay == 'off') return
+				if (bDisplay == 'time') return
+				if (bDisplay == 'finish') {
+					displaySize = fSize
+					deg = fDeg
+					displayColor1 = fDisplayColor1
+					displayColor2 = fDisplayColor2
+					displayColor3 = fDisplayColor3
+					displayColor4 = fDisplayColor4
+					displayColor5 = fDisplayColor5
+					gradientColorNumber = fColorNum
+					shadowYN = fShadowYN
+					shadowColor = fShadowColor
+					shadowNum = fShadowNum
+					shadowWidth = fShadowWidth
+					strokeYN = fStrokeYN
+					strokeColor = fStrokeColor
+					strokeWidth = fStrokeWidth
+					console.log(fDisplayColor1)
+					console.log(displayColor1)
+				}
+			}
+			function finishTime() {
+				//console.log('finishTime function run')
+				if (!messFYN) {
+					gradientDisplay.innerHTML = '00'
+					backgroundDisplay.innerHTML = '00'
+				} else {
+					gradientDisplay.innerHTML = messF
+					backgroundDisplay.innerHTML = messF
+				}
+				zeroIsReached = false
+				secFinish = secFinish * 1000
+				setTimeout(() => {
+					gradientDisplay.style.display = 'none'
+					backgroundDisplay.style.display = 'none'
+				}, secFinish)
+				//console.log('finishTime Function Finish')
+			}
+			function gradientDisplayFunction() {
+				if (gradientColorNumber === 1) {
+					//console.log('displayGradientColor1')
+					graidientText = 'background: -webkit-linear-gradient(' + deg + 'deg, ' + displayColor1 + ', ' + displayColor1 + ');-webkit-background-clip: text;background-clip: text;-webkit-text-fill-color: transparent;font-size:  ' + displaySize + 'px;'
+				}
+				if (gradientColorNumber === 2) {
+					//console.log('displayGradientColor2')
+					graidientText = 'background: -webkit-linear-gradient(' + deg + 'deg, ' + displayColor1 + ' 20%, ' + displayColor2 + ' 80%);-webkit-background-clip: text;background-clip: text;-webkit-text-fill-color: transparent;font-size:  ' + displaySize + 'px;'
+				}
+				if (gradientColorNumber === 3) {
+					//console.log('displayGradientColor3')
+					graidientText = 'background: -webkit-linear-gradient(' + deg + 'deg, ' + displayColor1 + ' 20%, ' + displayColor2 + ' 50%, ' + displayColor3 + ' 80%);-webkit-background-clip: text;background-clip: text;-webkit-text-fill-color: transparent;font-size:  ' + displaySize + 'px;'
+				}
+				if (gradientColorNumber === 4) {
+					//console.log('displayGradientColor4')
+					graidientText = 'background: -webkit-linear-gradient(' + deg + 'deg, ' + displayColor1 + ' 20%, ' + displayColor2 + ' 40%, ' + displayColor3 + ' 60%, ' + displayColor4 + ' 80%);-webkit-background-clip: text;background-clip: text;;-webkit-text-fill-color: transparent;font-size:  ' + displaySize + 'px;'
+				}
+				if (gradientColorNumber === 5) {
+					//console.log('displayGradientColor5')
+					graidientText = 'background: -webkit-linear-gradient(' + deg + 'deg, ' + displayColor1 + ' 20%, ' + displayColor2 + ' 35%, ' + displayColor3 + ' 50%, ' + displayColor4 + ' 65%, ' + displayColor5 + ' 80%);-webkit-background-clip: text;background-clip: text;;-webkit-text-fill-color: transparent;font-size:  ' + displaySize + 'px;'
+				}
+				gradientDisplay.style = graidientText
+			}
+			function shadowStrokeFunction() {
+				//console.log('stroke ' + strokeYN + ' shadow ' + shadowYN)
+				if (!strokeYN) backgroundDisplay.style = '-webkit-text-stroke: 0px ' + strokeColor + ';font-size: ' + displaySize + 'px;'
+				if (!shadowYN) backgroundDisplay.style = '-webkit-text-stroke: 0px ' + strokeColor + ';font-size: ' + displaySize + 'px;'
+				if (shadowYN) shadowFunction()
+				if (strokeYN) {
+					backgroundDisplay.style = '-webkit-text-stroke: ' + strokeWidth + 'px ' + strokeColor + ';font-size: ' + displaySize + 'px;'
+				}
+			}
+			function shadowFunction() {
+				//console.log('shadowFunction run')
+				if (shadowNum == 1) {
+					backgroundDisplay.style = 'text-shadow:' + shadowColor + ' 0px 0px ' + shadowWidth + 'px;font-size: ' + displaySize + 'px;color: ' + shadowColor + ';'
+				}
+				if (shadowNum == 2) {
+					backgroundDisplay.style = 'text-shadow:' + shadowColor + ' 0px 0px ' + shadowWidth + 'px,' + shadowColor + ' 0px 0px ' + shadowWidth + 'px;font-size: ' + displaySize + 'px;color: ' + shadowColor + ';'
+				}
+				if (shadowNum == 3) {
+					backgroundDisplay.style = 'text-shadow:' + shadowColor + ' 0px 0px ' + shadowWidth + 'px,' + shadowColor + ' 0px 0px ' + shadowWidth + 'px,' + shadowColor + ' 0px 0px ' + shadowWidth + 'px;font-size: ' + displaySize + 'px;color: ' + shadowColor + ';'
+				}
+				if (shadowNum == 4) {
+					backgroundDisplay.style = 'text-shadow: ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px,' + shadowColor + ' 0px 0px ' + shadowWidth + 'px, ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px, ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px;font-size: ' + displaySize + 'px;color: ' + shadowColor + ';'
+				}
+				if (shadowNum == 5) {
+					backgroundDisplay.style = 'text-shadow: ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px,' + shadowColor + ' 0px 0px ' + shadowWidth + 'px,' + shadowColor + ' 0px 0px ' + shadowWidth + 'px, ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px, ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px;font-size: ' + displaySize + 'px;color: ' + shadowColor + ';'
+				}
+				if (shadowNum == 6) {
+					backgroundDisplay.style = 'text-shadow: ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px,' + shadowColor + ' 0px 0px ' + shadowWidth + 'px,' + shadowColor + ' 0px 0px ' + shadowWidth + 'px, ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px, ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px, ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px;font-size: ' + displaySize + 'px;color: ' + shadowColor + ';'
+				}
+				if (shadowNum == 7) {
+					backgroundDisplay.style = 'text-shadow: ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px,' + shadowColor + ' 0px 0px ' + shadowWidth + 'px,' + shadowColor + ' 0px 0px ' + shadowWidth + 'px, ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px, ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px, ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px, ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px;font-size: ' + displaySize + 'px;color: ' + shadowColor + ';'
+				}
+				if (shadowNum == 8) {
+					backgroundDisplay.style = 'text-shadow: ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px,' + shadowColor + ' 0px 0px ' + shadowWidth + 'px,' + shadowColor + ' 0px 0px ' + shadowWidth + 'px, ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px, ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px,  ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px,' + shadowColor + ' 0px 0px ' + shadowWidth + 'px, ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px;font-size: ' + displaySize + 'px;color: ' + shadowColor + ';'
+				}
+				if (shadowNum == 9) {
+					backgroundDisplay.style = 'text-shadow: ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px,' + shadowColor + ' 0px 0px ' + shadowWidth + 'px,' + shadowColor + ' 0px 0px ' + shadowWidth + 'px, ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px, ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px,  ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px,' + shadowColor + ' 0px 0px ' + shadowWidth + 'px, ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px, ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px;font-size: ' + displaySize + 'px;color: ' + shadowColor + ';'
+				}
+				if (shadowNum == 10) {
+					backgroundDisplay.style = 'text-shadow: ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px,' + shadowColor + ' 0px 0px ' + shadowWidth + 'px,' + shadowColor + ' 0px 0px ' + shadowWidth + 'px, ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px, ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px,  ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px,' + shadowColor + ' 0px 0px ' + shadowWidth + 'px, ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px, ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px, ' + shadowColor + ' 0px 0px ' + shadowWidth + 'px;font-size: ' + displaySize + 'px;color: ' + shadowColor + ';'
+				}
+			}
+			function defaultSettings() {
+				fontUrl = 'https://fonts.googleapis.com/css2?family=Nunito:wght@700&display=swap'
+				fontName = 'Nunito'
+				displaySize = 100
+				graidientInfo = [90, '#ffffff', '#ffffff', '#ffffff', '#ffffff', '#ffffff', 1]
+				fSettingsInfo = [90, '#ffffff', '#ffffff', '#ffffff', '#ffffff', '#ffffff', 1, false, false, '#000000', 1, 1, false, '#000000', 1, 100]
+				deg = graidientInfo[0]
+				displayColor1 = graidientInfo[1]
+				displayColor2 = graidientInfo[2]
+				displayColor3 = graidientInfo[3]
+				displayColor4 = graidientInfo[4]
+				displayColor5 = graidientInfo[5]
+				colorNum = graidientInfo[6]
+				fDeg = fSettingsInfo[0]
+				fDisplayColor1 = fSettingsInfo[1]
+				fDisplayColor2 = fSettingsInfo[2]
+				fDisplayColor3 = fSettingsInfo[3]
+				fDisplayColor4 = fSettingsInfo[4]
+				fDisplayColor5 = fSettingsInfo[5]
+				fColorNum = fSettingsInfo[6]
+				fPreview = fSettingsInfo[7]
+				fShadowYN = fSettingsInfo[8]
+				fShadowColor = fSettingsInfo[9]
+				fShadowNum = fSettingsInfo[10]
+				fShadowWidth = fSettingsInfo[11]
+				fStrokeYN = fSettingsInfo[12]
+				fStrokeColor = fSettingsInfo[13]
+				fStrokeWidth = fSettingsInfo[14]
+				fSize = fSettingsInfo[15]
+				hAlign = 'left'
+				vAlign = 'flex-start'
+				shadowColor = '#000000'
+				shadowYN = false
+				shadowWidth = 10
+				shadowNum = 1
+				timeColor = '#ffffff'
+				messBTcolor = '#ffffff'
+				messATcolor = '#ffffff'
+				messFcolor = '#ffffff'
+				finishSize = 100
+				fPreview = false
+				strokeColor = '#000000'
+				strokeYN = true
+				strokeWidth = 5
+				settingsChoice = 'font'
+				cancelFinish = false
+				zeroIsReached = false
+				secFinish = 0
+				year = 0
+				month = 0
+				day = 0
+				hour = 0
+				min = 0
+				sec = 0
+				timeHS = 3
+				messBT = ''
+				messBTYN = false
+				messAT = ''
+				messATYN = false
+				messF = ''
+				messFYN = false
+				secFinishHS = false
+				displayOffOn = true
+				storageInfo = [fontUrl, fontName, displaySize, graidientInfo, hAlign, vAlign, shadowColor, shadowYN, shadowNum, messBTcolor, messATcolor, messFcolor, ampmStorage, fSettingsInfo, shadowWidth, strokeColor, strokeYN, strokeWidth, settingsChoice, cancelFinish]
+				browserD = [zeroIsReached, secFinish, year, month, day, hour, min, sec, timeHS, messBT, messBTYN, messAT, messATYN, messF, messFYN, secFinishYN, displayOffOn]
+			}
+			function applyMessage() {
+				fontUrl = storageInfo[0]
+				fontName = storageInfo[1]
+				displaySize = storageInfo[2]
+				graidientInfo = storageInfo[3]
+				hAlign = storageInfo[4]
+				vAlign = storageInfo[5]
+				shadowColor = storageInfo[6]
+				shadowYN = storageInfo[7]
+				shadowNum = storageInfo[8]
+				messBTcolor = storageInfo[9]
+				messATcolor = storageInfo[10]
+				messFcolor = storageInfo[11]
+				ampmStorage = storageInfo[12]
+				fSettingsInfo = storageInfo[13]
+				shadowWidth = storageInfo[14]
+				strokeColor = storageInfo[15]
+				strokeYN = storageInfo[16]
+				strokeWidth = storageInfo[17]
+				settingsChoice = storageInfo[18]
+				cancelFinish = storageInfo[19]
+				zeroIsReached = browserD[0]
+				secFinish = browserD[1]
+				year = browserD[2]
+				month = browserD[3]
+				day = browserD[4]
+				hour = browserD[5]
+				min = browserD[6]
+				sec = browserD[7]
+				timeHS = browserD[8]
+				messBT = browserD[9]
+				messBTYN = browserD[10]
+				messAT = browserD[11]
+				messATYN = browserD[12]
+				messF = browserD[13]
+				messFYN = browserD[14]
+				secFinishYN = browserD[15]
+				displayOffOn = browserD[16]
+				deg = graidientInfo[0]
+				displayColor1 = graidientInfo[1]
+				displayColor2 = graidientInfo[2]
+				displayColor3 = graidientInfo[3]
+				displayColor4 = graidientInfo[4]
+				displayColor5 = graidientInfo[5]
+				gradientColorNumber = graidientInfo[6]
+				fDeg = fSettingsInfo[0]
+				fDisplayColor1 = fSettingsInfo[1]
+				fDisplayColor2 = fSettingsInfo[2]
+				fDisplayColor3 = fSettingsInfo[3]
+				fDisplayColor4 = fSettingsInfo[4]
+				fDisplayColor5 = fSettingsInfo[5]
+				fColorNum = fSettingsInfo[6]
+				fPreview = fSettingsInfo[7]
+				fShadowYN = fSettingsInfo[8]
+				fShadowColor = fSettingsInfo[9]
+				fShadowNum = fSettingsInfo[10]
+				fShadowWidth = fSettingsInfo[11]
+				fStrokeYN = fSettingsInfo[12]
+				fStrokeColor = fSettingsInfo[13]
+				fStrokeWidth = fSettingsInfo[14]
+				fSize = fSettingsInfo[15]
+			}
+			function getSavedSettings() {
+				//console.log('Saved Settings run')
+				storageInfo = JSON.parse(window.localStorage.getItem(tag3))
+				browserD = JSON.parse(window.localStorage.getItem(tag4))
+				fontUrl = storageInfo[0]
+				fontName = storageInfo[1]
+				displaySize = storageInfo[2]
+				graidientInfo = storageInfo[3]
+				hAlign = storageInfo[4]
+				vAlign = storageInfo[5]
+				shadowColor = storageInfo[6]
+				shadowYN = storageInfo[7]
+				shadowNum = storageInfo[8]
+				messBTcolor = storageInfo[9]
+				messATcolor = storageInfo[10]
+				messFcolor = storageInfo[11]
+				ampmStorage = storageInfo[12]
+				fSettingsInfo = storageInfo[13]
+				shadowWidth = storageInfo[14]
+				strokeColor = storageInfo[15]
+				strokeYN = storageInfo[16]
+				strokeWidth = storageInfo[17]
+				settingsChoice = storageInfo[18]
+				cancelFinish = storageInfo[19]
+				zeroIsReached = browserD[0]
+				secFinish = browserD[1]
+				year = browserD[2]
+				month = browserD[3]
+				day = browserD[4]
+				hour = browserD[5]
+				min = browserD[6]
+				sec = browserD[7]
+				timeHS = browserD[8]
+				messBT = browserD[9]
+				messBTYN = browserD[10]
+				messAT = browserD[11]
+				messATYN = browserD[12]
+				messF = browserD[13]
+				messFYN = browserD[14]
+				secFinishYN = browserD[15]
+				displayOffOn = browserD[16]
+				deg = graidientInfo[0]
+				displayColor1 = graidientInfo[1]
+				displayColor2 = graidientInfo[2]
+				displayColor3 = graidientInfo[3]
+				displayColor4 = graidientInfo[4]
+				displayColor5 = graidientInfo[5]
+				gradientColorNumber = graidientInfo[6]
+				fDeg = fSettingsInfo[0]
+				fDisplayColor1 = fSettingsInfo[1]
+				fDisplayColor2 = fSettingsInfo[2]
+				fDisplayColor3 = fSettingsInfo[3]
+				fDisplayColor4 = fSettingsInfo[4]
+				fDisplayColor5 = fSettingsInfo[5]
+				fColorNum = fSettingsInfo[6]
+				fPreview = fSettingsInfo[7]
+				fShadowYN = fSettingsInfo[8]
+				fShadowColor = fSettingsInfo[9]
+				fShadowNum = fSettingsInfo[10]
+				fShadowWidth = fSettingsInfo[11]
+				fStrokeYN = fSettingsInfo[12]
+				fStrokeColor = fSettingsInfo[13]
+				fStrokeWidth = fSettingsInfo[14]
+				fSize = fSettingsInfo[15]
+				//console.log(storageInfo)
+				//console.log(browserD)
+				//console.log(graidientInfo)
+				//console.log(fSettingsInfo)
+			}
+			function setSettings() {
+				//console.log('setSettings Function')
+				fontUrl = 'https://fonts.googleapis.com/css2?family=Poetsen+One&display=swap'
+				fontName = 'Poetsen One, sans-serif'
+				displaySize = 100
+				hAlign = 'left'
+				vAlign = 'flex-start'
+				shadowColor = '#000000'
+				shadowYN = false
+				shadowNumber = 1
+				timeColor = '#ffffff'
+				messBTcolor = '#ffffff'
+				messATcolor = '#ffffff'
+				messFcolor = '#ffffff'
+				finishSize = 100
+				shadowWidth = 10
+				strokeColor = '#000000'
+				strokeYN = true
+				strokeWidth = 1
+				settingsChoice = 'font'
+				cancelFinish = false
+				zeroIsReached = false
+				secFinish = 0
+				year = 0
+				month = 0
+				day = 0
+				hour = 0
+				min = 0
+				sec = 0
+				timeHS = 3
+				messBT = ''
+				messBTYN = false
+				messAT = ''
+				messATYN = false
+				messF = ''
+				messFYN = false
+				secFinishHS = false
+				allOffOn = false
+				graidientInfo = [90, '#ffffff', '#ffffff', '#ffffff', '#ffffff', '#ffffff', 1]
+				deg = graidientInfo[0]
+				displayColor1 = graidientInfo[1]
+				displayColor2 = graidientInfo[2]
+				displayColor3 = graidientInfo[3]
+				displayColor4 = graidientInfo[4]
+				displayColor5 = graidientInfo[5]
+				colorNumber = graidientInfo[6]
+				fSettingsInfo = [90, '#ffffff', '#ffffff', '#ffffff', '#ffffff', '#ffffff', 1, false, false, '#000000', 1, 1, false, '#000000', 1, 100]
+				fDeg = fSettingsInfo[0]
+				fDisplayColor1 = fSettingsInfo[1]
+				fDisplayColor2 = fSettingsInfo[2]
+				fDisplayColor3 = fSettingsInfo[3]
+				fDisplayColor4 = fSettingsInfo[4]
+				fDisplayColor5 = fSettingsInfo[5]
+				fColorNum = fSettingsInfo[6]
+				fPreview = fSettingsInfo[7]
+				fShadowYN = fSettingsInfo[8]
+				fShadowColor = fSettingsInfo[9]
+				fShadowNum = fSettingsInfo[10]
+				fShadowWidth = fSettingsInfo[11]
+				fStrokeYN = fSettingsInfo[12]
+				fStrokeColor = fSettingsInfo[13]
+				fStrokeWidth = fSettingsInfo[14]
+				fSize = fSettingsInfo[15]
+				storageInfo = [fontUrl, fontName, displaySize, graidientInfo, hAlign, vAlign, shadowColor, shadowYN, shadowNum, messBTcolor, messATcolor, messFcolor, ampmStorage, fSettingsInfo, shadowWidth, strokeColor, strokeYN, strokeWidth, settingsChoice, cancelFinish]
+				browserD = [zeroIsReached, secFinish, year, month, day, hour, min, sec, timeHS, messBT, messBTYN, messAT, messATYN, messF, messFYN, secFinishYN, displayOffOn]
+			}
+		</script>
+	</body>
+</html>
