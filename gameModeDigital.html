@@ -45,53 +45,57 @@
     }
 
 
-.controls {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 20px; /* extra Abstand nach Karte */
-  flex-wrap: wrap;
-  position: relative; /* immer unter Container */
-  z-index: 1;
-}
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+      /* extra Abstand nach Karte */
+      flex-wrap: wrap;
+      position: relative;
+      /* immer unter Container */
+      z-index: 1;
+    }
 
-.qrContainer {
-  perspective: 1000px;
-  margin: 20px auto;
-  width: 100%;
-  max-width: 350px;
-  position: relative; /* Container bleibt im Layout */
-}
+    .qrContainer {
+      perspective: 1000px;
+      margin: 20px auto;
+      width: 100%;
+      max-width: 350px;
+      position: relative;
+      /* Container bleibt im Layout */
+    }
 
-.card {
-  width: 100%;
-  min-height: 250px;
-  transform-style: preserve-3d;
-  transition: transform 0.8s ease;
-  border-radius: 12px;
-  position: relative; /* sorgt, dass children sich korrekt ausrichten */
-}
+    .card {
+      width: 100%;
+      min-height: 250px;
+      transform-style: preserve-3d;
+      transition: transform 0.8s ease;
+      border-radius: 12px;
+      position: relative;
+      /* sorgt, dass children sich korrekt ausrichten */
+    }
 
     .card.flipped {
       transform: rotateY(180deg);
     }
 
-.card-face {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  min-height: 250px;
-  backface-visibility: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 15px;
-  box-sizing: border-box;
-  border-radius: 12px;
-  background: #1e1e1e;
-}
+    .card-face {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      min-height: 250px;
+      backface-visibility: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 15px;
+      box-sizing: border-box;
+      border-radius: 12px;
+      background: #1e1e1e;
+    }
 
     .card-back {
       transform: rotateY(180deg);

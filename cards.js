@@ -45,7 +45,7 @@ function renderCards(tracks, aiInfos, useAI) {
 
     let animeText;
     if (useAI) {
-      const info = aiInfos.find(i => i.song.toLowerCase().includes(track.name.toLowerCase())) || {};
+      const info = aiInfos.find(i => i.song.toLowerCase().includes(track.song.toLowerCase())) || {};
       animeText = info.anime ? `${info.anime} – ${info.type}` : "Anime unbekannt";
     } else {
       animeText = "Anime unbekannt – Opening/Ending";
