@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Spotify Playlist → Anime QR Cards</title>
+  <link rel="stylesheet" href="./styles.css">
+  </link>
+</head>
+
+<body>
+  <h1>Spotify Playlist → Anime QR Cards</h1>
+
+  <label>Playlist-URL:</label><br>
+  <input id="playlistUrl" type="text" style="width:400px" placeholder="https://open.spotify.com/playlist/..."><br>
+
+  <label>Karten Hintergrund:</label><br>
+  <input id="bgInput" type="file" accept="image/*"><br>
+
+  <label>
+    <input type="checkbox" id="useAI" checked>
+    AI Infos verwenden
+  </label><br>
+
+  <button id="startBtn">Generieren</button>
+
+  <h2>Debug Log</h2>
+  <div class="log" id="log"></div>
+
+  <h2>Kärtchen</h2>
+  <div class="card-grid" id="cardGrid"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <script src="./spotify.js"></script>
+  <script src="./ai.js"></script>
+  <script src="./cards.js"></script>
+  <script src="./debugLog.js"></script>
+  <script>
+    document.getElementById('startBtn').addEventListener('click', async () => {
+      logEl.textContent = "";
+      cardGrid.innerHTML = "";
+      try {
+        const playlistUrl = document.getElementById('playlistUrl').value.trim();
+        const useAI = document.getElementById('useAI').checked;
+        if (!playlistUrl) {
+          log("⚠ Bitte alle Felder ausfüllen!");
+          return;
+        }
+
+        const playlistId = extractPlaylistId(playlistUrl);
+        const spotifyToken = await getSpotifyAccessToken();
+        const tracks = await getPlaylistTracks(playlistId, spotifyToken);
+
+        let aiInfos = [];
+        if (useAI) {
+          aiInfos = await getAIInfos(tracks);
+        }
+
+        renderCards(tracks, aiInfos, useAI);
+        log("✅ Fertig! Zum Drucken: STRG+P / CMD+P");
+      } catch (e) {
+        log("❌ Fehler: " + e.message);
+      }
+    });
+  </script>
+</body>
+
+</html>

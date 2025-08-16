@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digital Mode</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #121212;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin-bottom: 15px;
+    }
+
+    input,
+    button {
+      font-size: 1rem;
+      padding: 10px;
+      margin: 5px;
+      border-radius: 8px;
+      border: none;
+      width: 90%;
+      max-width: 400px;
+    }
+
+    button {
+      background: #1DB954;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:active {
+      background: #14833b;
+    }
+
+
+.controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px; /* extra Abstand nach Karte */
+  flex-wrap: wrap;
+  position: relative; /* immer unter Container */
+  z-index: 1;
+}
+
+.qrContainer {
+  perspective: 1000px;
+  margin: 20px auto;
+  width: 100%;
+  max-width: 350px;
+  position: relative; /* Container bleibt im Layout */
+}
+
+.card {
+  width: 100%;
+  min-height: 250px;
+  transform-style: preserve-3d;
+  transition: transform 0.8s ease;
+  border-radius: 12px;
+  position: relative; /* sorgt, dass children sich korrekt ausrichten */
+}
+
+    .card.flipped {
+      transform: rotateY(180deg);
+    }
+
+.card-face {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  min-height: 250px;
+  backface-visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 15px;
+  box-sizing: border-box;
+  border-radius: 12px;
+  background: #1e1e1e;
+}
+
+    .card-back {
+      transform: rotateY(180deg);
+      text-align: center;
+    }
+
+    .card-back img {
+      margin-top: 10px;
+      border-radius: 8px;
+      max-width: 80%;
+      height: auto;
+    }
+
+    #qrCode canvas {
+      max-width: 100%;
+      height: auto;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Digital Mode</h1>
+
+  <input type="text" id="playlistInput" placeholder="Spotify Playlist URL">
+  <button id="loadPlaylistBtn">Playlist laden</button>
+
+  <div class="qrContainer">
+    <div class="card" id="card">
+      <div class="card-face card-front">
+        <div id="qrCode"></div>
+      </div>
+      <div class="card-face card-back" id="songInfo"></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="flipBtn">Umdrehen</button>
+    <button id="nextBtn">Weiter</button>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="spotify.js"></script>
+  <script src="ai.js"></script>
+  <script>
+    let playlistTracks = [];
+    let currentTrack = null;
+    let qr;
+    let flipped = false;
+
+    async function fetchPlaylistTracks(playlistUrl) {
+      const playlistId = extractPlaylistId(playlistUrl);
+      const spotifyToken = await getSpotifyAccessToken();
+      const playlistTracks = await getPlaylistTracks(playlistId, spotifyToken);
+      return playlistTracks;
+    }
+
+    function randomTrack() {
+      if (!playlistTracks.length) return null;
+      const idx = Math.floor(Math.random() * playlistTracks.length);
+      return playlistTracks[idx];
+    }
+
+    function updateQRCode(track) {
+      if (qr) document.getElementById("qrCode").innerHTML = "";
+      qr = new QRCode(document.getElementById("qrCode"), {
+        text: track.url,
+        width: 220,
+        height: 220
+      });
+    }
+
+    function showTrackInfo(track) {
+      console.log(track);
+      const infoDiv = document.getElementById("songInfo");
+      infoDiv.innerHTML = `
+        <h3>${track.name}</h3>
+        <p>${track.artist}</p>
+        <p>${track.year}</p>
+        <img src="${track.cover}">
+      `;
+    }
+
+    function flipCard() {
+      flipped = !flipped;
+      const card = document.getElementById("card");
+      if (flipped) {
+        showTrackInfo(currentTrack);
+        card.classList.add("flipped");
+      } else {
+        card.classList.remove("flipped");
+      }
+    }
+
+    function resetFlip() {
+      flipped = false;
+      document.getElementById("card").classList.remove("flipped");
+    }
+
+    document.getElementById("loadPlaylistBtn").addEventListener("click", async () => {
+      playlistTracks = await fetchPlaylistTracks(document.getElementById("playlistInput").value);
+      nextTrack();
+    });
+
+    function nextTrack() {
+      resetFlip();
+      currentTrack = randomTrack();
+      if (!currentTrack) return;
+      updateQRCode(currentTrack);
+    }
+
+    document.getElementById("flipBtn").addEventListener("click", () => {
+      if (currentTrack) flipCard();
+    });
+
+    document.getElementById("nextBtn").addEventListener("click", () => {
+      nextTrack();
+    });
+  </script>
+</body>
+
+</html>

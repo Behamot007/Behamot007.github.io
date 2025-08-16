@@ -1,34 +1,143 @@
-/* nunito-sans-regular - latin */
-@font-face {
-    font-display: swap;
-    font-family: 'Nunito Sans';
-    font-style: normal;
-    font-weight: 400;
-    src: url('../assets/fonts/nunito-sans-v12-latin-regular.eot');/* IE9 Compat Modes */
-    src: url('../assets/fonts/nunito-sans-v12-latin-regular.eot?#iefix') format('embedded-opentype'),/* IE6-IE8 */
-        url('../assets/fonts/nunito-sans-v12-latin-regular.woff2') format('woff2'),/* Super Modern Browsers */
-        url('../assets/fonts/nunito-sans-v12-latin-regular.woff') format('woff'),/* Modern Browsers */
-        url('../assets/fonts/nunito-sans-v12-latin-regular.ttf') format('truetype'),/* Safari, Android, iOS */
-        url('../assets/fonts/nunito-sans-v12-latin-regular.svg#NunitoSans') format('svg');/* Legacy iOS */
+body {
+  font-family: sans-serif;
+  margin: 20px;
+  background: #121212;
+  color: white;
 }
 
-:root {
-    --primary-bg-color: #F5ECDF;
-    --secondary-bg-color: #ffffff;
-
-    --main-fg-color: #242427;
-    --secondary-fg-color: #37373b;
+h1 {
+  color: #1DB954;
 }
 
+input,
+button {
+  padding: 8px;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
 
-html, body{
-    margin: 0 !important;
-    padding: 0 !important;
-    scroll-behavior: smooth;
+.log {
+  background: #000;
+  color: #0f0;
+  padding: 10px;
+  font-family: monospace;
+  height: 150px;
+  overflow-y: auto;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.card {
+  background-size: cover;
+  background-position: center;
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  color: #fff;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.qr {
+  align-items: center;
+}
+
+.editable {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 2px 4px;
+  border-radius: 4px;
+  display: inline-block;
+  word-break: break-word;
+}
+
+.song-title,
+.artist,
+.anime {
+  font-size: 12px;
+  margin: 2px 0;
+}
+
+.song-title {
+  font-weight: bold;
 }
 
 body {
-    background-color: var(--primary-bg-color);
-    overflow-x: hidden;
-    overflow-y: auto;
+  font-family: sans-serif;
+  margin: 0;
+  padding: 20px;
+  background: #121212;
+  color: white;
+}
+
+h1 {
+  color: #1DB954;
+}
+
+nav {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+nav a {
+  color: white;
+  text-decoration: none;
+  background: #1DB954;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+nav a:hover {
+  background: #14833b;
+}
+
+label,
+input {
+  display: block;
+  margin-bottom: 10px;
+}
+
+button {
+  padding: 10px 20px;
+  font-size: 1rem;
+  border: none;
+  border-radius: 8px;
+  background: #1DB954;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #14833b;
+}
+
+@media print {
+  body {
+    background: white;
+  }
+
+  .log,
+  h1,
+  button,
+  input,
+  label {
+    display: none;
+  }
+
+  .card {
+    page-break-inside: avoid;
+    color: white;
+    -webkit-print-color-adjust: exact;
+    /* wichtig, damit Hintergrundbilder gedruckt werden */
+    print-color-adjust: exact;
+    background-image: inherit;
+  }
 }

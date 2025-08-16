@@ -2,52 +2,71 @@
 <html lang="de">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, minimal-ui, initial-scale=1.0, minimum-scale=1.0, 
-    maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <title></title>
-    <link rel="stylesheet" href="styles.css">
-
-    <style>
-        #gradient-canvas {
-            --gradient-color-1: #001f3f; 
-            --gradient-color-2: #6b5b95; 
-            --gradient-color-3: #00b3b3;  
-            --gradient-color-4: #20bf55;
-
-            height: 100vh;
-            width: 100vw;
-            position: absolute;
-            z-index: 1;
-            top: 0;
-        }
-
-        #particles-js {
-            position: absolute;
-            top: 0;
-            z-index: 2;
-            height: 100vh;
-            width: 100vw;
-        }
-
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="./styles.css">
+  </link>
+  <title>Spotify Demo</title>
 </head>
 
 <body>
-    <div id="particles-js"></div>
-    <canvas id="gradient-canvas" data-transition-in> </canvas>
 
-    <script src="scripts/Gradient.js"></script>
-    <script src="/particles.js-master/particles.js"></script>
-    <script>
-        const gradient1 = new Gradient();
-        gradient1.initGradient('#gradient-canvas');
-        particlesJS.load('particles-js', 'assets/particles-sky.json', function() {
-  console.log('callback - particles.js config loaded');
-});
-    </script>
+  <h1>Spotify Demo</h1>
 
+  <!-- Navigation -->
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="generator.html">Karten drucken</a>
+    <a href="gameModeScan.html">Play Screen</a>
+    <a href="gameModeDigital.html">Digital Mode</a>
+  </nav>
+
+  <!-- Spotify Credentials Eingabe -->
+  <div id="credentials">
+    <h2>Spotify Zugangsdaten</h2>
+    <label>
+      Client ID:
+      <input type="text" id="clientId" placeholder="Client ID">
+    </label>
+    <label>
+      Client Secret:
+      <input type="text" id="clientSecret" placeholder="Client Secret">
+    </label>
+    <label>
+      OpenAPI Token:
+      <input type="text" id="openApiToken" placeholder="Token">
+    </label>
+    <button onclick="saveCredentials()">Speichern</button>
+  </div>
+
+  <button id="loginBtn" onclick="login()">Login mit Spotify</button>
+
+  <script>
+    // vorhandene Credentials aus LocalStorage laden
+    document.getElementById("clientId").value = localStorage.getItem("CLIENT_ID") || "";
+    document.getElementById("clientSecret").value = localStorage.getItem("CLIENT_SECRET") || "";
+    document.getElementById("openApiToken").value = localStorage.getItem("OPENAPI_TOKEN") || "";
+
+    function saveCredentials() {
+      localStorage.setItem("CLIENT_ID", document.getElementById("clientId").value);
+      localStorage.setItem("CLIENT_SECRET", document.getElementById("clientSecret").value);
+      localStorage.setItem("OPENAPI_TOKEN", document.getElementById("openApiToken").value);
+      alert("Credentials gespeichert!");
+    }
+
+    function login() {
+      // Hier greift spotify.js, zieht die Daten aus localStorage
+      const clientId = localStorage.getItem("CLIENT_ID");
+      if (!clientId) {
+        alert("Bitte zuerst Client ID speichern!");
+        return;
+      }
+      // Spotify Login Funktion aus spotify.js aufrufen
+      startSpotifyLogin();
+    }
+  </script>
+
+  <script src="spotify.js"></script>
 </body>
 
 </html>
