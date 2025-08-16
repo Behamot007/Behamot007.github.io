@@ -39,8 +39,6 @@
     <button onclick="saveCredentials()">Speichern</button>
   </div>
 
-  <button id="loginBtn" onclick="login()">Login mit Spotify</button>
-
   <script>
     // vorhandene Credentials aus LocalStorage laden
     document.getElementById("clientId").value = localStorage.getItem("CLIENT_ID") || "";
@@ -52,17 +50,6 @@
       localStorage.setItem("CLIENT_SECRET", document.getElementById("clientSecret").value);
       localStorage.setItem("OPENAPI_TOKEN", document.getElementById("openApiToken").value);
       alert("Credentials gespeichert!");
-    }
-
-    function login() {
-      // Hier greift spotify.js, zieht die Daten aus localStorage
-      const clientId = localStorage.getItem("CLIENT_ID");
-      if (!clientId) {
-        alert("Bitte zuerst Client ID speichern!");
-        return;
-      }
-      // Spotify Login Funktion aus spotify.js aufrufen
-      startSpotifyLogin();
     }
   </script>
 
