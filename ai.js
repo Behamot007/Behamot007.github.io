@@ -1,90 +1,47 @@
-// kleine Helfer
-const normalize = s => (s || "").toLowerCase().trim();
-const keyFor = (t) => `${normalize(t.name)}:::${normalize(t.artist)}`;
-
-// optionales Cache, damit wiederholte Aufrufe nicht neu fragen
-const aiCache = new Map(); // oder localStorage-basierter Cache
-
-async function getAIInfosStrict(tracks) {
+async function getAIInfos(tracks) {
   const OPENAPI_TOKEN = localStorage.getItem("OPENAPI_TOKEN");
-  if (!OPENAPI_TOKEN) return [];           // Keine KI möglich
-  if (!Array.isArray(tracks) || !tracks.length) return [];
+  const promptText = `Für die folgende Songliste:
+${tracks.map((t) => `- ${t.name} von ${t.artist}`).join("\n")}
+Bitte gebe mir nach Internetrecherche das korrekte Release-Datum der Lieder wieder im JSON-Format:
+[
+  { "name": "Titel", "artist": "Artist", "year": "first-release" }
+]`;
 
-  // 1) bereits bekannte Werte aus Cache ziehen
-  const unknowns = [];
-  for (const t of tracks) {
-    const k = keyFor(t);
-    const cached = aiCache.get(k) || JSON.parse(localStorage.getItem("release::" + k) || "null");
-    if (!cached) unknowns.push({ name: t.name, artist: t.artist });
-  }
-  if (!unknowns.length) return []; // alles gecached
-
-  // 2) in kleine Batches splitten (z. B. 15)
-  const chunks = [];
-  for (let i = 0; i < unknowns.length; i += 15) chunks.push(unknowns.slice(i, i + 15));
-
-  const results = [];
-  for (const chunk of chunks) {
-    const prompt = `Gib für jede Zeile das Erscheinungsjahr (YYYY). Wenn unsicher, "unknown".
-${chunk.map(x => `- ${x.name} — ${x.artist}`).join("\n")}`;
-
+  for (let i = 0; i < 3; i++) {
     const resp = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": "Bearer " + OPENAPI_TOKEN
+        Authorization: "Bearer " + OPENAPI_TOKEN,
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
-        temperature: 0,
-        seed: 42, // stabilere, reproduzierbare Antworten
-        response_format: {
-          // erzwinge eine Array-Antwort mit genau den Feldern
-          type: "json_schema",
-          json_schema: {
-            name: "releases",
-            strict: true,
-            schema: {
-              type: "array",
-              items: {
-                type: "object",
-                required: ["name", "artist", "year"],
-                properties: {
-                  name:   { type: "string" },
-                  artist: { type: "string" },
-                  year:   { type: "string", pattern: "^(unknown|[0-9]{4})$" }
-                },
-                additionalProperties: false
-              }
-            }
-          }
-        },
         messages: [
-          { role: "system", content: "Gib NUR JSON im geforderten Schema aus. Keine Erklärungen." },
-          { role: "user", content: prompt }
-        ]
-      })
+          {
+            role: "system",
+            content:
+              "Du bist ein Assistent, der ausschließlich korrektes JSON ausgibt, ohne Erklärung. Felder dürfen nicht leer sein",
+          },
+          {
+            role: "user",
+            content: promptText,
+          },
+        ],
+        temperature: 0,
+        max_tokens: 800,
+      }),
     });
-
-    if (!resp.ok) {
-      console.warn("OpenAI Fehler:", await resp.text());
-      continue;
-    }
     const data = await resp.json();
-    const arr = data?.choices?.[0]?.message?.content;
-    let parsed = [];
-    try { parsed = JSON.parse(arr); } catch { parsed = []; }
-
-    // Validierung + Cache
-    for (const r of parsed) {
-      if (!r || typeof r !== "object") continue;
-      const k = keyFor(r);
-      if (!k) continue;
-      results.push(r);
-      aiCache.set(k, r);
-      try { localStorage.setItem("release::" + k, JSON.stringify(r)); } catch {}
+    let text = data.choices[0].message.content.trim();
+    try {
+      return JSON.parse(text);
+    } catch {
+      try {
+        log("Ungültiges JSON, erneuter Versuch...");
+      } catch {
+        console.log("Ungültiges JSON, erneuter Versuch...");
+      }
     }
   }
-
-  return results;
+  throw new Error("KI liefert kein gültiges JSON nach 3 Versuchen.");
 }
