@@ -125,6 +125,7 @@
       border: 2px solid transparent;
       min-width: 100px;
       text-align: center;
+      cursor: pointer;
     }
 
     .player.active {
@@ -168,6 +169,7 @@
 
     <h2 id="currentPlayerDisplay"></h2>
     <div id="playerBoard" class="player-board"></div>
+    <div id="playerCards" style="margin-top:10px;"></div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -231,15 +233,36 @@
 
     function updatePlayerBoard() {
       const board = document.getElementById("playerBoard");
-      board.innerHTML = players.map((p, i) => `
-        <div class="player ${i === currentPlayerIndex ? 'active' : ''}">
-          <div class="name">${p.name}</div>
-          <div class="years">${p.years.length ? p.years.join(', ') : '-'}</div>
-        </div>
-      `).join('');
+      if (!players.length) {
+        board.innerHTML = '';
+        document.getElementById("currentPlayerDisplay").textContent = '';
+        return;
+      }
+      const current = players[currentPlayerIndex];
+      const years = current.cards
+        .map(c => c.year)
+        .sort((a, b) => a - b);
+      board.innerHTML = `
+        <div class="player active" id="currentPlayerBox">
+          <div class="name">${current.name}</div>
+          <div class="years">${years.length ? years.join(', ') : '-'}</div>
+        </div>`;
       document.getElementById("currentPlayerDisplay").textContent = players.length
-        ? `Aktueller Spieler: ${players[currentPlayerIndex].name}`
+        ? `Aktueller Spieler: ${current.name}`
         : '';
+      document.getElementById('playerCards').innerHTML = '';
+      document.getElementById('currentPlayerBox').addEventListener('click', () => showPlayerCards(currentPlayerIndex));
+    }
+
+    function showPlayerCards(index) {
+      const player = players[index];
+      const cardsDiv = document.getElementById('playerCards');
+      if (!player.cards.length) {
+        cardsDiv.textContent = 'Keine Karten';
+        return;
+      }
+      const sorted = player.cards.sort((a, b) => a.year - b.year);
+      cardsDiv.innerHTML = sorted.map(c => `${c.year} - ${c.title} - ${c.artist}`).join('<br>');
     }
 
     function nextPlayer() {
@@ -277,6 +300,7 @@
       const nameInputs = document.querySelectorAll('.playerName');
       players = Array.from(nameInputs).map((input, idx) => ({
         name: input.value || `Spieler ${idx + 1}`,
+        cards: []
         years: []
       }));
       playlistTracks = await fetchPlaylistTracks(document.getElementById("playlistInput").value);
@@ -298,7 +322,11 @@
 
     function handleAnswer(correct) {
       if (correct) {
-        players[currentPlayerIndex].years.push(currentTrack.year.slice(0,4));
+        players[currentPlayerIndex].cards.push({
+          year: parseInt(currentTrack.year.slice(0,4)),
+          title: currentTrack.name,
+          artist: currentTrack.artist
+        });
       }
       nextPlayer();
       nextTrack();
