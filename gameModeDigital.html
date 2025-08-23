@@ -300,7 +300,7 @@
       const nameInputs = document.querySelectorAll('.playerName');
       players = Array.from(nameInputs).map((input, idx) => ({
         name: input.value || `Spieler ${idx + 1}`,
-        cards: []
+        cards: [],
         years: []
       }));
       playlistTracks = await fetchPlaylistTracks(document.getElementById("playlistInput").value);
