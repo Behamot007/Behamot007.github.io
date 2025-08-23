@@ -152,7 +152,7 @@
     function randomTrack() {
       if (!playlistTracks.length) return null;
       const idx = Math.floor(Math.random() * playlistTracks.length);
-      return playlistTracks[idx];
+      return playlistTracks.splice(idx, 1)[0];
     }
 
     function updateQRCode(track) {
@@ -199,7 +199,10 @@
     function nextTrack() {
       resetFlip();
       currentTrack = randomTrack();
-      if (!currentTrack) return;
+      if (!currentTrack) {
+        alert('Keine weiteren Songs in der Playlist.');
+        return;
+      }
       updateQRCode(currentTrack);
     }
 
