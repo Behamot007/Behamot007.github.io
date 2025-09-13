@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Anime Character Guess</title>
+  <style>
+    :root{
+      --ok:#c8e6c9; --bad:#ffcdd2; --hint:#fff9c4;
+      --ui:#0ea5e9; --border:#e5e7eb; --text:#111827; --muted:#6b7280; --bg:#f9fafb;
+      --shadow: 0 10px 30px rgba(0,0,0,.06);
+      --radius: 12px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      margin:0; background:var(--bg); color:var(--text);
+      font-size: clamp(14px, 1.8vw, 16px);
+    }
+    header{ padding: clamp(16px, 2.5vw, 24px) 16px 8px; text-align:center; }
+    header h1{ margin:0; font-weight:800; letter-spacing:.2px; font-size: clamp(20px, 3.6vw, 28px); }
+    main{ padding: 8px clamp(10px, 2vw, 16px) 24px; max-width: 1200px; margin: 0 auto; }
+
+    .card{ background:#fff; border:1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+    .stack{ display:flex; flex-direction:column; gap: clamp(10px, 2vw, 16px); }
+
+    /* Search */
+    .search-card{ padding: clamp(12px, 2.5vw, 18px); position:relative; }
+    .search-wrap{ position:relative; max-width: min(720px, 100%); margin: 0 auto; }
+    .search-input{
+      width:100%; padding: 12px 14px 12px 44px; border: 1px solid var(--border); border-radius: 999px;
+      outline:none; background:#fff; transition: box-shadow .2s, border-color .2s;
+      font-size: clamp(14px, 2.4vw, 16px);
+    }
+    .search-input:focus{ border-color: var(--ui); box-shadow: 0 0 0 4px rgba(14,165,233,.15); }
+    .search-icon{
+      position:absolute; left:12px; top:50%; transform: translateY(-50%); font-size: 18px; color: var(--muted);
+    }
+    .actions{ display:flex; justify-content:center; gap:10px; margin-top: 8px; flex-wrap: wrap; }
+    .btn{
+      border:1px solid var(--border); background:#fff; border-radius: 10px; padding:10px 14px; cursor:pointer; font-weight:600;
+    }
+    .btn.primary{ background: var(--ui); color:#fff; border-color: var(--ui); }
+    .btn:disabled{ opacity:.6; cursor:not-allowed; }
+    .hint{ text-align:center; color:var(--muted); font-size: clamp(12px, 2vw, 14px); margin:8px 0 0; }
+
+    /* Suggestions */
+    .suggestions{
+      position:absolute; top: calc(100% + 8px); left: 0; right: 0; z-index:10;
+      background:#fff; border:1px solid var(--border); border-radius: 12px; overflow:hidden;
+      box-shadow: var(--shadow); max-height: 60vh; overflow-y:auto; animation: drop .16s ease-out;
+      display:none;
+    }
+    @keyframes drop{ from{opacity:0; transform: translateY(-6px)} to{opacity:1; transform: translateY(0)} }
+    .sugg-item{
+      display:flex; align-items:center; gap:10px; padding:10px 12px; cursor:pointer; border-bottom:1px solid #f3f4f6;
+    }
+    .sugg-item:last-child{ border-bottom:0; }
+    .sugg-item:hover, .sugg-item.active{ background:#f8fafc; }
+    .sugg-thumb{ width:36px; height:36px; border-radius:8px; object-fit:cover; border:1px solid var(--border); background:#f3f4f6; }
+    .sugg-text{ display:flex; flex-direction:column; min-width:0; }
+    .sugg-name{ font-size:14px; line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .sugg-anime{ font-size:12px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    /* Table */
+    .table-card{ padding: clamp(10px, 2vw, 14px); }
+    .table-card h2{ margin:0 0 8px 0; font-size: clamp(16px, 2.8vw, 20px); }
+    .table-scroll{ width:100%; overflow-x:auto; -webkit-overflow-scrolling: touch; border-radius: 10px; }
+    table{ width:100%; border-collapse: collapse; min-width: 820px; }
+    th, td{ border:1px solid #e5e7eb; padding: .55rem .6rem; text-align:left; vertical-align:middle; }
+    th{ background:#f3f4f6; position:sticky; top:0; z-index:1; }
+
+    .namecell {
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; line-height:1.3;
+    }
+    .namecell img { width:44px; height:44px; object-fit:cover; border-radius:8px; border:1px solid var(--border); }
+    .namecell span { font-size:13px; text-align:center; word-break:break-word; }
+
+    .fade-in{ animation: fin .18s ease-out; }
+    @keyframes fin{ from{opacity:0; transform: translateY(-4px)} to{opacity:1; transform: translateY(0)} }
+
+    /* Pills */
+    .pill-wrap{ display:flex; flex-wrap:wrap; gap:6px; }
+    .pill{
+      display:inline-flex; align-items:center; padding:4px 8px; border-radius:999px;
+      font-size:12px; line-height:1.2; white-space:nowrap; border:1px solid #dfe3e8; background:#f8f8f8;
+    }
+    .pill.green{ background:#c8e6c9; border-color:#9ccc65; }
+    .pill.red{ background:#ffcdd2; border-color:#e57373; }
+    .pill.yellow{ background:#fff9c4; border-color:#fdd835; }
+
+    /* Summary row inside table */
+    .summary-row td{ background:#fafafa; font-weight:600; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Anime Character Guess</h1>
+  </header>
+  <main class="stack">
+    <!-- SEARCH -->
+    <section class="card search-card">
+      <div class="search-wrap">
+        <span class="search-icon">🔎</span>
+        <input id="searchInput" class="search-input" type="text" placeholder="Charakter oder Anime suchen…" autocomplete="off" />
+        <div id="suggBox" class="suggestions" role="listbox" aria-label="Vorschläge"></div>
+      </div>
+      <div class="actions">
+        <button id="guessBtn" class="btn primary" disabled>Rate!</button>
+        <button id="hintBtn" class="btn">Tipp anzeigen</button>
+      </div>
+      <p class="hint" id="targetHint" style="display:none"></p>
+    </section>
+
+    <!-- TABLE -->
+    <section class="card table-card">
+      <h2>Versuche</h2>
+      <div class="table-scroll">
+        <table id="guessesTable">
+          <thead><tr id="headerRow"></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import {
+      HAIR_COLOR_TAGS,
+      EYE_COLOR_TAGS,
+      SPECIES_TAGS,
+      CLASS_TAGS,
+      CHARACTERISTIC_TAGS
+    } from "./tags.js";
+
+    /* ---------- ENUM-Hilfen ---------- */
+    const TAG_ENUMS = {
+      hair_color_tags: HAIR_COLOR_TAGS,
+      eye_color_tags: EYE_COLOR_TAGS,
+      species_tags:   SPECIES_TAGS,
+      class_tags:     CLASS_TAGS,
+      characteristic_tags: CHARACTERISTIC_TAGS
+    };
+
+    const lc = v => String(v ?? "").trim().toLowerCase();
+
+    function findEnumEntry(enumDef, value){
+      if(!enumDef) return null;
+      const keyLC = lc(value);
+
+      // Objekt-Form: { key: {label, description} }
+      if(!Array.isArray(enumDef) && typeof enumDef === "object"){
+        // direkter Key-Treffer
+        if(enumDef[keyLC]) return { key:keyLC, ...enumDef[keyLC] };
+        // per Label scannen
+        for(const [k, meta] of Object.entries(enumDef)){
+          if(lc(meta.label) === keyLC) return { key:k, ...meta };
+        }
+        return null;
+      }
+
+      // Array-Form: [{key,label,description}]
+      if(Array.isArray(enumDef)){
+        return enumDef.find(e => lc(e.key)===keyLC || lc(e.label)===keyLC) || null;
+      }
+      return null;
+    }
+    // Spalten
+    const FIELDS = [
+      { key:"gender",               label:"Geschlecht" },
+      { key:"species_tags",         label:"Spezies" },
+      { key:"hair_color_tags",      label:"Haare" },
+      // { key:"eye_color_tags",    label:"Augen" },
+      // { key:"difficulty_tags",   label:"Schwierigkeit" },
+      { key:"class_tags",           label:"Klasse" },
+      { key:"characteristic_tags",  label:"Eigenschaften" },
+      { key:"height_cm",            label:"Größe (cm)" },
+      { key:"anime_title",          label:"Anime Titel" },
+      { key:"anime_year_start",     label:"Startjahr (Anime)" },
+      { key:"age",                  label:"Alter" },
+      { key:"role",                 label:"Rolle" }
+    ];
+
+    let characters = [];
+    let pool = [];
+    let target = null;
+    const guessedChars = [];
+    const guessedIds = new Set();
+
+    const suggBox = document.getElementById('suggBox');
+    const searchInput = document.getElementById('searchInput');
+    const guessBtn = document.getElementById('guessBtn');
+    const hintBtn = document.getElementById('hintBtn');
+    const hintP = document.getElementById('targetHint');
+
+    function malFav(c){
+      const v = c?.popularity_mal_favorites;
+      return Number.isFinite(v) ? v : (v == null ? 0 : parseInt(v,10) || 0);
+    }
+
+    // Helpers
+    const asInt = (v) => {
+      if (v === null || v === undefined) return null;
+      if (typeof v === 'number' && Number.isFinite(v)) return Math.trunc(v);
+      if (typeof v === 'string') {
+        const m = v.trim().match(/^[-+]?\d+$/);
+        if (!m) return null;
+        const n = parseInt(v, 10);
+        return Number.isNaN(n) ? null : n;
+      }
+      return null;
+    };
+    const normalizeStr = s => (typeof s === "string" ? s.trim().toLowerCase() : s);
+    const joinTags = (v) => Array.isArray(v) ? v.join(", ") : (v ?? "");
+
+    function parseRange(val){
+      if (val === null || val === undefined) return null;
+      if (typeof val === "number") return { min: val, max: val, text: String(val) };
+      const s = String(val).trim(); if (!s) return null;
+      const m = s.match(/^(\d{1,3})\s*(?:[-–—]\s*(\d{1,3}))?$/);
+      if (!m) return null;
+      const a = parseInt(m[1],10), b = m[2] ? parseInt(m[2],10) : a;
+      if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
+      const [min,max] = a<=b ? [a,b] : [b,a];
+      return { min, max, text: s };
+    }
+    function rangesOverlap(r1, r2){ return r1 && r2 && r1.min <= r2.max && r2.min <= r1.max; }
+    function centerOf(r){ return (r.min + r.max) / 2; }
+
+    // Pfeil-Logik (10% / 49% / sonst)
+    function arrowForPercent(diffPct, dir){
+      const arrows = diffPct <= 10 ? 1 : (diffPct <= 49 ? 2 : 3);
+      const ch = dir === "up" ? "↑" : "↓";
+      return ch.repeat(arrows);
+    }
+    function percentDiff(a, b){ const denom = Math.max(Math.abs(b), 1); return Math.abs(a - b) / denom * 100; }
+
+    function compareRangeAware(guessVal, targetVal){
+      const rg = parseRange(guessVal), rt = parseRange(targetVal);
+      if (!rg && !rt) return { cls: "correct", text: String(guessVal ?? "") };
+      if (!rg || !rt)  return { cls: "", text: String(guessVal ?? "") };
+      if (rg.min === rg.max && rt.min === rt.max && rg.min === rt.min) return { cls: "correct", text: String(rg.min) };
+      if (rg.min === rt.min && rg.max === rt.max) return { cls: "correct", text: rg.text };
+      if (rangesOverlap(rg, rt)) return { cls: "partial", text: rg.text };
+      const cg = centerOf(rg), ct = centerOf(rt);
+      const dir = cg < ct ? "up" : "down";
+      const diffPct = percentDiff(cg, ct);
+      const arrows = arrowForPercent(diffPct, dir);
+      return { cls: "wrong", text: `${rg.text} ${arrows}` };
+    }
+
+    function compareTags(guessVal, targetVal){
+      const g = Array.isArray(guessVal) ? guessVal.map(normalizeStr) : [];
+      const t = Array.isArray(targetVal) ? targetVal.map(normalizeStr) : [];
+      if (g.length === 0 && t.length === 0) return { cls: "", text: "" };
+      const setT = new Set(t);
+      const overlap = g.filter(x => setT.has(x));
+      const same = g.length === t.length && overlap.length === t.length;
+      if (same) return { cls: "correct", text: joinTags(guessVal) };
+      if (overlap.length > 0) return { cls: "partial", text: joinTags(guessVal) };
+      return { cls: "wrong", text: joinTags(guessVal) };
+    }
+
+    function compareField(field, guessVal, targetVal){
+      if (field === 'species_tags' || field.endsWith('_tags')) return compareTags(guessVal, targetVal);
+      if (field === 'height_cm' || field === 'age') return compareRangeAware(guessVal, targetVal);
+      if (field === 'anime_year_start'){
+        const g = asInt(guessVal), t = asInt(targetVal);
+        if (g === null || t === null) return { cls: '', text: String(guessVal ?? '') };
+        if (g === t) return { cls: 'correct', text: String(g) };
+        const dir = g < t ? "up" : "down";
+        const diffPct = percentDiff(g, t);
+        const arrows = arrowForPercent(diffPct, dir);
+        return { cls: 'wrong', text: `${g} ${arrows}` };
+      }
+      const isEqual = (a,b)=>{
+        if (a===null||a===undefined||b===null||b===undefined) return false;
+        if (typeof a === 'string' && typeof b === 'string') return a.trim().toLowerCase() === b.trim().toLowerCase();
+        return a === b;
+      };
+      if (isEqual(guessVal, targetVal)) return { cls:'correct', text: String(guessVal ?? '') };
+      return { cls:'wrong', text: Array.isArray(guessVal) ? joinTags(guessVal) : String(guessVal ?? '') };
+    }
+
+    // === Pills (NEU: gegen Target einfärben) ===
+function renderPillsInto(td, guessVal, targetVal, fieldKey){
+  td.textContent='';
+  const wrap=document.createElement('div'); wrap.className='pill-wrap';
+  const arr=Array.isArray(guessVal)?guessVal:(guessVal?[String(guessVal)]:[]);
+  const targets = Array.isArray(targetVal) ? targetVal.map(normalizeStr)
+                : targetVal!=null ? [normalizeStr(targetVal)] : [];
+
+  arr.forEach(val=>{
+    const pill=document.createElement('span'); pill.className='pill';
+    if (targets.length && targets.includes(normalizeStr(val))) pill.classList.add('green');
+    else if (targets.length) pill.classList.add('red');
+
+    // Übersetzung + Tooltip
+    const enumDef = TAG_ENUMS[fieldKey];
+    const entry = findEnumEntry(enumDef, val);
+    if(entry){
+      pill.textContent = entry.label ?? val;
+      pill.title = entry.description ?? '';
+    } else {
+      pill.textContent = val;
+    }
+
+    wrap.appendChild(pill);
+  });
+
+  if(!arr.length){
+    const dash=document.createElement('span'); dash.textContent='—'; wrap.appendChild(dash);
+  }
+  td.appendChild(wrap);
+}
+
+
+    // === SUMMARY (kumulativ über ALLE guesses) ===
+    function uniqueByLower(arr){
+      const seen=new Set(); const out=[];
+      arr.forEach(v=>{
+        if(v==null) return;
+        const k=String(v).toLowerCase();
+        if(!seen.has(k)){ seen.add(k); out.push(v); }
+      });
+      return out;
+    }
+
+    function buildSummaryForRanges(fieldKey){
+      const t=parseRange(target[fieldKey]);
+      if(!t) return null;
+      let min=null, max=null, inter=null;
+      for(const c of guessedChars){
+        const g=parseRange(c[fieldKey]); if(!g) continue;
+        if(g.max < t.min){ min = Math.max(min ?? -Infinity, g.max+1); }
+        else if(g.min > t.max){ max = Math.min(max ?? Infinity, g.min-1); }
+        else{ // overlap
+          const piece={min:Math.max(g.min,t.min), max:Math.min(g.max,t.max)};
+          if(inter){
+            inter.min=Math.max(inter.min,piece.min);
+            inter.max=Math.min(inter.max,piece.max);
+          }else inter=piece;
+        }
+      }
+      return {t, min, max, inter};
+    }
+
+    function renderRangeSummaryPill(fieldKey){
+      const s=buildSummaryForRanges(fieldKey);
+      const pill=document.createElement('span'); pill.className='pill yellow';
+      if(!s){ pill.textContent='—'; return pill; }
+
+      const ct=(s.t.min+s.t.max)/2;
+
+      if(s.inter){
+        // exakt deckungsgleich -> grün
+        if(s.inter.min===s.t.min && s.inter.max===s.t.max) pill.className='pill green';
+        pill.textContent = formatRange(s.min, s.max);
+        return pill;
+      }
+
+      // nur Grenzen bekannt -> Pfeile (kein ≤/≥)
+      if(s.min!=null && s.max!=null){
+        // deduzierter Bereich zwischen min..max (gelb)
+        pill.textContent = formatRange(s.min, s.max);
+        pill.className='pill yellow';
+        return pill;
+      }
+
+      if(s.min!=null){
+        const dir='up';
+        const diffPct=percentDiff(s.min, ct);
+        pill.textContent = `${s.min} ${arrowForPercent(diffPct, dir)}`;
+        pill.className='pill red'; // noch nicht sicher
+        return pill;
+      }
+      if(s.max!=null){
+        const dir='down';
+        const diffPct=percentDiff(s.max, ct);
+        pill.textContent = `${s.max} ${arrowForPercent(diffPct, dir)}`;
+        pill.className='pill red';
+        return pill;
+      }
+      pill.textContent='—';
+      return pill;
+    }
+
+    function formatRange(min, max) {
+  if (min == null && max == null) return '—';
+  if (min == null) return `${max}`;
+  if (max == null) return `${min}`;
+
+  // immer sortieren, falls min > max
+  const lo = Math.min(min, max);
+  const hi = Math.max(min, max);
+
+  // falls gleich -> nur eine Zahl
+  if (lo === hi) return `${lo}`;
+
+  return `${lo}-${hi}`;
+}
+
+    function renderStringSummaryPills(fieldKey){
+      const td=document.createElement('td');
+      const wrap=document.createElement('div'); wrap.className='pill-wrap';
+      const guesses=uniqueByLower(guessedChars.map(c=>c[fieldKey]).filter(v=>v!=null && v!==''));
+      if(guesses.length===0){ const dash=document.createElement('span'); dash.textContent='—'; wrap.appendChild(dash); td.appendChild(wrap); return td; }
+
+      const tVal=target[fieldKey];
+      const tKey=tVal==null?null:String(tVal).toLowerCase();
+      let hasGreen=false;
+
+      guesses.forEach(v=>{
+        if(tKey!=null && String(v).toLowerCase()===tKey) {
+          const pill=document.createElement('span'); pill.className='pill';
+          pill.textContent=String(v);
+          pill.classList.add('green'); 
+          hasGreen=true;
+          wrap.appendChild(pill);
+        }
+      });
+
+      // Falls nichts geraten, oder nur rote – bereits erledigt
+      if (hasGreen) {
+        td.appendChild(wrap);
+      }
+      return td;
+    }
+function renderTagsSummaryPills(fieldKey){
+  const td=document.createElement('td');
+  const wrap=document.createElement('div'); wrap.className='pill-wrap';
+
+  const guessedSet=new Set();
+  guessedChars.forEach(c=>{
+    const arr=c[fieldKey];
+    if(Array.isArray(arr)) arr.forEach(v=> guessedSet.add(v));
+  });
+
+  const tSet=new Set((target[fieldKey]||[]).map(normalizeStr));
+  const greenTags=[...guessedSet].filter(tag=> tSet.has(normalizeStr(tag)));
+
+  if(greenTags.length===0){
+    const dash=document.createElement('span');
+    dash.textContent='—';
+    wrap.appendChild(dash);
+    td.appendChild(wrap);
+    return td;
+  }
+
+  greenTags.forEach(tag=>{
+    const pill=document.createElement('span'); pill.className='pill green';
+    const enumDef = TAG_ENUMS[fieldKey];
+    const entry = findEnumEntry(enumDef, tag);
+    if(entry){
+      pill.textContent = entry.label ?? tag;
+      pill.title = entry.description ?? '';
+    } else {
+      pill.textContent = tag;
+    }
+    wrap.appendChild(pill);
+  });
+
+  td.appendChild(wrap);
+  return td;
+}
+
+
+function updateSummaryFromAll(){
+  // reset
+  summaryState = {
+    age: {min:null, max:null, inter:null},
+    height_cm: {min:null, max:null, inter:null},
+    anime_year_start: {min:null, max:null, inter:null}
+  };
+
+  guessedChars.forEach(c=>{
+    const upd=(field)=>{
+      const g=parseRange(c[field]), t=parseRange(target[field]);
+      if(!(g&&t)) return;
+      const s=summaryState[field];
+
+      if(g.max < t.min){ // guess zu klein
+        s.min = Math.max(s.min ?? -Infinity, g.max+1);
+      } 
+      else if(g.min > t.max){ // guess zu groß
+        s.max = Math.min(s.max ?? Infinity, g.min-1);
+      } 
+      else if(rangesOverlap(g,t)){ // Schnittmenge
+        const inter={
+          min: Math.max(g.min, t.min),
+          max: Math.min(g.max, t.max)
+        };
+        if(inter.min > inter.max){
+          // keine gültige Schnittmenge → aufheben
+          s.inter = null;
+        } else {
+          if(s.inter){
+            s.inter.min = Math.max(s.inter.min, inter.min);
+            s.inter.max = Math.min(s.inter.max, inter.max);
+            if(s.inter.min > s.inter.max){
+              s.inter = null;
+            }
+          } else {
+            s.inter = inter;
+          }
+        }
+      }
+    };
+    upd("age");
+    upd("height_cm");
+    upd("anime_year_start");
+  });
+
+  renderSummaryRow();
+}
+
+
+    function renderSummaryRow(){
+      const tbody=document.querySelector('#guessesTable tbody');
+      let row=document.querySelector('.summary-row');
+      if(row) row.remove();
+      row=document.createElement('tr'); row.className='summary-row';
+
+      const tdName=document.createElement('td');
+      tdName.textContent="Summary";
+      row.appendChild(tdName);
+
+      FIELDS.forEach(f=>{
+        if(f.key==="age" || f.key==="height_cm" || f.key==="anime_year_start"){
+          const td=document.createElement('td');
+          td.appendChild( renderRangeSummaryPill(f.key) );
+          row.appendChild(td);
+        } else if (f.key==="species_tags" || f.key.endsWith("_tags")){
+          row.appendChild( renderTagsSummaryPills(f.key) );
+        } else {
+          row.appendChild( renderStringSummaryPills(f.key) );
+        }
+      });
+
+      tbody.prepend(row);
+    }
+
+    // Table
+    function initTableHeader(){
+      const headerRow = document.getElementById('headerRow');
+      headerRow.innerHTML = '';
+      const thName = document.createElement('th'); thName.textContent = 'Bild & Name'; headerRow.appendChild(thName);
+      FIELDS.forEach(f=>{ const th=document.createElement('th'); th.textContent=f.label; headerRow.appendChild(th); });
+    }
+
+    function renderGuessRow(char){
+      const tbody=document.querySelector('#guessesTable tbody');
+      const row=document.createElement('tr'); row.className='fade-in';
+
+      // Name
+      const tdName=document.createElement('td'); tdName.className='namecell';
+      if(char.image_url){ const img=document.createElement('img'); img.src=char.image_url; img.alt=char.name||''; tdName.appendChild(img); }
+      const span=document.createElement('span'); span.textContent=char.name||'—'; tdName.appendChild(span);
+      row.appendChild(tdName);
+
+      FIELDS.forEach(f=>{
+        const td=document.createElement('td');
+        const gv=(f.key==="species_tags" || f.key.endsWith('_tags'))? (char[f.key]||[]): char[f.key];
+        const tv=(f.key==="species_tags" || f.key.endsWith('_tags'))? (target[f.key]||[]): target[f.key];
+
+        if(f.key==="species_tags" || f.key.endsWith('_tags')){
+          renderPillsInto(td, gv, tv, f.key);
+        } else {
+          const cmp=compareField(f.key, gv, tv);
+          const pill=document.createElement('span'); pill.className='pill';
+          if(cmp.cls==='correct') pill.classList.add('green');
+          else if(cmp.cls==='wrong') pill.classList.add('red');
+          else if(cmp.cls==='partial') pill.classList.add('yellow');
+          pill.textContent=cmp.text || '—';
+          td.appendChild(pill);
+        }
+        row.appendChild(td);
+      });
+
+      tbody.prepend(row);
+
+      // kumulativ merken & Summary neu aufbauen
+      guessedChars.push(char);
+      renderSummaryRow();
+    }
+
+    // Suggestions
+    let activeIndex = -1;
+    let visibleItems = [];
+
+    function filterPoolByQuery(q){
+      const list = pool.filter(c => !guessedIds.has(String(c.character_id_mal)));
+      if (!q) return list;
+      const lower = q.toLowerCase();
+      return list.filter(c => {
+        const nameHit = (c.name||"").toLowerCase().includes(lower);
+        const altHit  = Array.isArray(c.alt_names) && c.alt_names.some(n => String(n).toLowerCase().includes(lower));
+        const animeHit = (c.anime_title||"").toLowerCase().includes(lower);
+        return nameHit || altHit || animeHit;
+      });
+    }
+
+    function renderSuggestions(list){
+      suggBox.innerHTML = '';
+      if (!list.length) { suggBox.style.display='none'; activeIndex=-1; guessBtn.disabled = true; return; }
+      const top = list.slice(0, 10);
+      visibleItems = top;
+
+      top.forEach((c, i) => {
+        const div = document.createElement('div');
+        div.className = 'sugg-item';
+        div.setAttribute('role','option');
+        div.dataset.id = c.character_id_mal;
+
+        const img = document.createElement('img');
+        img.className = 'sugg-thumb';
+        img.src = c.image_url || '';
+        img.alt = c.name || '';
+        div.appendChild(img);
+
+        const text = document.createElement('div'); text.className = 'sugg-text';
+        const name = document.createElement('div'); name.className = 'sugg-name'; name.textContent = c.name || '—';
+        const anime = document.createElement('div'); anime.className = 'sugg-anime'; anime.textContent = c.anime_title || '—';
+        text.appendChild(name); text.appendChild(anime);
+        div.appendChild(text);
+
+        div.addEventListener('mouseenter', ()=> setActiveIndex(i));
+        div.addEventListener('mouseleave', ()=> setActiveIndex(-1));
+        div.addEventListener('click', ()=> confirmGuessByIndex(i));
+        suggBox.appendChild(div);
+      });
+
+      suggBox.style.display='block';
+      setActiveIndex(0);
+    }
+
+    function setActiveIndex(idx){
+      activeIndex = idx;
+      [...suggBox.children].forEach((el, i) => {
+        if (i === activeIndex) el.classList.add('active');
+        else el.classList.remove('active');
+      });
+      guessBtn.disabled = !(activeIndex >= 0 && visibleItems[activeIndex]);
+    }
+
+    function confirmGuessByIndex(idx){
+      if (!(idx >= 0 && visibleItems[idx])) return;
+      const c = visibleItems[idx];
+      if (guessedIds.has(String(c.character_id_mal))) return;
+
+      renderGuessRow(c);
+      guessedIds.add(String(c.character_id_mal));
+
+      // UI reset
+      searchInput.value = '';
+      suggBox.style.display='none';
+      visibleItems = [];
+      guessBtn.disabled = true;
+
+      if (c.character_id_mal == target.character_id_mal){
+        alert('Richtig! Du hast den Charakter gefunden: ' + target.name);
+      }
+    }
+
+    // Events
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.trim();
+      const list = filterPoolByQuery(q);
+      renderSuggestions(list);
+    });
+    searchInput.addEventListener('focus', () => {
+      const q = searchInput.value.trim();
+      const list = filterPoolByQuery(q);
+      renderSuggestions(list);
+    });
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.search-wrap')) suggBox.style.display = 'none';
+    });
+    searchInput.addEventListener('keydown', (e) => {
+      if (suggBox.style.display === 'none') return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (visibleItems.length) setActiveIndex( (activeIndex + 1) % visibleItems.length );
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (visibleItems.length) setActiveIndex( (activeIndex - 1 + visibleItems.length) % visibleItems.length );
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        confirmGuessByIndex(activeIndex >= 0 ? activeIndex : 0);
+      } else if (e.key === 'Escape') {
+        suggBox.style.display='none';
+      }
+    });
+    guessBtn.addEventListener('click', () => {
+      confirmGuessByIndex(activeIndex >= 0 ? activeIndex : 0);
+    });
+
+    // Hint Button
+    hintBtn.addEventListener('click', ()=>{
+      hintP.style.display = 'block';
+      hintBtn.disabled = true;
+    });
+
+    // Boot
+    function getTopParam(){
+      const p = new URLSearchParams(location.search).get("top");
+      const n = parseInt(p, 10);
+      return Number.isFinite(n) && n > 0 ? n : null;
+    }
+    async function loadData(){
+      const resp = await fetch('/api/characters');
+      characters = await resp.json();
+
+      const topN = getTopParam();
+      const sorted = [...characters].sort((a,b)=> malFav(b) - malFav(a));
+      pool = topN ? sorted.slice(0, topN) : sorted;
+
+      if (!pool.length){
+        alert('Kein Datensatz im aktuellen Top-Pool gefunden.');
+        return;
+      }
+
+      target = pool[Math.floor(Math.random()*pool.length)];
+      hintP.textContent = `Tipp: Ziel stammt aus ${target.anime_title ?? 'unbekannt'}`;
+
+      initTableHeader();
+    }
+    loadData();
+  </script>
+</body>
+</html>
