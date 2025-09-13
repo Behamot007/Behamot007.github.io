@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Anime Character Guess</title>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
     :root{
       --ok:#c8e6c9; --bad:#ffcdd2; --hint:#fff9c4;
@@ -709,8 +710,10 @@ function updateSummaryFromAll(){
       return Number.isFinite(n) && n > 0 ? n : null;
     }
     async function loadData(){
-      const resp = await fetch('/api/characters');
-      characters = await resp.json();
+      const resp = await fetch('../dataset/characters.csv');
+      const csvText = await resp.text();
+      const parsed = Papa.parse(csvText, { header: true });
+      characters = parsed.data.filter(c => c && c.character_id_mal);
 
       const topN = getTopParam();
       const sorted = [...characters].sort((a,b)=> malFav(b) - malFav(a));
