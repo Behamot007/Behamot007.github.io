@@ -9,7 +9,7 @@
     body {
       font-family: sans-serif;
       margin: 0;
-      padding: 20px;
+      padding: 20px 20px 100px;
       background: #121212;
       color: white;
       display: flex;
@@ -52,15 +52,16 @@
       margin-top: 20px;
       flex-wrap: wrap;
       position: relative;
-      z-index: 1;
+      z-index: 2;
     }
 
     .qrContainer {
       perspective: 1000px;
-      margin: 20px auto;
+      margin: 20px auto 80px;
       width: 100%;
       max-width: 350px;
       position: relative;
+      z-index: 1;
     }
 
     .card {
@@ -111,11 +112,15 @@
     }
 
     .player-board {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
       display: flex;
-      flex-wrap: wrap;
       gap: 10px;
       justify-content: center;
-      margin-top: 20px;
+      padding: 10px;
+      background: rgba(0,0,0,0.8);
     }
 
     .player {
@@ -132,10 +137,42 @@
       border-color: #1DB954;
     }
 
+
     .player .years {
       margin-top: 5px;
       font-size: 0.9rem;
       color: #aaa;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 100;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      background: #232323;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 90%;
+      max-height: 80%;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      cursor: pointer;
+      font-size: 1.5rem;
     }
   </style>
 </head>
@@ -163,13 +200,34 @@
 
     <div class="controls">
       <button id="flipBtn">Umdrehen</button>
-      <button id="correctBtn" disabled>Richtig</button>
-      <button id="wrongBtn" disabled>Falsch</button>
+      <button id="correctBtn" disabled style="display:none">Richtig</button>
+      <button id="wrongBtn" disabled style="display:none">Falsch</button>
+      <button id="chipsBtn">Chips ausgeben</button>
     </div>
 
     <h2 id="currentPlayerDisplay"></h2>
     <div id="playerBoard" class="player-board"></div>
-    <div id="playerCards" style="margin-top:10px;"></div>
+  </div>
+
+  <div id="historyModal" class="modal">
+    <div class="modal-content">
+      <span class="modal-close" id="modalClose">&times;</span>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <div id="chipsModal" class="modal">
+    <div class="modal-content">
+      <span class="modal-close" id="chipsModalClose">&times;</span>
+      <label for="chipPlayerSelect">Aktion für Spieler:</label>
+      <select id="chipPlayerSelect"></select>
+      <p id="chipCoins"></p>
+      <div class="controls" style="margin-top:10px;">
+        <button id="modalSkipBtn">Überspringen</button>
+        <button id="stealBtn">Klauen</button>
+        <button id="giftBtn">Song gutschreiben</button>
+      </div>
+    </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -215,14 +273,34 @@
       `;
     }
 
+    function showAnswerButtons() {
+      const c = document.getElementById('correctBtn');
+      const w = document.getElementById('wrongBtn');
+      c.style.display = 'inline-block';
+      w.style.display = 'inline-block';
+      c.disabled = false;
+      w.disabled = false;
+    }
+
+    function hideAnswerButtons() {
+      const c = document.getElementById('correctBtn');
+      const w = document.getElementById('wrongBtn');
+      c.style.display = 'none';
+      w.style.display = 'none';
+      c.disabled = true;
+      w.disabled = true;
+    }
+
     function flipCard() {
       flipped = !flipped;
       const card = document.getElementById("card");
       if (flipped) {
         showTrackInfo(currentTrack);
         card.classList.add("flipped");
+        showAnswerButtons();
       } else {
         card.classList.remove("flipped");
+        hideAnswerButtons();
       }
     }
 
@@ -233,37 +311,85 @@
 
     function updatePlayerBoard() {
       const board = document.getElementById("playerBoard");
+      board.innerHTML = '';
       if (!players.length) {
-        board.innerHTML = '';
         document.getElementById("currentPlayerDisplay").textContent = '';
         return;
       }
-      const current = players[currentPlayerIndex];
-      const years = current.cards
-        .map(c => c.year)
-        .sort((a, b) => a - b);
-      board.innerHTML = `
-        <div class="player active" id="currentPlayerBox">
-          <div class="name">${current.name}</div>
-          <div class="years">${years.length ? years.join(', ') : '-'}</div>
-        </div>`;
-      document.getElementById("currentPlayerDisplay").textContent = players.length
-        ? `Aktueller Spieler: ${current.name}`
-        : '';
-      document.getElementById('playerCards').innerHTML = '';
-      document.getElementById('currentPlayerBox').addEventListener('click', () => showPlayerCards(currentPlayerIndex));
+      players.forEach((p, idx) => {
+        const years = p.cards
+          .map(c => c.year)
+          .sort((a, b) => a - b);
+        const div = document.createElement('div');
+        div.className = 'player' + (idx === currentPlayerIndex ? ' active' : '');
+        const yearsText = years.length ? years.join(', ') : '-';
+        div.innerHTML = `<div class="name">${p.name} (${p.coins} BC)</div><div class="years">${yearsText}</div>`;
+        div.addEventListener('click', () => showPlayerCards(idx));
+        board.appendChild(div);
+      });
+      document.getElementById("currentPlayerDisplay").textContent = `Aktueller Spieler: ${players[currentPlayerIndex].name}`;
     }
 
     function showPlayerCards(index) {
       const player = players[index];
-      const cardsDiv = document.getElementById('playerCards');
+      const modal = document.getElementById('historyModal');
+      const body = document.getElementById('modalBody');
+      let historyHtml;
       if (!player.cards.length) {
-        cardsDiv.textContent = 'Keine Karten';
-        return;
+        historyHtml = 'Keine Karten';
+      } else {
+        const sorted = player.cards.sort((a, b) => a.year - b.year);
+        historyHtml = sorted.map(c => `${c.year} - ${c.title} - ${c.artist}`).join('<br>');
       }
-      const sorted = player.cards.sort((a, b) => a.year - b.year);
-      cardsDiv.innerHTML = sorted.map(c => `${c.year} - ${c.title} - ${c.artist}`).join('<br>');
+      body.innerHTML = `<h3>${player.name}</h3><p>BeatCoins: <span id="playerCoins">${player.coins}</span></p>${historyHtml}<div style="margin-top:10px;"><button id="giveCoinBtn">BeatCoin geben</button></div>`;
+      document.getElementById('giveCoinBtn').addEventListener('click', () => {
+        player.coins++;
+        document.getElementById('playerCoins').textContent = player.coins;
+        updatePlayerBoard();
+      });
+      modal.style.display = 'flex';
     }
+
+    document.getElementById('modalClose').addEventListener('click', () => {
+      document.getElementById('historyModal').style.display = 'none';
+    });
+
+    document.getElementById('chipsModalClose').addEventListener('click', () => {
+      document.getElementById('chipsModal').style.display = 'none';
+    });
+
+    function openChipsModal() {
+      const select = document.getElementById('chipPlayerSelect');
+      select.innerHTML = '';
+      players.forEach((p, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        opt.textContent = p.name;
+        select.appendChild(opt);
+      });
+      select.value = currentPlayerIndex;
+      updateChipActionsState();
+      document.getElementById('chipsModal').style.display = 'flex';
+    }
+
+    function updateChipActionsState() {
+      const selected = parseInt(document.getElementById('chipPlayerSelect').value);
+      const selectedCoins = players[selected].coins;
+      document.getElementById('chipCoins').textContent = `BeatCoins: ${selectedCoins}`;
+      document.getElementById('modalSkipBtn').disabled = selected !== currentPlayerIndex || selectedCoins < 1;
+      document.getElementById('stealBtn').disabled = selected === currentPlayerIndex || selectedCoins < 1;
+      document.getElementById('giftBtn').disabled = selectedCoins < 3;
+    }
+
+    document.getElementById('chipPlayerSelect').addEventListener('change', updateChipActionsState);
+    document.getElementById('chipsBtn').addEventListener('click', openChipsModal);
+
+    window.addEventListener('click', (e) => {
+      const historyModal = document.getElementById('historyModal');
+      const chipsModal = document.getElementById('chipsModal');
+      if (e.target === historyModal) historyModal.style.display = 'none';
+      if (e.target === chipsModal) chipsModal.style.display = 'none';
+    });
 
     function nextPlayer() {
       currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
@@ -279,8 +405,7 @@
       }
       updateQRCode(currentTrack);
       document.getElementById('flipBtn').disabled = false;
-      document.getElementById('correctBtn').disabled = true;
-      document.getElementById('wrongBtn').disabled = true;
+      hideAnswerButtons();
     }
 
     document.getElementById("playerCount").addEventListener("change", () => {
@@ -301,7 +426,8 @@
       players = Array.from(nameInputs).map((input, idx) => ({
         name: input.value || `Spieler ${idx + 1}`,
         cards: [],
-        years: []
+        years: [],
+        coins: 2
       }));
       playlistTracks = await fetchPlaylistTracks(document.getElementById("playlistInput").value);
       document.getElementById('setup').style.display = 'none';
@@ -314,9 +440,6 @@
     document.getElementById("flipBtn").addEventListener("click", () => {
       if (currentTrack) {
         flipCard();
-        document.getElementById('flipBtn').disabled = true;
-        document.getElementById('correctBtn').disabled = false;
-        document.getElementById('wrongBtn').disabled = false;
       }
     });
 
@@ -334,6 +457,47 @@
 
     document.getElementById('correctBtn').addEventListener('click', () => handleAnswer(true));
     document.getElementById('wrongBtn').addEventListener('click', () => handleAnswer(false));
+    document.getElementById('modalSkipBtn').addEventListener('click', () => {
+      const actor = parseInt(document.getElementById('chipPlayerSelect').value);
+      if (players[actor].coins < 1) return;
+      players[actor].coins -= 1;
+      updatePlayerBoard();
+      nextTrack();
+      document.getElementById('chipsModal').style.display = 'none';
+    });
+
+    document.getElementById('stealBtn').addEventListener('click', () => {
+      const actor = parseInt(document.getElementById('chipPlayerSelect').value);
+      if (players[actor].coins < 1) return;
+      players[actor].coins -= 1;
+      players[actor].cards.push({
+        year: parseInt(currentTrack.year.slice(0,4)),
+        title: currentTrack.name,
+        artist: currentTrack.artist
+      });
+      updatePlayerBoard();
+      nextPlayer();
+      nextTrack();
+      document.getElementById('chipsModal').style.display = 'none';
+    });
+
+    document.getElementById('giftBtn').addEventListener('click', () => {
+      const actor = parseInt(document.getElementById('chipPlayerSelect').value);
+      if (players[actor].coins < 3) return;
+      const track = randomTrack();
+      if (!track) {
+        alert('Keine Songs im Pool.');
+        return;
+      }
+      players[actor].coins -= 3;
+      players[actor].cards.push({
+        year: parseInt(track.year.slice(0,4)),
+        title: track.name,
+        artist: track.artist
+      });
+      updatePlayerBoard();
+      document.getElementById('chipsModal').style.display = 'none';
+    });
   </script>
 </body>
 
