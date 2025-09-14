@@ -9,7 +9,7 @@
     body {
       font-family: sans-serif;
       margin: 0;
-      padding: 20px;
+      padding: 20px 20px 100px;
       background: #121212;
       color: white;
       display: flex;
@@ -52,15 +52,16 @@
       margin-top: 20px;
       flex-wrap: wrap;
       position: relative;
-      z-index: 1;
+      z-index: 2;
     }
 
     .qrContainer {
       perspective: 1000px;
-      margin: 20px auto;
+      margin: 20px auto 80px;
       width: 100%;
       max-width: 350px;
       position: relative;
+      z-index: 1;
     }
 
     .card {
@@ -111,11 +112,15 @@
     }
 
     .player-board {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
       display: flex;
-      flex-wrap: wrap;
       gap: 10px;
       justify-content: center;
-      margin-top: 20px;
+      padding: 10px;
+      background: rgba(0,0,0,0.8);
     }
 
     .player {
@@ -132,10 +137,42 @@
       border-color: #1DB954;
     }
 
+
     .player .years {
       margin-top: 5px;
       font-size: 0.9rem;
       color: #aaa;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 100;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      background: #232323;
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 90%;
+      max-height: 80%;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      cursor: pointer;
+      font-size: 1.5rem;
     }
   </style>
 </head>
@@ -170,7 +207,13 @@
 
     <h2 id="currentPlayerDisplay"></h2>
     <div id="playerBoard" class="player-board"></div>
-    <div id="playerCards" style="margin-top:10px;"></div>
+  </div>
+
+  <div id="historyModal" class="modal">
+    <div class="modal-content">
+      <span class="modal-close" id="modalClose">&times;</span>
+      <div id="modalBody"></div>
+    </div>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -222,8 +265,12 @@
       if (flipped) {
         showTrackInfo(currentTrack);
         card.classList.add("flipped");
+        document.getElementById('correctBtn').disabled = false;
+        document.getElementById('wrongBtn').disabled = false;
       } else {
         card.classList.remove("flipped");
+        document.getElementById('correctBtn').disabled = true;
+        document.getElementById('wrongBtn').disabled = true;
       }
     }
 
@@ -250,19 +297,29 @@
         board.appendChild(div);
       });
       document.getElementById("currentPlayerDisplay").textContent = `Aktueller Spieler: ${players[currentPlayerIndex].name}`;
-      document.getElementById('playerCards').innerHTML = '';
     }
 
     function showPlayerCards(index) {
       const player = players[index];
-      const cardsDiv = document.getElementById('playerCards');
+      const modal = document.getElementById('historyModal');
+      const body = document.getElementById('modalBody');
       if (!player.cards.length) {
-        cardsDiv.textContent = 'Keine Karten';
-        return;
+        body.textContent = 'Keine Karten';
+      } else {
+        const sorted = player.cards.sort((a, b) => a.year - b.year);
+        body.innerHTML = sorted.map(c => `${c.year} - ${c.title} - ${c.artist}`).join('<br>');
       }
-      const sorted = player.cards.sort((a, b) => a.year - b.year);
-      cardsDiv.innerHTML = sorted.map(c => `${c.year} - ${c.title} - ${c.artist}`).join('<br>');
+      modal.style.display = 'flex';
     }
+
+    document.getElementById('modalClose').addEventListener('click', () => {
+      document.getElementById('historyModal').style.display = 'none';
+    });
+
+    window.addEventListener('click', (e) => {
+      const modal = document.getElementById('historyModal');
+      if (e.target === modal) modal.style.display = 'none';
+    });
 
     function nextPlayer() {
       currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
@@ -313,9 +370,6 @@
     document.getElementById("flipBtn").addEventListener("click", () => {
       if (currentTrack) {
         flipCard();
-        document.getElementById('flipBtn').disabled = true;
-        document.getElementById('correctBtn').disabled = false;
-        document.getElementById('wrongBtn').disabled = false;
       }
     });
 
