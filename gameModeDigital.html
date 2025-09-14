@@ -44,6 +44,12 @@
       background: #14833b;
     }
 
+    button:disabled {
+      background: #555;
+      color: #888;
+      cursor: not-allowed;
+    }
+
 
     .controls {
       display: flex;
@@ -434,6 +440,16 @@
         coins: 2
       }));
       playlistTracks = await fetchPlaylistTracks(document.getElementById("playlistInput").value);
+      players.forEach(p => {
+        const track = randomTrack();
+        if (track) {
+          p.cards.push({
+            year: parseInt(track.year.slice(0,4)),
+            title: track.name,
+            artist: track.artist
+          });
+        }
+      });
       document.getElementById('setup').style.display = 'none';
       document.getElementById('gameArea').style.display = 'block';
       currentPlayerIndex = 0;
