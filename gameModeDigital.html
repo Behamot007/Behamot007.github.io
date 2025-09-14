@@ -165,6 +165,7 @@
       <button id="flipBtn">Umdrehen</button>
       <button id="correctBtn" disabled>Richtig</button>
       <button id="wrongBtn" disabled>Falsch</button>
+      <button id="skipBtn">Überspringen</button>
     </div>
 
     <h2 id="currentPlayerDisplay"></h2>
@@ -233,25 +234,23 @@
 
     function updatePlayerBoard() {
       const board = document.getElementById("playerBoard");
+      board.innerHTML = '';
       if (!players.length) {
-        board.innerHTML = '';
         document.getElementById("currentPlayerDisplay").textContent = '';
         return;
       }
-      const current = players[currentPlayerIndex];
-      const years = current.cards
-        .map(c => c.year)
-        .sort((a, b) => a - b);
-      board.innerHTML = `
-        <div class="player active" id="currentPlayerBox">
-          <div class="name">${current.name}</div>
-          <div class="years">${years.length ? years.join(', ') : '-'}</div>
-        </div>`;
-      document.getElementById("currentPlayerDisplay").textContent = players.length
-        ? `Aktueller Spieler: ${current.name}`
-        : '';
+      players.forEach((p, idx) => {
+        const years = p.cards
+          .map(c => c.year)
+          .sort((a, b) => a - b);
+        const div = document.createElement('div');
+        div.className = 'player' + (idx === currentPlayerIndex ? ' active' : '');
+        div.innerHTML = `<div class="name">${p.name}</div><div class="years">${years.length ? years.join(', ') : '-'}</div>`;
+        div.addEventListener('click', () => showPlayerCards(idx));
+        board.appendChild(div);
+      });
+      document.getElementById("currentPlayerDisplay").textContent = `Aktueller Spieler: ${players[currentPlayerIndex].name}`;
       document.getElementById('playerCards').innerHTML = '';
-      document.getElementById('currentPlayerBox').addEventListener('click', () => showPlayerCards(currentPlayerIndex));
     }
 
     function showPlayerCards(index) {
@@ -334,6 +333,7 @@
 
     document.getElementById('correctBtn').addEventListener('click', () => handleAnswer(true));
     document.getElementById('wrongBtn').addEventListener('click', () => handleAnswer(false));
+    document.getElementById('skipBtn').addEventListener('click', () => nextTrack());
   </script>
 </body>
 
