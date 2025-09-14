@@ -228,6 +228,7 @@
         <button id="giftBtn">Song gutschreiben</button>
       </div>
     </div>
+
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -301,6 +302,8 @@
       } else {
         card.classList.remove("flipped");
         hideAnswerButtons();
+        document.getElementById('correctBtn').disabled = false;
+        document.getElementById('wrongBtn').disabled = false;
       }
     }
 
@@ -324,6 +327,7 @@
         div.className = 'player' + (idx === currentPlayerIndex ? ' active' : '');
         const yearsText = years.length ? years.join(', ') : '-';
         div.innerHTML = `<div class="name">${p.name} (${p.coins} BC)</div><div class="years">${yearsText}</div>`;
+        div.innerHTML = `<div class="name">${p.name}</div><div class="years">${years.length ? years.join(', ') : '-'}</div>`;
         div.addEventListener('click', () => showPlayerCards(idx));
         board.appendChild(div);
       });
