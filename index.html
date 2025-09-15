@@ -1,60 +1,16 @@
 <!DOCTYPE html>
 <html lang="de">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="./styles.css">
-  </link>
   <title>Spotify Demo</title>
 </head>
-
 <body>
-
   <h1>Spotify Demo</h1>
-
-  <!-- Navigation -->
-  <nav>
-    <a href="index.html">Home</a>
-    <a href="generator.html">Karten drucken</a>
-    <a href="gameModeScan.html">Play Screen</a>
-    <a href="gameModeDigital.html">Digital Mode</a>
-    <a href="arena-match-history.html">Arena Analyzer</a>
-  </nav>
-
-  <!-- Spotify Credentials Eingabe -->
-  <div id="credentials">
-    <h2>Spotify Zugangsdaten</h2>
-    <label>
-      Client ID:
-      <input type="text" id="clientId" placeholder="Client ID">
-    </label>
-    <label>
-      Client Secret:
-      <input type="text" id="clientSecret" placeholder="Client Secret">
-    </label>
-    <label>
-      OpenAPI Token:
-      <input type="text" id="openApiToken" placeholder="Token">
-    </label>
-    <button onclick="saveCredentials()">Speichern</button>
-  </div>
-
-  <script>
-    // vorhandene Credentials aus LocalStorage laden
-    document.getElementById("clientId").value = localStorage.getItem("CLIENT_ID") || "";
-    document.getElementById("clientSecret").value = localStorage.getItem("CLIENT_SECRET") || "";
-    document.getElementById("openApiToken").value = localStorage.getItem("OPENAPI_TOKEN") || "";
-
-    function saveCredentials() {
-      localStorage.setItem("CLIENT_ID", document.getElementById("clientId").value);
-      localStorage.setItem("CLIENT_SECRET", document.getElementById("clientSecret").value);
-      localStorage.setItem("OPENAPI_TOKEN", document.getElementById("openApiToken").value);
-      alert("Credentials gespeichert!");
-    }
-  </script>
-
-  <script src="spotify.js"></script>
+  <nav id="nav"></nav>
+  <script src="pages.js"></script>
+  <script src="navigation.js"></script>
+  <script>buildNavigation('nav');</script>
 </body>
-
 </html>
