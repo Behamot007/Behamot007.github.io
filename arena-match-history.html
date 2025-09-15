@@ -14,11 +14,14 @@
     input,select,button{background:var(--card);border:1px solid #1e2a44;color:var(--text);padding:10px 12px;border-radius:10px;outline:none}
     button{cursor:pointer;background:linear-gradient(180deg,#3b6dd8,#2c5ac0);border:0;box-shadow:0 6px 18px rgba(59,109,216,.25)}
     .filehint{font-size:12px;color:#9ab0da}
-    table{width:100%;border-collapse:collapse;margin-top:20px}
-    th,td{padding:8px;border-bottom:1px solid #1e2a44;text-align:left;font-size:14px}
-    th{background:var(--card)}
     .kvs{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin:10px 0 18px}
     .kv{background:var(--card);border:1px dashed #28406f;border-radius:12px;padding:10px 12px;font-size:13px}
+    details{background:var(--card);border:1px solid #1e2a44;border-radius:8px;padding:8px 12px;margin-top:8px}
+    summary{cursor:pointer;display:grid;grid-template-columns:110px 1fr 100px 60px;gap:10px;font-size:14px;align-items:center}
+    summary::-webkit-details-marker{display:none}
+    .details-content{margin-top:8px;font-size:13px;color:var(--muted)}
+    .pagination{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:12px}
+    .pagination button{padding:6px 10px;background:var(--card);border:1px solid #1e2a44;border-radius:6px;color:var(--text);cursor:pointer}
   </style>
 </head>
 <body>
@@ -43,8 +46,21 @@
   </form>
 
   <div class="kvs">
+    <div class="kv"><strong>Spiele:</strong> <span id="games">—</span></div>
+    <div class="kv"><strong>Siege:</strong> <span id="wins">—</span></div>
+    <div class="kv"><strong>Win-Rate:</strong> <span id="winrate">—</span></div>
     <div class="kv"><strong>KDA:</strong> <span id="kda">—</span></div>
-    <div class="kv"><strong>Beste Synergie:</strong> <span id="synergy">—</span></div>
+    <div class="kv"><strong>Ø Kills:</strong> <span id="avgKills">—</span></div>
+    <div class="kv"><strong>Ø Deaths:</strong> <span id="avgDeaths">—</span></div>
+    <div class="kv"><strong>Ø Assists:</strong> <span id="avgAssists">—</span></div>
+    <div class="kv"><strong>Ø Dauer:</strong> <span id="avgDuration">—</span></div>
+    <div class="kv"><strong>Meist gespielt:</strong> <span id="mostChamp">—</span></div>
+    <div class="kv"><strong>Beste WR (≥5):</strong> <span id="bestChamp">—</span></div>
+  </div>
+
+  <div>
+    <h2>Teamkollegen (≥5 Spiele)</h2>
+    <ul id="mateList"></ul>
   </div>
 
   <div>
@@ -57,7 +73,12 @@
     <select id="filter"></select>
   </div>
 
-  <table id="matchTable"></table>
+  <div id="matchList"></div>
+  <div class="pagination">
+    <button id="prevPage" type="button">◀</button>
+    <span id="pageInfo">0/0</span>
+    <button id="nextPage" type="button">▶</button>
+  </div>
 </div>
 
 <script>
@@ -68,14 +89,28 @@
     importInfo: document.getElementById('importInfo'),
     name: document.getElementById('name'),
     filter: document.getElementById('filter'),
-    matchTable: document.getElementById('matchTable'),
+    matchList: document.getElementById('matchList'),
+    prevPage: document.getElementById('prevPage'),
+    nextPage: document.getElementById('nextPage'),
+    pageInfo: document.getElementById('pageInfo'),
+    games: document.getElementById('games'),
+    wins: document.getElementById('wins'),
+    winrate: document.getElementById('winrate'),
     kda: document.getElementById('kda'),
-    synergy: document.getElementById('synergy'),
+    avgKills: document.getElementById('avgKills'),
+    avgDeaths: document.getElementById('avgDeaths'),
+    avgAssists: document.getElementById('avgAssists'),
+    avgDuration: document.getElementById('avgDuration'),
+    mostChamp: document.getElementById('mostChamp'),
+    bestChamp: document.getElementById('bestChamp'),
+    mateList: document.getElementById('mateList'),
     items: document.getElementById('items')
   };
   let dataset = null;
   let matches = [];
   let itemData = null;
+  let currentPage = 0;
+  const PAGE_SIZE = 20;
   const itemDataPromise = fetch('https://ddragon.leagueoflegends.com/cdn/14.17.1/data/en_US/item.json')
     .then(r => r.json()).then(d => { itemData = d.data; });
 
@@ -114,59 +149,99 @@
         const id = me['item' + i];
         if (id) items.push(id);
       }
+      const cs = (me.totalMinionsKilled || 0) + (me.neutralMinionsKilled || 0);
       return {
         id: m.id,
+        timestamp: m.info.gameCreation || 0,
+        duration: m.info.gameDuration || 0,
         champion: me.championName,
         k: me.kills || 0,
         d: me.deaths || 0,
         a: me.assists || 0,
         kda: ((me.kills || 0) + (me.assists || 0)) / Math.max(1, me.deaths || 0),
+        gold: me.goldEarned || 0,
+        damage: me.totalDamageDealtToChampions || 0,
+        cs,
         win,
         items,
-        teammate: mate ? mate.championName : null
+        teammateName: mate ? (mate.riotIdGameName || mate.summonerName || mate.puuid) : null,
+        teammateChamp: mate ? mate.championName : null
       };
     }).filter(Boolean);
+    matches.sort((a,b) => b.timestamp - a.timestamp);
 
     const champs = Array.from(new Set(matches.map(m => m.champion))).sort();
     els.filter.innerHTML = '<option value="">Alle Champions</option>' +
       champs.map(c => `<option value="${c}">${c}</option>`).join('');
-    render();
+    currentPage = 0;
+    renderMatches();
     renderStats();
   }
 
-  els.filter.addEventListener('change', render);
+  els.filter.addEventListener('change', () => { currentPage = 0; renderMatches(); });
+  els.prevPage.addEventListener('click', () => { if (currentPage > 0) { currentPage--; renderMatches(); } });
+  els.nextPage.addEventListener('click', () => { currentPage++; renderMatches(); });
 
-  async function render() {
+  async function renderMatches() {
     await itemDataPromise;
     const champ = els.filter.value;
-    const rows = matches.filter(m => !champ || m.champion === champ)
-      .map(m => {
-        const items = m.items.map(id => itemData[id]?.name || id).join(', ');
-        return `<tr><td>${m.champion}</td><td>${m.k}/${m.d}/${m.a} (${m.kda.toFixed(2)})</td><td>${m.win ? '✅' : '❌'}</td><td>${items}</td></tr>`;
-      }).join('');
-    els.matchTable.innerHTML = '<tr><th>Champion</th><th>K/D/A (KDA)</th><th>Win</th><th>Items</th></tr>' + rows;
+    const filtered = matches.filter(m => !champ || m.champion === champ);
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+    if (currentPage >= totalPages) currentPage = totalPages - 1;
+    const start = currentPage * PAGE_SIZE;
+    const pageMatches = filtered.slice(start, start + PAGE_SIZE);
+    els.matchList.innerHTML = pageMatches.map(m => {
+      const items = m.items.map(id => itemData[id]?.name || id).join(', ');
+      const date = m.timestamp ? new Date(m.timestamp).toLocaleDateString() : '';
+      return `<details><summary><span>${date}</span><span>${m.champion}</span><span>${m.k}/${m.d}/${m.a} (${m.kda.toFixed(2)})</span><span>${m.win ? '✅' : '❌'}</span></summary>`+
+        `<div class="details-content">Dauer: ${(m.duration/60).toFixed(1)}m<br/>Gold: ${m.gold}<br/>Damage: ${m.damage}<br/>CS: ${m.cs}<br/>Teamkollege: ${m.teammateName ? `${m.teammateName} (${m.teammateChamp})` : '—'}<br/>Items: ${items}</div></details>`;
+    }).join('');
+    els.pageInfo.textContent = `${filtered.length ? currentPage + 1 : 0}/${totalPages}`;
+    els.prevPage.disabled = currentPage === 0;
+    els.nextPage.disabled = currentPage >= totalPages - 1;
   }
 
   async function renderStats() {
     await itemDataPromise;
-    const sum = matches.reduce((acc, m) => { acc.k += m.k; acc.d += m.d; acc.a += m.a; return acc; }, { k: 0, d: 0, a: 0 });
+    const sum = matches.reduce((acc, m) => {
+      acc.k += m.k; acc.d += m.d; acc.a += m.a; acc.duration += m.duration; return acc;
+    }, { k: 0, d: 0, a: 0, duration: 0 });
+    const total = matches.length;
+    const wins = matches.filter(m => m.win).length;
     const kda = (sum.k + sum.a) / Math.max(1, sum.d);
+    els.games.textContent = total;
+    els.wins.textContent = wins;
+    els.winrate.textContent = total ? ((wins * 100) / total).toFixed(1) + '%' : '—';
     els.kda.textContent = `${sum.k}/${sum.d}/${sum.a} (${kda.toFixed(2)})`;
+    els.avgKills.textContent = (sum.k / Math.max(1,total)).toFixed(1);
+    els.avgDeaths.textContent = (sum.d / Math.max(1,total)).toFixed(1);
+    els.avgAssists.textContent = (sum.a / Math.max(1,total)).toFixed(1);
+    els.avgDuration.textContent = (sum.duration / Math.max(1,total) / 60).toFixed(1) + 'm';
 
-    const sy = {};
+    const champStats = {};
     for (const m of matches) {
-      if (!m.teammate) continue;
-      const obj = sy[m.teammate] || { games: 0, wins: 0 };
-      obj.games++;
-      if (m.win) obj.wins++;
-      sy[m.teammate] = obj;
+      const cs = champStats[m.champion] || { games:0, wins:0 };
+      cs.games++; if (m.win) cs.wins++; champStats[m.champion] = cs;
     }
-    let best = null;
-    for (const [champ, obj] of Object.entries(sy)) {
+    let most = null; let best = null;
+    for (const [champ, obj] of Object.entries(champStats)) {
+      if (!most || obj.games > most.games) most = { champ, games: obj.games };
       const wr = obj.wins / obj.games;
-      if (!best || wr > best.wr) best = { champ, wr, games: obj.games };
+      if (obj.games >= 5 && (!best || wr > best.wr)) best = { champ, wr, games: obj.games };
     }
-    els.synergy.textContent = best ? `${best.champ} (${(best.wr * 100).toFixed(1)}% WR, ${best.games} Spiele)` : '—';
+    els.mostChamp.textContent = most ? `${most.champ} (${most.games})` : '—';
+    els.bestChamp.textContent = best ? `${best.champ} (${(best.wr*100).toFixed(1)}%, ${best.games})` : '—';
+
+    const mateStats = {};
+    for (const m of matches) {
+      if (!m.teammateName) continue;
+      const obj = mateStats[m.teammateName] || { games:0, wins:0 };
+      obj.games++; if (m.win) obj.wins++; mateStats[m.teammateName] = obj;
+    }
+    const mateList = Object.entries(mateStats).filter(([_,o]) => o.games >= 5)
+      .sort((a,b) => b[1].games - a[1].games);
+    els.mateList.innerHTML = mateList.map(([name,o]) =>
+      `<li>${name}: ${(o.wins/o.games*100).toFixed(1)}% WR (${o.games})</li>`).join('');
 
     const items = {};
     for (const m of matches) {
