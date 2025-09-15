@@ -14,6 +14,16 @@
     .wrap{max-width:1100px;margin:0 auto; padding:0 16px 40px}
     form.tools{display:grid;gap:12px;grid-template-columns:1fr 1fr;align-items:end;margin:18px auto 14px; max-width:980px}
     .field{display:flex;flex-direction:column; gap:6px}
+    .notice .callout{background:rgba(17,27,48,.8);border:1px solid #1e2a44;border-radius:12px;padding:12px 14px;font-size:13px}
+    .callout a{color:var(--accent);text-decoration:none;font-weight:600}
+    .callout a:hover{text-decoration:underline}
+    .status-line{margin:6px 0 0;color:var(--muted);font-size:13px}
+    .status-ok{color:var(--good);font-weight:600}
+    .status-missing{color:var(--bad);font-weight:600}
+    .info-callout{background:rgba(17,27,48,.85);border:1px solid #24355b;border-radius:14px;padding:14px 16px;margin:0 0 18px;font-size:14px;color:var(--muted)}
+    .info-callout strong{color:var(--text)}
+    .info-callout a{color:var(--accent);font-weight:600;text-decoration:none}
+    .info-callout a:hover{text-decoration:underline}
     label{font-size:13px;color:var(--muted)}
     input, select{background:var(--card);border:1px solid #1e2a44;color:var(--text);padding:10px 12px;border-radius:10px;outline:none}
     input::placeholder{color:#6f7ea5}
@@ -22,6 +32,8 @@
     button:disabled{opacity:.6; cursor:not-allowed; box-shadow:none}
     .hint{font-size:13px;color:var(--muted)}
     .status{margin:10px 0 18px; font-size:14px; color:var(--muted)}
+    .status a{color:var(--accent);text-decoration:none;font-weight:600}
+    .status a:hover{text-decoration:underline}
     .kvs{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; margin:10px 0 18px}
     .kv{background:var(--card); border:1px dashed #28406f; border-radius:12px; padding:10px 12px; font-size:13px}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px}
@@ -40,25 +52,6 @@
     .card-body{display:flex;flex-direction:column;gap:8px}
     .meta-line{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:12px}
     .meta-line span{white-space:nowrap}
-    .card details{background:rgba(10,16,32,.6);border:1px solid #263659;border-radius:12px;padding:10px 12px;margin-top:8px}
-    .card details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--accent)}
-    .card details summary::-webkit-details-marker{display:none}
-    .card details[open]{border-color:#345b9c}
-    .match-list{display:flex;flex-direction:column;gap:12px;margin-top:10px}
-    .match-entry{background:rgba(11,16,32,.8);border:1px solid #1f2c4a;border-radius:10px;padding:10px}
-    .match-header{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;font-size:12px;color:var(--muted)}
-    .match-result{font-weight:700}
-    .match-result.win{color:var(--good)}
-    .match-result.loss{color:var(--bad)}
-    .match-teams{display:grid;gap:8px;margin-top:8px}
-    .team{border:1px solid #1f2c4a;border-radius:8px;padding:8px;background:rgba(15,22,40,.6)}
-    .team.self{border-color:var(--accent)}
-    .team-header{font-size:12px;font-weight:600;margin-bottom:6px;color:var(--muted)}
-    .team-list{display:flex;flex-direction:column;gap:4px;font-size:12px}
-    .player-name{font-weight:600;color:var(--text)}
-    .player-name.player-main{color:var(--accent)}
-    .player-champ{color:var(--muted)}
-    .player-kda{color:var(--muted)}
     .section{margin-top:32px}
     .section-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
     .section-header h2{margin:0;font-size:18px}
@@ -83,10 +76,12 @@
 
 <div class="wrap">
   <form class="tools" id="form">
-    <div class="field">
-      <label for="apiKey">Riot API-Key</label>
-      <input id="apiKey" type="password" placeholder="RGAPI-xxxx..." required />
-      <div class="hint">Wird nur im Browser verwendet.</div>
+    <div class="field notice">
+      <label>Riot API-Key</label>
+      <div class="callout">
+        <p>Der Key wird automatisch aus der <a href="config.html" target="_blank" rel="noopener">Konfiguration</a> übernommen.</p>
+        <p class="status-line">Status: <span id="keyStatus">–</span></p>
+      </div>
     </div>
 
     <div class="field">
@@ -129,6 +124,11 @@
   </form>
 
   <div class="status" id="status"></div>
+
+  <div class="info-callout">
+    <strong>Match-History:</strong> Detaillierte Spielverläufe findest du im
+    <a href="arena-match-history.html" target="_blank" rel="noopener">Arena Match Analyzer</a>.
+  </div>
 
   <div class="kvs" id="kvs" hidden>
     <div class="kv"><strong>Spieler:</strong> <span id="kv-sum"></span></div>
@@ -190,7 +190,7 @@
   // --- DOM refs ---
   const els = {
     form: document.getElementById('form'),
-    apiKey: document.getElementById('apiKey'),
+    keyStatus: document.getElementById('keyStatus'),
     gameName: document.getElementById('gameName'),
     tagLine: document.getElementById('tagLine'),
     limit: document.getElementById('limit'),
@@ -235,22 +235,29 @@
     mateContent: document.getElementById('mateContent'),
   };
 
-  if (els.apiKey) {
-    const storedKey = localStorage.getItem(RIOT_STORAGE_KEY);
-    if (storedKey) {
-      els.apiKey.value = storedKey;
-    }
-    const persistKey = () => {
-      localStorage.setItem(RIOT_STORAGE_KEY, els.apiKey.value.trim());
-    };
-    els.apiKey.addEventListener('change', persistKey);
-    els.apiKey.addEventListener('blur', persistKey);
-    window.addEventListener('storage', evt => {
-      if (evt.key === RIOT_STORAGE_KEY) {
-        els.apiKey.value = evt.newValue || '';
-      }
-    });
+  function getStoredApiKey() {
+    return (localStorage.getItem(RIOT_STORAGE_KEY) || '').trim();
   }
+
+  function updateKeyStatus() {
+    if (!els.keyStatus) return;
+    const key = getStoredApiKey();
+    els.keyStatus.textContent = key ? 'Gefunden' : 'Nicht gesetzt';
+    els.keyStatus.className = key ? 'status-ok' : 'status-missing';
+  }
+
+  updateKeyStatus();
+  if (!getStoredApiKey()) {
+    setStatus('Kein Riot API-Key gefunden. Bitte in der Konfiguration hinterlegen.', false, true);
+    setTimeout(() => {
+      alert('Kein Riot API-Key hinterlegt. Öffne die Konfiguration und trage den Key ein.');
+    }, 150);
+  }
+  window.addEventListener('storage', evt => {
+    if (evt.key === RIOT_STORAGE_KEY) {
+      updateKeyStatus();
+    }
+  });
 
   // --- Consts ---
   const PLATFORM = 'euw1';    // Summoner-v4
@@ -643,7 +650,7 @@
     renderPerChampion(statsByChamp);
     lastTeammateStats = teammateStats;
     renderTeammates(teammateStats);
-    setStatus(`Fertig. Arena-Spiele: ${totals.games} • Top 4: ${totals.top4} • Top 1: ${totals.top1}`);
+    setStatus(`Fertig. Arena-Spiele: ${totals.games} • Top 4: ${totals.top4} • Top 1: ${totals.top1} • <a href="arena-match-history.html" target="_blank" rel="noopener">Arena Match Analyzer öffnen</a>`);
   }
 
   // --- Render Gesamt ---
@@ -724,6 +731,26 @@
       const avgCs = info.games ? nf1.format(info.cs / info.games) : '—';
       const kda = info.deaths ? (info.kills + info.assists) / Math.max(1, info.deaths) : (info.kills + info.assists);
       const badge = info.top1 > 0 ? ` <span class="badge">Top 1 × ${info.top1}</span>` : '';
+      const matches = Array.isArray(info.matches) ? info.matches : [];
+      const lastMatch = matches[0];
+      const firstMatch = matches.length ? matches[matches.length - 1] : null;
+      const lastSeen = lastMatch ? formatDate(lastMatch.timestamp) : '—';
+      const firstSeen = firstMatch ? formatDate(firstMatch.timestamp) : '—';
+      const lastResult = lastMatch ? (lastMatch.win ? 'Sieg' : 'Niederlage') : '—';
+      const mateCounts = new Map();
+      for (const match of matches) {
+        if (!match || !Array.isArray(match.teammates)) continue;
+        for (const mate of match.teammates) {
+          const name = mate && mate.name ? mate.name : (mate && mate.puuid ? mate.puuid.slice(0, 8) : 'Unbekannt');
+          mateCounts.set(name, (mateCounts.get(name) || 0) + 1);
+        }
+      }
+      let favMate = '—';
+      if (mateCounts.size) {
+        const [topName, topCount] = Array.from(mateCounts.entries()).sort((a, b) => b[1] - a[1])[0];
+        favMate = `${topName} (${topCount})`;
+      }
+      const period = (firstSeen !== '—' && lastSeen !== '—') ? `${firstSeen} – ${lastSeen}` : '—';
       card.innerHTML = `
         <div class="avatar"><img src="${info.img}" alt="${escapeHtml(champ)}" loading="lazy"></div>
         <div class="card-body">
@@ -747,44 +774,14 @@
             <span>Ø Gold: ${avgGold}</span>
             <span>Ø CS: ${avgCs}</span>
           </div>
-          <details>
-            <summary>Spiele & Teams anzeigen</summary>
-            <div class="match-list">
-              ${renderMatchEntries(info.matches)}
-            </div>
-          </details>
+          <div class="meta-line">
+            <span>Zeitraum: ${escapeHtml(period)}</span>
+            <span>Letztes Ergebnis: ${escapeHtml(lastResult)}</span>
+            <span>Top-Mate: ${escapeHtml(favMate)}</span>
+          </div>
         </div>`;
       els.grid.appendChild(card);
     }
-  }
-
-  function renderMatchEntries(matches) {
-    if (!matches || matches.length === 0) {
-      return '<div class="match-entry">Keine Arena-Spiele mit diesem Champion.</div>';
-    }
-    return matches.map(match => {
-      const date = formatDate(match.timestamp);
-      const placementText = match.placement != null ? `Platz ${match.placement}/${match.teamCount}` : `Platz ?/${match.teamCount}`;
-      const top4Text = match.top4 ? 'Top 4' : 'Außerhalb Top 4';
-      const resultClass = match.win ? 'win' : 'loss';
-      const resultText = match.win ? 'Sieg' : 'Niederlage';
-      const kdaText = `${match.kills}/${match.deaths}/${match.assists} (${nf2.format(match.kda)})`;
-      const damageText = nf0.format(Math.round(match.damage));
-      const goldText = nf0.format(Math.round(match.gold));
-      const csText = nf1.format(match.cs);
-      const durationText = formatDuration(match.duration);
-      const teamsHtml = (match.teams && match.teams.length) ? match.teams.map(team => {
-        const headerLabel = team.isSelf ? 'Eigenes Team' : 'Team';
-        const placement = team.placement != null ? `Platz ${team.placement}` : 'Platz ?';
-        const players = team.participants.map(player => {
-          const name = escapeHtml(player.name);
-          const champ = escapeHtml(player.champion);
-          return `<div><span class="player-name${player.isMain ? ' player-main' : ''}">${name}</span> – <span class="player-champ">${champ}</span> <span class="player-kda">${player.kills}/${player.deaths}/${player.assists}</span></div>`;
-        }).join('');
-        return `<div class="team${team.isSelf ? ' self' : ''}"><div class="team-header">${headerLabel} ${escapeHtml(String(team.display))} – ${placement}</div><div class="team-list">${players}</div></div>`;
-      }).join('') : '<div class="team"><div class="team-header">Keine Teamdaten</div></div>';
-      return `<div class="match-entry"><div class="match-header"><span>${escapeHtml(date)}</span><span>${escapeHtml(placementText)} • ${top4Text}</span><span class="match-result ${resultClass}">${resultText}</span><span>K/D/A: ${kdaText}</span><span>Schaden: ${damageText}</span><span>Gold: ${goldText}</span><span>CS: ${csText}</span><span>Dauer: ${durationText}</span></div><div class="match-teams">${teamsHtml}</div></div>`;
-    }).join('');
   }
 
   function renderTeammates(map) {
@@ -903,13 +900,20 @@
   // --- Events ---
   els.form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
-    const apiKey = els.apiKey.value.trim();
+    const apiKey = getStoredApiKey();
     const gameName = els.gameName.value.trim();
     const tagLine = els.tagLine.value.trim();
     const limit = parseInt(els.limit.value, 10);
 
-    if (!apiKey || !gameName) {
-      setStatus('Bitte API-Key und Riot-ID-Name angeben.', false, true);
+    if (!apiKey) {
+      setStatus('Fehlender Riot API-Key. Bitte in der Konfiguration hinterlegen.', false, true);
+      alert('Kein Riot API-Key hinterlegt. Öffne die Konfiguration und trage den Key ein.');
+      updateKeyStatus();
+      return;
+    }
+
+    if (!gameName) {
+      setStatus('Bitte Riot-ID-Name angeben.', false, true);
       return;
     }
 
