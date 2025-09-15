@@ -2,263 +2,1168 @@
 <html lang="de">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Arena Match Analyzer</title>
   <style>
-    :root { --bg:#0b1020; --card:#131a2a; --muted:#8fa1c7; --text:#e9f0ff; --accent:#6aa9ff; --good:#56d364; }
-    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.45 system-ui,Segoe UI,Roboto,Arial,sans-serif;padding-bottom:40px}
-    header{text-align:center;padding:28px 20px 10px;}
-    .wrap{max-width:1100px;margin:0 auto;padding:0 16px}
-    form.tools{display:grid;gap:12px;grid-template-columns:1fr 1fr;align-items:end;margin:18px auto 14px;max-width:980px}
-    .field{display:flex;flex-direction:column;gap:6px}
-    label{font-size:13px;color:var(--muted)}
-    input,select,button{background:var(--card);border:1px solid #1e2a44;color:var(--text);padding:10px 12px;border-radius:10px;outline:none}
-    button{cursor:pointer;background:linear-gradient(180deg,#3b6dd8,#2c5ac0);border:0;box-shadow:0 6px 18px rgba(59,109,216,.25)}
-    .filehint{font-size:12px;color:#9ab0da}
-    .kvs{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin:10px 0 18px}
-    .kv{background:var(--card);border:1px dashed #28406f;border-radius:12px;padding:10px 12px;font-size:13px}
-    details{background:var(--card);border:1px solid #1e2a44;border-radius:8px;padding:8px 12px;margin-top:8px}
-    summary{cursor:pointer;display:grid;grid-template-columns:110px 1fr 100px 60px;gap:10px;font-size:14px;align-items:center}
-    summary::-webkit-details-marker{display:none}
-    .details-content{margin-top:8px;font-size:13px;color:var(--muted)}
-    .pagination{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:12px}
-    .pagination button{padding:6px 10px;background:var(--card);border:1px solid #1e2a44;border-radius:6px;color:var(--text);cursor:pointer}
+    :root { --bg:#0b1020; --card:#131a2a; --muted:#8fa1c7; --text:#e9f0ff; --accent:#6aa9ff; --good:#56d364; --bad:#ff6b6b; }
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(1200px 700px at 5% -10%,#16254a 0,#0b1020 55%,#080d18 100%);color:var(--text);font:16px/1.5 "Segoe UI",system-ui,-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;padding-bottom:60px}
+    header{text-align:center;padding:32px 20px 16px}
+    h1{margin:0 0 10px;font-size:clamp(24px,4vw,34px)}
+    p.sub{margin:0 auto;max-width:640px;color:var(--muted)}
+    .wrap{max-width:1200px;margin:0 auto;padding:0 24px;display:flex;flex-direction:column;gap:22px}
+    .panel{background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.01));border:1px solid #1f2a45;border-radius:20px;padding:22px 24px;box-shadow:0 18px 45px rgba(5,10,25,.35)}
+    .panel-header{display:flex;flex-direction:column;gap:6px;margin-bottom:18px}
+    .panel-header h2{margin:0;font-size:22px}
+    .panel-header p{margin:0;font-size:14px;color:var(--muted);max-width:720px}
+    .panel-body{display:flex;flex-direction:column;gap:16px}
+    button{background:linear-gradient(180deg,#3b6dd8,#2c5ac0);border:0;color:#fff;padding:10px 18px;border-radius:12px;font-weight:600;cursor:pointer;box-shadow:0 12px 32px rgba(59,109,216,.25);transition:transform .15s ease,box-shadow .15s ease}
+    button:hover{transform:translateY(-1px);box-shadow:0 18px 40px rgba(59,109,216,.35)}
+    button:disabled{opacity:.6;cursor:not-allowed;box-shadow:none;transform:none}
+    .button-secondary{background:transparent;border:1px solid #2a3b63;color:var(--accent);box-shadow:none}
+    .button-secondary:hover{border-color:var(--accent)}
+    input,select{background:rgba(19,30,54,.7);border:1px solid #24355b;color:var(--text);padding:10px 12px;border-radius:12px;outline:none}
+    input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(106,169,255,.25)}
+    label{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+    .filters-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+    .filter-actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+    .toggle{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+    .toggle input{width:16px;height:16px}
+    .filter-summary{font-size:13px;color:var(--muted)}
+    .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+    .summary-card{background:rgba(15,25,45,.8);border:1px solid #1f2a45;border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+    .summary-label{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+    .summary-value{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+    .summary-sub{font-size:13px;color:var(--muted);display:none}
+    .summary-sub.show{display:block}
+    .dataset-meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:6px}
+    .dataset-meta span{background:rgba(17,27,48,.75);border:1px solid #1f2a45;border-radius:999px;padding:6px 12px;font-size:13px;color:var(--muted)}
+    .filehint{font-size:13px;color:#9ab0da}
+    .layout-split{display:flex;flex-direction:column;gap:18px}
+    .table table{width:100%;border-collapse:collapse;font-size:13px}
+    .table th,.table td{text-align:left;padding:10px 12px;border-bottom:1px solid #1f2a45}
+    .table tbody tr:hover{background:rgba(19,30,54,.55)}
+    .table .champion-cell{display:flex;align-items:center;gap:10px}
+    .table .champion-cell img{width:32px;height:32px;border-radius:8px;border:1px solid #2a3a5f;object-fit:cover}
+    .placement-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+    .placement-row{display:grid;grid-template-columns:80px 1fr 60px;gap:12px;align-items:center;font-size:13px;color:var(--muted)}
+    .placement-bar{height:8px;background:rgba(106,169,255,.15);border-radius:999px;overflow:hidden}
+    .placement-bar span{display:block;height:100%;background:linear-gradient(90deg,rgba(106,169,255,.45),rgba(106,169,255,.85))}
+    .match-section .panel-body{gap:20px}
+    .match-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px}
+    .match-card{background:rgba(18,28,50,.85);border:1px solid #1f2a45;border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:14px;box-shadow:0 14px 32px rgba(5,10,25,.4)}
+    .match-card--win{border-color:rgba(86,211,100,.55)}
+    .match-card--loss{border-color:rgba(255,107,107,.45)}
+    .match-card__header{display:flex;justify-content:space-between;gap:16px;font-size:14px}
+    .match-meta{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+    .match-card__placement{font-weight:700;color:var(--text);text-align:right}
+    .chip{display:inline-flex;align-items:center;gap:4px;background:rgba(106,169,255,.18);color:var(--accent);padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600}
+    .badge-win{background:rgba(86,211,100,.18);color:var(--good)}
+    .badge-loss{background:rgba(255,107,107,.2);color:var(--bad)}
+    .badge-top4{background:rgba(106,169,255,.25);color:var(--accent)}
+    .match-card__champion{display:flex;align-items:center;gap:14px}
+    .champion-icon{width:54px;height:54px;border-radius:14px;border:1px solid #273455;overflow:hidden;flex-shrink:0}
+    .champion-icon img{width:100%;height:100%;object-fit:cover;display:block}
+    .match-card__teammates{font-size:13px;color:var(--muted)}
+    .match-card__stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;font-size:13px;color:var(--muted)}
+    .match-card__footer{display:flex;justify-content:flex-end}
+    .link-button{background:transparent;border:1px solid #2a3b63;color:var(--accent);border-radius:999px;padding:8px 16px;font-weight:600;cursor:pointer;transition:all .15s ease}
+    .link-button:hover{border-color:var(--accent);box-shadow:0 0 0 3px rgba(106,169,255,.15)}
+    .empty-state{padding:32px;text-align:center;font-size:14px;color:var(--muted);background:rgba(15,24,44,.6);border:1px dashed #2a3a5f;border-radius:16px}
+    .modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(4,7,16,.75);opacity:0;pointer-events:none;transition:opacity .2s ease;z-index:20}
+    .modal.open{opacity:1;pointer-events:auto}
+    .modal__backdrop{position:absolute;inset:0}
+    .modal__dialog{position:relative;background:linear-gradient(180deg,rgba(18,28,50,.95),rgba(12,18,36,.95));border:1px solid #2a3b63;border-radius:20px;padding:26px 28px;width:min(92vw,760px);max-height:90vh;overflow-y:auto;box-shadow:0 26px 60px rgba(0,0,0,.55)}
+    .modal__close{position:absolute;top:14px;right:16px;background:transparent;border:0;color:var(--muted);font-size:22px;cursor:pointer}
+    .modal__close:hover{color:var(--text)}
+    .modal__header{margin-bottom:18px}
+    .modal__header h3{margin:0 0 8px;font-size:24px}
+    .modal__header .meta{font-size:13px;color:var(--muted)}
+    .modal__section{margin:18px 0}
+    .modal__section h4{margin:0 0 10px;font-size:18px}
+    .modal-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;font-size:13px;color:var(--muted)}
+    .item-grid{display:flex;flex-wrap:wrap;gap:10px}
+    .item{display:flex;align-items:center;gap:10px;background:rgba(17,27,48,.8);border:1px solid #273657;border-radius:12px;padding:6px 10px;font-size:13px;color:var(--muted)}
+    .item img{width:36px;height:36px;border-radius:10px;border:1px solid #3a4c74;object-fit:cover}
+    .augment-list{display:flex;flex-wrap:wrap;gap:8px;font-size:12px}
+    .augment-chip{background:rgba(106,169,255,.18);color:var(--accent);padding:4px 10px;border-radius:999px;font-weight:600}
+    .team-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+    .team-card{background:rgba(16,26,46,.75);border:1px solid #273657;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+    .team-card.self{border-color:var(--accent);box-shadow:0 0 0 1px rgba(106,169,255,.3)}
+    .team-card h5{margin:0;font-size:14px;color:var(--muted)}
+    .team-player{display:flex;justify-content:space-between;gap:12px;font-size:13px;color:var(--muted)}
+    .team-player .name{font-weight:600;color:var(--text)}
+    .team-player.self .name{color:var(--accent)}
+    .team-player .kda{font-variant-numeric:tabular-nums}
+    .muted{color:var(--muted)}
+    @media(min-width:960px){.layout-split{display:grid;grid-template-columns:2fr 1fr;gap:18px}}
+    @media(max-width:720px){header{padding:26px 16px 12px}.wrap{padding:0 16px 60px}}
   </style>
 </head>
 <body>
 <header>
   <h1>Arena Match Analyzer</h1>
-  <p class="sub">Importiere einen Datensatz aus Arena-Statistiken und analysiere deine Spiele.</p>
+  <p class="sub">Importiere einen Datensatz aus Arena Stats und erkunde deine Spiele mit komfortablen Filtern und detaillierten Modalfenstern.</p>
 </header>
-<div class="wrap">
-  <form class="tools">
-    <div class="field">
-      <label for="name">Beschwörername (optional)</label>
-      <input id="name" type="text" placeholder="z. B. Behamot" />
+
+<main class="wrap">
+  <section class="panel">
+    <div class="panel-header">
+      <h2>Datensatz laden</h2>
+      <p>Wähle die exportierte JSON-Datei aus <strong>Arena Stats</strong>. Die Analyse findet lokal im Browser statt.</p>
     </div>
-    <div class="field">
-      <label>Datensatz</label>
-      <div class="row">
+    <div class="panel-body">
+      <div class="import-actions" style="display:flex;gap:12px;flex-wrap:wrap">
         <input id="importFile" type="file" accept="application/json" style="display:none" />
-        <button id="importBtn" type="button">Importieren (.json)</button>
+        <button id="importBtn" type="button">Datensatz importieren (.json)</button>
+        <button id="resetBtn" type="button" class="button-secondary" hidden>Datensatz entfernen</button>
       </div>
+      <div class="dataset-meta" id="datasetMeta"></div>
       <div class="filehint" id="importInfo">Noch kein Datensatz importiert.</div>
     </div>
-  </form>
+  </section>
 
-  <div class="kvs">
-    <div class="kv"><strong>Spiele:</strong> <span id="games">—</span></div>
-    <div class="kv"><strong>Siege:</strong> <span id="wins">—</span></div>
-    <div class="kv"><strong>Win-Rate:</strong> <span id="winrate">—</span></div>
-    <div class="kv"><strong>KDA:</strong> <span id="kda">—</span></div>
-    <div class="kv"><strong>Ø Kills:</strong> <span id="avgKills">—</span></div>
-    <div class="kv"><strong>Ø Deaths:</strong> <span id="avgDeaths">—</span></div>
-    <div class="kv"><strong>Ø Assists:</strong> <span id="avgAssists">—</span></div>
-    <div class="kv"><strong>Ø Dauer:</strong> <span id="avgDuration">—</span></div>
-    <div class="kv"><strong>Meist gespielt:</strong> <span id="mostChamp">—</span></div>
-    <div class="kv"><strong>Beste WR (≥5):</strong> <span id="bestChamp">—</span></div>
-  </div>
+  <section class="panel" id="summaryPanel" hidden>
+    <div class="panel-header">
+      <h2>Übersicht</h2>
+      <p>Gesamtwerte deines Datensatzes &ndash; gefilterte Werte erscheinen direkt unter den Kennzahlen.</p>
+    </div>
+    <div class="summary-grid" id="summaryGrid"></div>
+  </section>
 
-  <div>
-    <h2>Teamkollegen (≥5 Spiele)</h2>
-    <ul id="mateList"></ul>
-  </div>
+  <section class="panel" id="filterPanel" hidden>
+    <div class="panel-header">
+      <h2>Filter &amp; Sortierung</h2>
+      <p>Kombiniere Champion-, Ergebnis- und Zeitfilter, um genau die relevanten Matches zu finden.</p>
+    </div>
+    <div class="panel-body">
+      <div class="filters-grid">
+        <label>Suche
+          <input id="filterSearch" type="search" placeholder="Match-ID, Champion, Mitspieler&hellip;" />
+        </label>
+        <label>Champion
+          <select id="filterChampion"></select>
+        </label>
+        <label>Queue
+          <select id="filterQueue"></select>
+        </label>
+        <label>Ergebnis
+          <select id="filterResult">
+            <option value="all">Alle Ergebnisse</option>
+            <option value="wins">Nur Siege</option>
+            <option value="losses">Nur Niederlagen</option>
+            <option value="top4">Top 4</option>
+            <option value="outside">Außerhalb Top 4</option>
+          </select>
+        </label>
+        <label>Sortierung
+          <select id="filterSort">
+            <option value="newest">Neueste zuerst</option>
+            <option value="oldest">Älteste zuerst</option>
+            <option value="duration-desc">Längste Dauer</option>
+            <option value="duration-asc">Kürzeste Dauer</option>
+            <option value="damage-desc">Höchster Schaden</option>
+            <option value="kda-desc">Beste KDA</option>
+            <option value="placement-asc">Beste Platzierung</option>
+            <option value="placement-desc">Schlechteste Platzierung</option>
+          </select>
+        </label>
+        <label>Von (Datum)
+          <input id="filterFrom" type="date" />
+        </label>
+        <label>Bis (Datum)
+          <input id="filterTo" type="date" />
+        </label>
+      </div>
+      <div class="filter-actions">
+        <label class="toggle"><input id="filterTop4" type="checkbox" /> nur Top&nbsp;4</label>
+        <button id="resetFilters" type="button" class="button-secondary">Filter zurücksetzen</button>
+      </div>
+      <div class="filter-summary" id="filterSummary"></div>
+    </div>
+  </section>
 
-  <div>
-    <h2>Top Items</h2>
-    <ul id="items"></ul>
-  </div>
+  <section class="layout-split" id="insightPanels" hidden>
+    <article class="panel table">
+      <div class="panel-header">
+        <h2>Champion-Historie</h2>
+        <p>Welche Champions performen am besten? Sortiert nach gespielten Matches.</p>
+      </div>
+      <div class="panel-body" id="championTable"></div>
+    </article>
+    <article class="panel table">
+      <div class="panel-header">
+        <h2>Teamkollegen</h2>
+        <p>Mit wem spielst du am häufigsten zusammen und wie erfolgreich seid ihr?</p>
+      </div>
+      <div class="panel-body" id="teammateTable"></div>
+    </article>
+  </section>
 
-  <div class="field" style="margin-top:20px">
-    <label for="filter">Champion-Filter</label>
-    <select id="filter"></select>
-  </div>
+  <section class="panel" id="placementPanel" hidden>
+    <div class="panel-header">
+      <h2>Platzierungsverteilung</h2>
+      <p>Aktualisiert sich dynamisch mit deinen Filtern.</p>
+    </div>
+    <div class="panel-body" id="placementList"></div>
+  </section>
 
-  <div id="matchList"></div>
-  <div class="pagination">
-    <button id="prevPage" type="button">◀</button>
-    <span id="pageInfo">0/0</span>
-    <button id="nextPage" type="button">▶</button>
+  <section class="panel match-section" id="matchPanel" hidden>
+    <div class="panel-header">
+      <div>
+        <h2>Match-History</h2>
+        <p>Alle Spiele des Datensatzes. Detailansicht per Modal für jedes Match.</p>
+      </div>
+      <div class="match-meta" id="matchMeta"></div>
+    </div>
+    <div class="panel-body">
+      <div class="match-grid" id="matchList"></div>
+    </div>
+  </section>
+</main>
+
+<div id="matchModal" class="modal" aria-hidden="true">
+  <div class="modal__backdrop" data-close></div>
+  <div class="modal__dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <button type="button" class="modal__close" data-close aria-label="Schließen">×</button>
+    <div id="modalContent"></div>
   </div>
 </div>
 
 <script>
 (() => {
+  const ARENA_QUEUES = {
+    1700: 'Arena (Beta)',
+    1701: 'Arena (Beta 2)',
+    1702: 'Arena Ranked (Beta)',
+    1710: 'Arena',
+    1711: 'Arena Ranked'
+  };
+
   const els = {
     importBtn: document.getElementById('importBtn'),
     importFile: document.getElementById('importFile'),
+    resetBtn: document.getElementById('resetBtn'),
     importInfo: document.getElementById('importInfo'),
-    name: document.getElementById('name'),
-    filter: document.getElementById('filter'),
+    datasetMeta: document.getElementById('datasetMeta'),
+    summaryPanel: document.getElementById('summaryPanel'),
+    summaryGrid: document.getElementById('summaryGrid'),
+    filterPanel: document.getElementById('filterPanel'),
+    filterSearch: document.getElementById('filterSearch'),
+    filterChampion: document.getElementById('filterChampion'),
+    filterQueue: document.getElementById('filterQueue'),
+    filterResult: document.getElementById('filterResult'),
+    filterSort: document.getElementById('filterSort'),
+    filterFrom: document.getElementById('filterFrom'),
+    filterTo: document.getElementById('filterTo'),
+    filterTop4: document.getElementById('filterTop4'),
+    resetFilters: document.getElementById('resetFilters'),
+    filterSummary: document.getElementById('filterSummary'),
+    insightPanels: document.getElementById('insightPanels'),
+    championTable: document.getElementById('championTable'),
+    teammateTable: document.getElementById('teammateTable'),
+    placementPanel: document.getElementById('placementPanel'),
+    placementList: document.getElementById('placementList'),
+    matchPanel: document.getElementById('matchPanel'),
     matchList: document.getElementById('matchList'),
-    prevPage: document.getElementById('prevPage'),
-    nextPage: document.getElementById('nextPage'),
-    pageInfo: document.getElementById('pageInfo'),
-    games: document.getElementById('games'),
-    wins: document.getElementById('wins'),
-    winrate: document.getElementById('winrate'),
-    kda: document.getElementById('kda'),
-    avgKills: document.getElementById('avgKills'),
-    avgDeaths: document.getElementById('avgDeaths'),
-    avgAssists: document.getElementById('avgAssists'),
-    avgDuration: document.getElementById('avgDuration'),
-    mostChamp: document.getElementById('mostChamp'),
-    bestChamp: document.getElementById('bestChamp'),
-    mateList: document.getElementById('mateList'),
-    items: document.getElementById('items')
+    matchMeta: document.getElementById('matchMeta'),
+    modal: document.getElementById('matchModal'),
+    modalContent: document.getElementById('modalContent'),
   };
-  let dataset = null;
-  let matches = [];
-  let itemData = null;
-  let currentPage = 0;
-  const PAGE_SIZE = 20;
-  const itemDataPromise = fetch('https://ddragon.leagueoflegends.com/cdn/14.17.1/data/en_US/item.json')
-    .then(r => r.json()).then(d => { itemData = d.data; });
 
-  els.importBtn.addEventListener('click', () => els.importFile.click());
-  els.importFile.addEventListener('change', async (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
+  const nf0 = new Intl.NumberFormat('de-DE');
+  const nf1 = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const nf2 = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const SUMMARY_DEFS = [
+    { key: 'games', label: 'Spiele', value: t => t.games, format: v => nf0.format(v) },
+    { key: 'wins', label: 'Siege', value: t => t.wins, format: v => nf0.format(v) },
+    { key: 'winrate', label: 'Win-Rate', value: t => percentValue(t.wins, t.games), format: v => v == null ? '—' : nf1.format(v) + '%' },
+    { key: 'top4', label: 'Top 4', value: t => t.top4, format: v => nf0.format(v) },
+    { key: 'top4rate', label: 'Top 4-Rate', value: t => percentValue(t.top4, t.games), format: v => v == null ? '—' : nf1.format(v) + '%' },
+    { key: 'avg-placement', label: 'Ø Platzierung', value: t => t.games ? t.placementSum / t.games : null, format: v => v == null ? '—' : nf1.format(v) },
+    { key: 'avg-kda', label: 'Ø K/D/A', value: t => t.games ? { k: t.kills / t.games, d: t.deaths / t.games, a: t.assists / t.games } : null, format: v => v ? `${nf1.format(v.k)} / ${nf1.format(v.d)} / ${nf1.format(v.a)}` : '—' },
+    { key: 'avg-kda-ratio', label: 'Ø KDA', value: t => t.games ? (t.kills + t.assists) / Math.max(1, t.deaths) : null, format: v => v == null ? '—' : nf2.format(v) },
+    { key: 'avg-damage', label: 'Ø Schaden', value: t => t.games ? t.damage / t.games : null, format: v => v == null ? '—' : nf0.format(Math.round(v)) },
+    { key: 'avg-duration', label: 'Ø Dauer', value: t => t.games ? t.duration / t.games : null, format: v => formatDuration(v) },
+    { key: 'max-damage', label: 'Max Schaden', value: t => t.maxDamage || null, format: v => v == null ? '—' : nf0.format(v) },
+    { key: 'max-gold', label: 'Max Gold', value: t => t.maxGold || null, format: v => v == null ? '—' : nf0.format(v) },
+    { key: 'high-kills', label: 'Spiele ≥ 10 Kills', value: t => t.highKillGames, format: v => nf0.format(v) },
+    { key: 'high-damage', label: 'Spiele ≥ 30k Schaden', value: t => t.highDamageGames, format: v => nf0.format(v) },
+    { key: 'no-deaths', label: 'Spiele ohne Tod', value: t => t.noDeathGames, format: v => nf0.format(v) },
+    { key: 'longest', label: 'Längstes Spiel', value: t => t.longestDuration || null, format: v => formatDuration(v) },
+    { key: 'shortest', label: 'Kürzestes Spiel', value: t => t.shortestDuration || null, format: v => formatDuration(v) }
+  ];
+
+  const state = {
+    dataset: null,
+    matches: [],
+    filtered: [],
+    totals: null,
+    championStats: new Map(),
+    teammateStats: new Map(),
+    filters: defaultFilters(),
+  };
+
+  let ddVer = null;
+  let champByKey = null;
+  let itemData = null;
+
+  function defaultFilters() {
+    return {
+      search: '',
+      champion: 'all',
+      queue: 'all',
+      result: 'all',
+      sort: 'newest',
+      from: null,
+      to: null,
+      top4: false,
+    };
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] || ch));
+  }
+
+  function ensureSeconds(duration) {
+    if (!duration) return 0;
+    return duration > 100000 ? duration / 1000 : duration;
+  }
+
+  function formatDuration(seconds) {
+    if (!seconds) return '—';
+    const total = Math.max(0, Math.round(seconds));
+    const mins = Math.floor(total / 60);
+    const secs = total % 60;
+    return `${mins}m ${secs.toString().padStart(2, '0')}s`;
+  }
+
+  function formatDateTime(ts) {
+    if (!ts) return '—';
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function formatDateOnly(ts) {
+    if (!ts) return '—';
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  function percentValue(count, total) {
+    if (!total) return null;
+    return (count * 100) / total;
+  }
+
+  async function ensureDataDragon() {
+    if (ddVer && champByKey) return;
+    const versions = await fetch('https://ddragon.leagueoflegends.com/api/versions.json').then(r => r.json());
+    ddVer = versions[0];
+    const data = await fetch(`https://ddragon.leagueoflegends.com/cdn/${ddVer}/data/en_US/champion.json`).then(r => r.json());
+    champByKey = new Map();
+    for (const key in data.data) {
+      const c = data.data[key];
+      champByKey.set(String(c.key), { id: c.id, name: c.name });
+    }
+  }
+
+  async function ensureItemData() {
+    if (itemData) return;
+    await ensureDataDragon();
+    const data = await fetch(`https://ddragon.leagueoflegends.com/cdn/${ddVer}/data/en_US/item.json`).then(r => r.json());
+    itemData = data.data || {};
+  }
+
+  function champAssetByParticipant(part) {
+    const key = part && part.championId != null ? String(part.championId) : '';
+    if (key && champByKey && champByKey.has(key)) {
+      const entry = champByKey.get(key);
+      return {
+        id: entry.id,
+        label: entry.name,
+        img: `https://ddragon.leagueoflegends.com/cdn/${ddVer}/img/champion/${entry.id}.png`
+      };
+    }
+    const safe = (part?.championName || 'Unknown').replace(/[^A-Za-z]/g, '') || 'Unknown';
+    return {
+      id: safe,
+      label: part?.championName || 'Unknown',
+      img: `https://ddragon.leagueoflegends.com/cdn/${ddVer}/img/champion/${safe}.png`
+    };
+  }
+
+  function playerLabel(part) {
+    if (!part) return 'Unbekannt';
+    if (part.riotIdGameName) {
+      if (part.riotIdTagline && part.riotIdTagline !== '0') return `${part.riotIdGameName}#${part.riotIdTagline}`;
+      return part.riotIdGameName;
+    }
+    if (part.gameName) {
+      return part.tagLine ? `${part.gameName}#${part.tagLine}` : part.gameName;
+    }
+    if (part.summonerName) return part.summonerName;
+    if (part.puuid) return part.puuid.slice(0, 8);
+    return 'Unbekannt';
+  }
+
+  function getTeamIdentifier(part) {
+    if (!part) return 'team-unknown';
+    if (part.playerSubteamId != null) return `subteam-${part.playerSubteamId}`;
+    if (part.subteamId != null) return `subteam-${part.subteamId}`;
+    if (part.teamId != null) return `team-${part.teamId}`;
+    return `solo-${part.puuid || Math.random().toString(36).slice(2, 7)}`;
+  }
+
+  function getPlacement(part) {
+    if (part && typeof part.subteamPlacement === 'number') return part.subteamPlacement;
+    if (part && typeof part.placement === 'number') return part.placement;
+    return null;
+  }
+
+  function getTeamCount(info) {
+    const ps = info.participants || [];
+    const set = new Set();
+    for (const p of ps) {
+      if (p.playerSubteamId != null) set.add(p.playerSubteamId);
+      else if (p.subteamId != null) set.add(p.subteamId);
+    }
+    if (set.size) return set.size;
+    return info.queueId >= 1710 ? 8 : 4;
+  }
+
+  function isTop4(placement, teamCount) {
+    if (placement == null) return false;
+    const threshold = teamCount >= 8 ? 4 : 2;
+    return placement <= threshold;
+  }
+
+  function buildTeams(participants, puuid) {
+    const teams = new Map();
+    participants.forEach(part => {
+      const key = getTeamIdentifier(part);
+      if (!teams.has(key)) {
+        const numeric = part.playerSubteamId ?? part.subteamId ?? part.teamId ?? null;
+        teams.set(key, { key, numericId: numeric, placement: getPlacement(part), participants: [] });
+      }
+      const teamObj = teams.get(key);
+      if (teamObj.placement == null) teamObj.placement = getPlacement(part);
+      const asset = champAssetByParticipant(part);
+      teamObj.participants.push({
+        puuid: part.puuid,
+        name: playerLabel(part),
+        champion: asset.label,
+        championImg: asset.img,
+        kills: part.kills || 0,
+        deaths: part.deaths || 0,
+        assists: part.assists || 0,
+        isMain: part.puuid === puuid,
+      });
+    });
+    const list = Array.from(teams.values()).map(team => ({ ...team, isSelf: team.participants.some(p => p.puuid === puuid) }));
+    list.sort((a, b) => {
+      if (a.placement != null && b.placement != null) return a.placement - b.placement;
+      if (a.placement != null) return -1;
+      if (b.placement != null) return 1;
+      return (a.numericId ?? 0) - (b.numericId ?? 0);
+    });
+    list.forEach((team, idx) => {
+      team.display = team.numericId != null ? team.numericId : idx + 1;
+    });
+    return list;
+  }
+
+  function formatAugmentName(name) {
+    if (!name) return 'Unbekannt';
+    return name.replace(/^ArenaAugment_/, '').replace(/([a-z])([A-Z])/g, '$1 $2');
+  }
+
+  function calcTotals(list) {
+    const totals = {
+      games: 0,
+      wins: 0,
+      top4: 0,
+      kills: 0,
+      deaths: 0,
+      assists: 0,
+      damage: 0,
+      gold: 0,
+      cs: 0,
+      duration: 0,
+      placementSum: 0,
+      bestPlacement: null,
+      worstPlacement: null,
+      maxDamage: 0,
+      maxGold: 0,
+      longestDuration: 0,
+      shortestDuration: null,
+      highKillGames: 0,
+      highDamageGames: 0,
+      noDeathGames: 0,
+    };
+    for (const match of list) {
+      totals.games += 1;
+      if (match.win) totals.wins += 1;
+      if (match.top4) totals.top4 += 1;
+      totals.kills += match.kills;
+      totals.deaths += match.deaths;
+      totals.assists += match.assists;
+      totals.damage += match.damage;
+      totals.gold += match.gold;
+      totals.cs += match.cs;
+      totals.duration += match.duration;
+      totals.placementSum += match.placement;
+      totals.bestPlacement = totals.bestPlacement == null ? match.placement : Math.min(totals.bestPlacement, match.placement);
+      totals.worstPlacement = totals.worstPlacement == null ? match.placement : Math.max(totals.worstPlacement, match.placement);
+      totals.maxDamage = Math.max(totals.maxDamage, match.damage);
+      totals.maxGold = Math.max(totals.maxGold, match.gold);
+      totals.longestDuration = Math.max(totals.longestDuration, match.duration);
+      totals.shortestDuration = totals.shortestDuration == null ? match.duration : Math.min(totals.shortestDuration, match.duration);
+      if (match.kills >= 10) totals.highKillGames += 1;
+      if (match.damage >= 30000) totals.highDamageGames += 1;
+      if (match.deaths === 0) totals.noDeathGames += 1;
+    }
+    return totals;
+  }
+
+  function formatSummaryValue(val, def) {
+    if (val == null || (typeof val === 'number' && !Number.isFinite(val))) return '—';
+    if (def.format) return def.format(val);
+    if (typeof val === 'number') return nf0.format(val);
+    return String(val);
+  }
+
+  function buildSummaryCards() {
+    const frag = document.createDocumentFragment();
+    for (const def of SUMMARY_DEFS) {
+      const card = document.createElement('div');
+      card.className = 'summary-card';
+      card.dataset.summary = def.key;
+      card.innerHTML = `
+        <span class="summary-label">${escapeHtml(def.label)}</span>
+        <span class="summary-value" data-role="total">—</span>
+        <span class="summary-sub" data-role="filtered"></span>
+      `;
+      frag.appendChild(card);
+    }
+    els.summaryGrid.appendChild(frag);
+  }
+
+  function updateSummaryCards(total, filtered, filtersActive) {
+    for (const def of SUMMARY_DEFS) {
+      const card = els.summaryGrid.querySelector(`[data-summary="${def.key}"]`);
+      if (!card) continue;
+      const totalVal = def.value(total || {});
+      const filteredVal = def.value(filtered || {});
+      const totalEl = card.querySelector('[data-role="total"]');
+      const filteredEl = card.querySelector('[data-role="filtered"]');
+      totalEl.textContent = formatSummaryValue(totalVal, def);
+      if (filtersActive) {
+        filteredEl.textContent = 'Gefiltert: ' + formatSummaryValue(filteredVal, def);
+        filteredEl.classList.add('show');
+      } else {
+        filteredEl.textContent = '';
+        filteredEl.classList.remove('show');
+      }
+    }
+  }
+
+  function renderChampionTable() {
+    if (!els.championTable) return;
+    if (!state.championStats.size) {
+      els.championTable.innerHTML = '<div class="empty-state">Keine Champion-Daten verfügbar.</div>';
+      return;
+    }
+    const rows = Array.from(state.championStats.values()).sort((a, b) => {
+      if (b.games !== a.games) return b.games - a.games;
+      return a.name.localeCompare(b.name);
+    });
+    const body = rows.map(entry => {
+      const winrate = entry.games ? nf1.format((entry.wins * 100) / entry.games) + '%' : '—';
+      const top4 = entry.games ? nf1.format((entry.top4 * 100) / entry.games) + '%' : '—';
+      const avgPlacement = entry.games ? nf1.format(entry.placementSum / entry.games) : '—';
+      const lastPlayed = entry.lastPlayed ? formatDateOnly(entry.lastPlayed) : '—';
+      return `<tr>
+        <td class="champion-cell"><img src="${entry.img}" alt="${escapeHtml(entry.name)}" loading="lazy" />${escapeHtml(entry.name)}</td>
+        <td>${entry.games}</td>
+        <td>${entry.wins}</td>
+        <td>${winrate}</td>
+        <td>${top4}</td>
+        <td>${avgPlacement}</td>
+        <td>${lastPlayed}</td>
+      </tr>`;
+    }).join('');
+    els.championTable.innerHTML = `<table>
+      <thead><tr><th>Champion</th><th>Spiele</th><th>Siege</th><th>Win-Rate</th><th>Top 4-Rate</th><th>Ø Platzierung</th><th>Zuletzt</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table>`;
+  }
+
+  function renderTeammateTable() {
+    if (!els.teammateTable) return;
+    if (!state.teammateStats.size) {
+      els.teammateTable.innerHTML = '<div class="empty-state">Keine Mitspieler-Daten ermittelt.</div>';
+      return;
+    }
+    const rows = Array.from(state.teammateStats.values()).sort((a, b) => {
+      if (b.games !== a.games) return b.games - a.games;
+      return (b.lastPlayed || 0) - (a.lastPlayed || 0);
+    });
+    const body = rows.map(entry => {
+      const winrate = entry.games ? nf1.format((entry.wins * 100) / entry.games) + '%' : '—';
+      const top4 = entry.games ? nf1.format((entry.top4 * 100) / entry.games) + '%' : '—';
+      const champs = Array.from(entry.champions.entries()).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([name, count]) => `${escapeHtml(name)} × ${count}`).join(', ') || '—';
+      const lastPlayed = entry.lastPlayed ? formatDateOnly(entry.lastPlayed) : '—';
+      return `<tr>
+        <td>${escapeHtml(entry.name)}</td>
+        <td>${entry.games}</td>
+        <td>${entry.wins}</td>
+        <td>${winrate}</td>
+        <td>${top4}</td>
+        <td>${champs}</td>
+        <td>${lastPlayed}</td>
+      </tr>`;
+    }).join('');
+    els.teammateTable.innerHTML = `<table>
+      <thead><tr><th>Name</th><th>Spiele</th><th>Siege</th><th>Win-Rate</th><th>Top 4-Rate</th><th>Top Champions</th><th>Zuletzt</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table>`;
+  }
+
+  function renderPlacementDistribution(list) {
+    if (!els.placementList) return;
+    if (!list.length) {
+      els.placementList.innerHTML = '<div class="empty-state">Keine Platzierungen für die aktuelle Auswahl.</div>';
+      return;
+    }
+    const counts = new Map();
+    for (const match of list) {
+      counts.set(match.placement, (counts.get(match.placement) || 0) + 1);
+    }
+    const max = Math.max(...counts.values());
+    const rows = Array.from(counts.entries()).sort((a, b) => a[0] - b[0]).map(([placement, count]) => {
+      const pct = max ? Math.round((count / max) * 100) : 0;
+      return `<li class="placement-row"><span>Platz ${placement}</span><div class="placement-bar"><span style="width:${pct}%"></span></div><span>${count}</span></li>`;
+    }).join('');
+    els.placementList.innerHTML = `<ul class="placement-list">${rows}</ul>`;
+  }
+
+  function renderFilterSummary(filteredTotals, filtersActive) {
+    if (!els.filterSummary) return;
+    if (!filtersActive) {
+      els.filterSummary.textContent = 'Keine Filter aktiv – alle Matches werden angezeigt.';
+      return;
+    }
+    if (!filteredTotals.games) {
+      els.filterSummary.textContent = 'Keine Matches entsprechen den aktuellen Filtern.';
+      return;
+    }
+    const winrate = nf1.format((filteredTotals.wins * 100) / filteredTotals.games) + '%';
+    const placement = nf1.format(filteredTotals.placementSum / filteredTotals.games);
+    els.filterSummary.textContent = `${filteredTotals.games} Spiele gefiltert • Win-Rate ${winrate} • Ø Platzierung ${placement}`;
+  }
+
+  function updateMatchMeta(filteredTotals, filtersActive) {
+    if (!els.matchMeta) return;
+    const source = filtersActive ? filteredTotals : (state.totals || { games: 0 });
+    if (!source.games) {
+      els.matchMeta.innerHTML = '<div>Keine Spiele vorhanden.</div>';
+      return;
+    }
+    const winrate = source.games ? nf1.format((source.wins * 100) / source.games) + '%' : '—';
+    const placement = source.games ? nf1.format(source.placementSum / source.games) : '—';
+    const prefix = filtersActive ? 'Gefiltert' : 'Gesamt';
+    els.matchMeta.innerHTML = `<div>${prefix}: ${source.games} Spiele</div><div>Siege: ${source.wins}</div><div>Win-Rate: ${winrate}</div><div>Ø Platzierung: ${placement}</div>`;
+  }
+
+  function renderMatchList(list) {
+    if (!els.matchList) return;
+    els.matchList.innerHTML = '';
+    if (!state.matches.length) {
+      els.matchList.innerHTML = '<div class="empty-state">Bitte importiere zuerst einen Datensatz.</div>';
+      return;
+    }
+    if (!list.length) {
+      els.matchList.innerHTML = '<div class="empty-state">Keine Matches für die aktuelle Auswahl gefunden.</div>';
+      return;
+    }
+    const frag = document.createDocumentFragment();
+    for (const match of list) {
+      const card = document.createElement('article');
+      card.className = 'match-card' + (match.win ? ' match-card--win' : ' match-card--loss');
+      const badgeWin = `<span class="chip ${match.win ? 'badge-win' : 'badge-loss'}">${match.win ? 'Sieg' : 'Niederlage'}</span>`;
+      const badgeTop = match.top4 ? '<span class="chip badge-top4">Top 4</span>' : '';
+      const teammates = match.teammates.length ? match.teammates.map(t => escapeHtml(t.name)).join(', ') : 'Solo';
+      card.innerHTML = `
+        <div class="match-card__header">
+          <div>
+            <div>${escapeHtml(match.queueLabel)}</div>
+            <div class="match-meta">${escapeHtml(formatDateTime(match.timestamp))}</div>
+          </div>
+          <div class="match-meta" style="align-items:flex-end;text-align:right">
+            <span class="match-card__placement">Platz ${match.placement}/${match.teamCount}</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${badgeWin}${badgeTop}</div>
+          </div>
+        </div>
+        <div class="match-card__champion">
+          <div class="champion-icon"><img src="${match.championImg}" alt="${escapeHtml(match.championLabel)}" loading="lazy"></div>
+          <div>
+            <div style="font-size:18px;font-weight:700">${escapeHtml(match.championLabel)}</div>
+            <div class="match-card__teammates">Mit: ${escapeHtml(teammates)}</div>
+          </div>
+        </div>
+        <div class="match-card__stats">
+          <span>K/D/A: ${match.kills}/${match.deaths}/${match.assists} (${nf2.format(match.kda)})</span>
+          <span>Schaden: ${nf0.format(match.damage)}</span>
+          <span>Gold: ${nf0.format(match.gold)}</span>
+          <span>CS: ${nf1.format(match.cs)}</span>
+          <span>Dauer: ${formatDuration(match.duration)}</span>
+        </div>
+        <div class="match-card__footer">
+          <button type="button" class="link-button" data-match-id="${escapeHtml(match.id)}">Details anzeigen</button>
+        </div>
+      `;
+      const btn = card.querySelector('[data-match-id]');
+      btn.addEventListener('click', () => openModal(match));
+      frag.appendChild(card);
+    }
+    els.matchList.appendChild(frag);
+  }
+
+  function openModal(match) {
+    if (!els.modal || !els.modalContent) return;
+    const teammateText = match.teammates.length ? match.teammates.map(t => escapeHtml(t.name)).join(', ') : 'Solo';
+    const itemHtml = match.items.length ? match.items.map(id => {
+      const data = itemData && itemData[String(id)];
+      const name = data ? data.name : `Item ${id}`;
+      return `<div class="item"><img src="https://ddragon.leagueoflegends.com/cdn/${ddVer}/img/item/${id}.png" alt="${escapeHtml(name)}" loading="lazy" /><span>${escapeHtml(name)}</span></div>`;
+    }).join('') : '<span class="muted">Keine Items erfasst.</span>';
+    const augmentHtml = match.augments.length ? match.augments.map(a => `<span class="augment-chip">${escapeHtml(formatAugmentName(a))}</span>`).join('') : '<span class="muted">Keine Augments erfasst.</span>';
+    const teamsHtml = match.teams.map(team => {
+      const header = `${team.isSelf ? 'Eigenes Team' : 'Team'} ${escapeHtml(String(team.display))} • Platz ${team.placement ?? '?'}`;
+      const players = team.participants.map(player => `<div class="team-player${player.isMain ? ' self' : ''}"><span class="name">${escapeHtml(player.name)}</span><span class="kda">${player.kills}/${player.deaths}/${player.assists}</span></div>`).join('');
+      return `<div class="team-card${team.isSelf ? ' self' : ''}"><h5>${header}</h5>${players}</div>`;
+    }).join('');
+    els.modalContent.innerHTML = `
+      <div class="modal__header">
+        <h3 id="modalTitle">${escapeHtml(match.championLabel)} &ndash; ${escapeHtml(match.queueLabel)}</h3>
+        <div class="meta">Match-ID: ${escapeHtml(match.id)} • ${escapeHtml(formatDateTime(match.timestamp))}</div>
+      </div>
+      <div class="modal__section">
+        <h4>Eigene Leistung</h4>
+        <div class="modal-stats">
+          <span>Platzierung: ${match.placement}/${match.teamCount}</span>
+          <span>Mitspieler: ${escapeHtml(teammateText)}</span>
+          <span>K/D/A: ${match.kills}/${match.deaths}/${match.assists} (${nf2.format(match.kda)})</span>
+          <span>Schaden: ${nf0.format(match.damage)}</span>
+          <span>Gold: ${nf0.format(match.gold)}</span>
+          <span>CS: ${nf1.format(match.cs)}</span>
+          <span>Dauer: ${formatDuration(match.duration)}</span>
+        </div>
+      </div>
+      <div class="modal__section">
+        <h4>Items &amp; Augments</h4>
+        <div class="item-grid">${itemHtml}</div>
+        <div class="augment-list" style="margin-top:12px">${augmentHtml}</div>
+      </div>
+      <div class="modal__section">
+        <h4>Teams</h4>
+        <div class="team-grid">${teamsHtml}</div>
+      </div>
+    `;
+    els.modal.classList.add('open');
+    els.modal.setAttribute('aria-hidden', 'false');
+  }
+
+  function closeModal() {
+    if (!els.modal) return;
+    els.modal.classList.remove('open');
+    els.modal.setAttribute('aria-hidden', 'true');
+  }
+
+  function clearUI() {
+    state.dataset = null;
+    state.matches = [];
+    state.filtered = [];
+    state.totals = null;
+    state.championStats.clear();
+    state.teammateStats.clear();
+    state.filters = defaultFilters();
+    els.datasetMeta.innerHTML = '';
+    els.importInfo.textContent = 'Noch kein Datensatz importiert.';
+    els.summaryPanel.hidden = true;
+    els.filterPanel.hidden = true;
+    els.insightPanels.hidden = true;
+    els.placementPanel.hidden = true;
+    els.matchPanel.hidden = true;
+    els.matchList.innerHTML = '';
+    els.matchMeta.innerHTML = '';
+    els.championTable.innerHTML = '';
+    els.teammateTable.innerHTML = '';
+    els.placementList.innerHTML = '';
+    els.resetBtn.hidden = true;
+  }
+
+  function setDatasetMeta(dataset) {
+    const parts = [];
+    if (dataset.player) parts.push(`Spieler: ${dataset.player}`);
+    const totalMatches = dataset.count ?? (Array.isArray(dataset.matches) ? dataset.matches.length : 0);
+    parts.push(`Matches: ${totalMatches}`);
+    if (dataset.exportedAt) parts.push(`Exportiert am: ${formatDateOnly(dataset.exportedAt)}`);
+    if (Array.isArray(dataset.queues) && dataset.queues.length) parts.push(`Queues: ${dataset.queues.join(', ')}`);
+    els.datasetMeta.innerHTML = parts.map(part => `<span>${escapeHtml(part)}</span>`).join('');
+  }
+
+  function populateFilters() {
+    els.filterChampion.innerHTML = '<option value="all">Alle Champions</option>';
+    const champs = Array.from(state.championStats.values()).sort((a, b) => a.name.localeCompare(b.name));
+    for (const champ of champs) {
+      const opt = document.createElement('option');
+      opt.value = champ.key;
+      opt.textContent = `${champ.name} (${champ.games})`;
+      els.filterChampion.appendChild(opt);
+    }
+    els.filterQueue.innerHTML = '<option value="all">Alle Queues</option>';
+    const queues = new Map();
+    for (const match of state.matches) {
+      const label = match.queueLabel || `Queue ${match.queueId}`;
+      queues.set(String(match.queueId), label);
+    }
+    for (const [value, label] of Array.from(queues.entries()).sort((a, b) => a[1].localeCompare(b[1]))) {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = label;
+      els.filterQueue.appendChild(opt);
+    }
+  }
+
+  function resetFilterInputs() {
+    els.filterSearch.value = state.filters.search || '';
+    els.filterChampion.value = state.filters.champion;
+    els.filterQueue.value = state.filters.queue;
+    els.filterResult.value = state.filters.result;
+    els.filterSort.value = state.filters.sort;
+    els.filterFrom.value = state.filters.from ? toDateInput(state.filters.from) : '';
+    els.filterTo.value = state.filters.to ? toDateInput(state.filters.to) : '';
+    els.filterTop4.checked = !!state.filters.top4;
+  }
+
+  function resetFilters(silent = false) {
+    state.filters = defaultFilters();
+    resetFilterInputs();
+    if (!silent) applyFilters();
+  }
+
+  function isFiltersActive() {
+    const f = state.filters;
+    return !!(f.search || f.champion !== 'all' || f.queue !== 'all' || f.result !== 'all' || f.sort !== 'newest' || f.from || f.to || f.top4);
+  }
+
+  function toDateInput(ts) {
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return '';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  function transformMatch(raw, puuid) {
+    if (!raw) return null;
+    const info = raw.info || raw;
+    const participants = info.participants || [];
+    const me = participants.find(p => p.puuid === puuid);
+    if (!me) return null;
+    const asset = champAssetByParticipant(me);
+    const teamCount = getTeamCount(info);
+    const placement = getPlacement(me);
+    if (placement == null) return null;
+    const win = me.win != null ? !!me.win : placement === 1;
+    const top4 = isTop4(placement, teamCount);
+    const kills = me.kills || 0;
+    const deaths = me.deaths || 0;
+    const assists = me.assists || 0;
+    const damage = me.totalDamageDealtToChampions || 0;
+    const gold = me.goldEarned || 0;
+    const cs = (me.totalMinionsKilled || 0) + (me.neutralMinionsKilled || 0);
+    const duration = ensureSeconds(info.gameDuration || info.gameDurationInSeconds || 0);
+    const timestamp = info.gameCreation || info.gameStartTimestamp || 0;
+    const queueId = info.queueId != null ? info.queueId : 'unknown';
+    const queueLabel = ARENA_QUEUES[queueId] || `Queue ${queueId}`;
+    const teams = buildTeams(participants, puuid);
+    const myTeam = teams.find(team => team.isSelf) || { participants: [] };
+    const teammates = myTeam.participants.filter(p => !p.isMain);
+    const teammateSummary = teammates.map(t => t.name).join(', ');
+    const augments = [];
+    for (let i = 1; i <= 4; i++) {
+      const aug = me[`playerAugment${i}`];
+      if (aug) augments.push(aug);
+    }
+    const items = [];
+    for (let i = 0; i <= 6; i++) {
+      const it = me[`item${i}`];
+      if (it) items.push(it);
+    }
+    const searchText = `${raw.id || ''} ${asset.label} ${queueLabel} ${teammateSummary}`.toLowerCase();
+    return {
+      id: raw.id || info.gameId || String(timestamp),
+      info,
+      timestamp,
+      queueId,
+      queueLabel,
+      placement,
+      teamCount,
+      win,
+      top4,
+      kills,
+      deaths,
+      assists,
+      damage,
+      gold,
+      cs,
+      kda: (kills + assists) / Math.max(1, deaths),
+      duration,
+      championKey: String(me.championId ?? asset.id ?? asset.label),
+      championLabel: asset.label,
+      championImg: asset.img,
+      teammates,
+      teammateSummary,
+      teams,
+      items,
+      augments,
+      searchText,
+    };
+  }
+
+  function analyzeDataset(dataset) {
+    state.dataset = dataset;
+    state.matches = [];
+    state.championStats.clear();
+    state.teammateStats.clear();
+
+    const puuid = dataset.puuid;
+    const rawMatches = Array.isArray(dataset.matches) ? dataset.matches : [];
+    for (const raw of rawMatches) {
+      const transformed = transformMatch(raw, puuid);
+      if (!transformed) continue;
+      state.matches.push(transformed);
+
+      const champKey = transformed.championKey;
+      if (!state.championStats.has(champKey)) {
+        state.championStats.set(champKey, {
+          key: champKey,
+          name: transformed.championLabel,
+          img: transformed.championImg,
+          games: 0,
+          wins: 0,
+          top4: 0,
+          kills: 0,
+          deaths: 0,
+          assists: 0,
+          damage: 0,
+          placementSum: 0,
+          bestPlacement: null,
+          worstPlacement: null,
+          lastPlayed: 0,
+        });
+      }
+      const champEntry = state.championStats.get(champKey);
+      champEntry.games += 1;
+      if (transformed.win) champEntry.wins += 1;
+      if (transformed.top4) champEntry.top4 += 1;
+      champEntry.kills += transformed.kills;
+      champEntry.deaths += transformed.deaths;
+      champEntry.assists += transformed.assists;
+      champEntry.damage += transformed.damage;
+      champEntry.placementSum += transformed.placement;
+      champEntry.bestPlacement = champEntry.bestPlacement == null ? transformed.placement : Math.min(champEntry.bestPlacement, transformed.placement);
+      champEntry.worstPlacement = champEntry.worstPlacement == null ? transformed.placement : Math.max(champEntry.worstPlacement, transformed.placement);
+      champEntry.lastPlayed = Math.max(champEntry.lastPlayed, transformed.timestamp || 0);
+
+      for (const mate of transformed.teammates) {
+        const key = mate.puuid || mate.name;
+        if (!key) continue;
+        if (!state.teammateStats.has(key)) {
+          state.teammateStats.set(key, {
+            key,
+            name: mate.name,
+            games: 0,
+            wins: 0,
+            top4: 0,
+            champions: new Map(),
+            lastPlayed: 0,
+          });
+        }
+        const entry = state.teammateStats.get(key);
+        entry.name = mate.name;
+        entry.games += 1;
+        if (transformed.win) entry.wins += 1;
+        if (transformed.top4) entry.top4 += 1;
+        entry.lastPlayed = Math.max(entry.lastPlayed, transformed.timestamp || 0);
+        entry.champions.set(transformed.championLabel, (entry.champions.get(transformed.championLabel) || 0) + 1);
+      }
+    }
+
+    state.matches.sort((a, b) => b.timestamp - a.timestamp);
+    state.totals = calcTotals(state.matches);
+
+    populateFilters();
+    state.filters = defaultFilters();
+    resetFilterInputs();
+
+    renderChampionTable();
+    renderTeammateTable();
+
+    els.summaryPanel.hidden = false;
+    els.filterPanel.hidden = false;
+    els.insightPanels.hidden = false;
+    els.placementPanel.hidden = false;
+    els.matchPanel.hidden = false;
+
+    applyFilters();
+  }
+
+  async function useDataset(dataset) {
+    await ensureDataDragon();
+    await ensureItemData();
+    analyzeDataset(dataset);
+    setDatasetMeta(dataset);
+    const totalMatches = dataset.count ?? (Array.isArray(dataset.matches) ? dataset.matches.length : 0);
+    els.importInfo.textContent = `Importiert: ${dataset.player || 'Unbekannt'} • Matches: ${totalMatches}`;
+    els.resetBtn.hidden = false;
+  }
+
+  async function handleDatasetImport(file) {
     try {
+      els.importInfo.textContent = `Lade ${file.name}…`;
       const text = await file.text();
       const obj = JSON.parse(text);
-      if (!obj || !Array.isArray(obj.matches) || !obj.puuid) throw new Error('Ungültiges Format');
-      dataset = obj;
-      els.importInfo.textContent = `Importiert: ${obj.player || 'Unbekannt'} • Matches: ${obj.count ?? obj.matches.length}`;
-      analyze();
+      if (!obj || !Array.isArray(obj.matches)) throw new Error('Ungültiges Format: "matches" fehlt');
+      await useDataset(obj);
     } catch (err) {
       console.error(err);
-      els.importInfo.textContent = 'Import fehlgeschlagen.';
-    } finally {
-      e.target.value = '';
+      els.importInfo.textContent = 'Import fehlgeschlagen: ' + err.message;
+    }
+  }
+
+  function applyFilters() {
+    if (!state.matches.length) {
+      const emptyTotals = calcTotals([]);
+      updateSummaryCards(state.totals || emptyTotals, emptyTotals, false);
+      renderFilterSummary(emptyTotals, false);
+      renderPlacementDistribution([]);
+      updateMatchMeta(emptyTotals, false);
+      renderMatchList([]);
+      return;
+    }
+    const f = state.filters;
+    let from = f.from;
+    let to = f.to;
+    if (from && to && from > to) {
+      const tmp = from;
+      from = to;
+      to = tmp;
+    }
+    let list = state.matches.slice();
+    if (f.champion !== 'all') list = list.filter(m => m.championKey === f.champion);
+    if (f.queue !== 'all') list = list.filter(m => String(m.queueId) === f.queue);
+    if (f.result === 'wins') list = list.filter(m => m.win);
+    else if (f.result === 'losses') list = list.filter(m => !m.win);
+    else if (f.result === 'top4') list = list.filter(m => m.top4);
+    else if (f.result === 'outside') list = list.filter(m => !m.top4);
+    if (f.top4) list = list.filter(m => m.top4);
+    if (from) list = list.filter(m => (m.timestamp || 0) >= from);
+    if (to) list = list.filter(m => (m.timestamp || 0) <= to);
+    if (f.search) {
+      const q = f.search.toLowerCase();
+      list = list.filter(m => m.searchText.includes(q));
+    }
+    list.sort((a, b) => {
+      switch (f.sort) {
+        case 'oldest': return a.timestamp - b.timestamp;
+        case 'duration-desc': return b.duration - a.duration;
+        case 'duration-asc': return a.duration - b.duration;
+        case 'damage-desc': return b.damage - a.damage;
+        case 'kda-desc': return b.kda - a.kda;
+        case 'placement-asc': return a.placement - b.placement;
+        case 'placement-desc': return b.placement - a.placement;
+        default: return b.timestamp - a.timestamp;
+      }
+    });
+    state.filtered = list;
+    const filteredTotals = calcTotals(list);
+    const filtersActive = isFiltersActive();
+    updateSummaryCards(state.totals, filteredTotals, filtersActive);
+    renderFilterSummary(filteredTotals, filtersActive);
+    renderPlacementDistribution(list);
+    updateMatchMeta(filteredTotals, filtersActive);
+    renderMatchList(list);
+  }
+
+  els.importBtn.addEventListener('click', () => els.importFile.click());
+  els.importFile.addEventListener('change', ev => {
+    const file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    handleDatasetImport(file);
+    ev.target.value = '';
+  });
+
+  els.resetBtn.addEventListener('click', () => {
+    clearUI();
+  });
+
+  els.filterSearch.addEventListener('input', ev => {
+    state.filters.search = ev.target.value.trim();
+    applyFilters();
+  });
+  els.filterChampion.addEventListener('change', ev => {
+    state.filters.champion = ev.target.value;
+    applyFilters();
+  });
+  els.filterQueue.addEventListener('change', ev => {
+    state.filters.queue = ev.target.value;
+    applyFilters();
+  });
+  els.filterResult.addEventListener('change', ev => {
+    state.filters.result = ev.target.value;
+    applyFilters();
+  });
+  els.filterSort.addEventListener('change', ev => {
+    state.filters.sort = ev.target.value;
+    applyFilters();
+  });
+  els.filterFrom.addEventListener('change', ev => {
+    const val = ev.target.value;
+    state.filters.from = val ? new Date(val + 'T00:00:00').getTime() : null;
+    applyFilters();
+  });
+  els.filterTo.addEventListener('change', ev => {
+    const val = ev.target.value;
+    state.filters.to = val ? new Date(val + 'T23:59:59').getTime() : null;
+    applyFilters();
+  });
+  els.filterTop4.addEventListener('change', ev => {
+    state.filters.top4 = ev.target.checked;
+    applyFilters();
+  });
+  els.resetFilters.addEventListener('click', () => {
+    resetFilters();
+  });
+
+  els.modal.addEventListener('click', ev => {
+    if (ev.target.dataset.close != null) {
+      closeModal();
+    }
+  });
+  document.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape' && els.modal.classList.contains('open')) {
+      closeModal();
     }
   });
 
-  function analyze() {
-    const puuid = dataset.puuid;
-    matches = dataset.matches.map(m => {
-      const ps = m.info.participants || [];
-      const me = ps.find(p => p.puuid === puuid);
-      if (!me) return null;
-      const teamId = me.playerSubteamId ?? me.subteamId;
-      const mates = ps.filter(p => p !== me && ((p.playerSubteamId ?? p.subteamId) === teamId));
-      const mate = mates[0];
-      const placement = me.subteamPlacement ?? me.placement;
-      const win = placement === 1 || me.win;
-      const items = [];
-      for (let i = 0; i <= 6; i++) {
-        const id = me['item' + i];
-        if (id) items.push(id);
-      }
-      const cs = (me.totalMinionsKilled || 0) + (me.neutralMinionsKilled || 0);
-      return {
-        id: m.id,
-        timestamp: m.info.gameCreation || 0,
-        duration: m.info.gameDuration || 0,
-        champion: me.championName,
-        k: me.kills || 0,
-        d: me.deaths || 0,
-        a: me.assists || 0,
-        kda: ((me.kills || 0) + (me.assists || 0)) / Math.max(1, me.deaths || 0),
-        gold: me.goldEarned || 0,
-        damage: me.totalDamageDealtToChampions || 0,
-        cs,
-        win,
-        items,
-        teammateName: mate ? (mate.riotIdGameName || mate.summonerName || mate.puuid) : null,
-        teammateChamp: mate ? mate.championName : null
-      };
-    }).filter(Boolean);
-    matches.sort((a,b) => b.timestamp - a.timestamp);
-
-    const champs = Array.from(new Set(matches.map(m => m.champion))).sort();
-    els.filter.innerHTML = '<option value="">Alle Champions</option>' +
-      champs.map(c => `<option value="${c}">${c}</option>`).join('');
-    currentPage = 0;
-    renderMatches();
-    renderStats();
-  }
-
-  els.filter.addEventListener('change', () => { currentPage = 0; renderMatches(); });
-  els.prevPage.addEventListener('click', () => { if (currentPage > 0) { currentPage--; renderMatches(); } });
-  els.nextPage.addEventListener('click', () => { currentPage++; renderMatches(); });
-
-  async function renderMatches() {
-    await itemDataPromise;
-    const champ = els.filter.value;
-    const filtered = matches.filter(m => !champ || m.champion === champ);
-    const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
-    if (currentPage >= totalPages) currentPage = totalPages - 1;
-    const start = currentPage * PAGE_SIZE;
-    const pageMatches = filtered.slice(start, start + PAGE_SIZE);
-    els.matchList.innerHTML = pageMatches.map(m => {
-      const items = m.items.map(id => itemData[id]?.name || id).join(', ');
-      const date = m.timestamp ? new Date(m.timestamp).toLocaleDateString() : '';
-      return `<details><summary><span>${date}</span><span>${m.champion}</span><span>${m.k}/${m.d}/${m.a} (${m.kda.toFixed(2)})</span><span>${m.win ? '✅' : '❌'}</span></summary>`+
-        `<div class="details-content">Dauer: ${(m.duration/60).toFixed(1)}m<br/>Gold: ${m.gold}<br/>Damage: ${m.damage}<br/>CS: ${m.cs}<br/>Teamkollege: ${m.teammateName ? `${m.teammateName} (${m.teammateChamp})` : '—'}<br/>Items: ${items}</div></details>`;
-    }).join('');
-    els.pageInfo.textContent = `${filtered.length ? currentPage + 1 : 0}/${totalPages}`;
-    els.prevPage.disabled = currentPage === 0;
-    els.nextPage.disabled = currentPage >= totalPages - 1;
-  }
-
-  async function renderStats() {
-    await itemDataPromise;
-    const sum = matches.reduce((acc, m) => {
-      acc.k += m.k; acc.d += m.d; acc.a += m.a; acc.duration += m.duration; return acc;
-    }, { k: 0, d: 0, a: 0, duration: 0 });
-    const total = matches.length;
-    const wins = matches.filter(m => m.win).length;
-    const kda = (sum.k + sum.a) / Math.max(1, sum.d);
-    els.games.textContent = total;
-    els.wins.textContent = wins;
-    els.winrate.textContent = total ? ((wins * 100) / total).toFixed(1) + '%' : '—';
-    els.kda.textContent = `${sum.k}/${sum.d}/${sum.a} (${kda.toFixed(2)})`;
-    els.avgKills.textContent = (sum.k / Math.max(1,total)).toFixed(1);
-    els.avgDeaths.textContent = (sum.d / Math.max(1,total)).toFixed(1);
-    els.avgAssists.textContent = (sum.a / Math.max(1,total)).toFixed(1);
-    els.avgDuration.textContent = (sum.duration / Math.max(1,total) / 60).toFixed(1) + 'm';
-
-    const champStats = {};
-    for (const m of matches) {
-      const cs = champStats[m.champion] || { games:0, wins:0 };
-      cs.games++; if (m.win) cs.wins++; champStats[m.champion] = cs;
-    }
-    let most = null; let best = null;
-    for (const [champ, obj] of Object.entries(champStats)) {
-      if (!most || obj.games > most.games) most = { champ, games: obj.games };
-      const wr = obj.wins / obj.games;
-      if (obj.games >= 5 && (!best || wr > best.wr)) best = { champ, wr, games: obj.games };
-    }
-    els.mostChamp.textContent = most ? `${most.champ} (${most.games})` : '—';
-    els.bestChamp.textContent = best ? `${best.champ} (${(best.wr*100).toFixed(1)}%, ${best.games})` : '—';
-
-    const mateStats = {};
-    for (const m of matches) {
-      if (!m.teammateName) continue;
-      const obj = mateStats[m.teammateName] || { games:0, wins:0 };
-      obj.games++; if (m.win) obj.wins++; mateStats[m.teammateName] = obj;
-    }
-    const mateList = Object.entries(mateStats).filter(([_,o]) => o.games >= 5)
-      .sort((a,b) => b[1].games - a[1].games);
-    els.mateList.innerHTML = mateList.map(([name,o]) =>
-      `<li>${name}: ${(o.wins/o.games*100).toFixed(1)}% WR (${o.games})</li>`).join('');
-
-    const items = {};
-    for (const m of matches) {
-      for (const id of m.items) {
-        const obj = items[id] || { games: 0, wins: 0 };
-        obj.games++;
-        if (m.win) obj.wins++;
-        items[id] = obj;
-      }
-    }
-    const top = Object.entries(items).sort((a, b) => b[1].games - a[1].games).slice(0, 5);
-    els.items.innerHTML = top.map(([id, obj]) => {
-      const wr = obj.wins / obj.games;
-      const name = itemData[id]?.name || id;
-      return `<li>${name}: ${(wr * 100).toFixed(1)}% WR (${obj.games})</li>`;
-    }).join('');
-  }
+  buildSummaryCards();
 })();
 </script>
 </body>
