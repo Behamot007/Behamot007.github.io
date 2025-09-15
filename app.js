@@ -1,5 +1,8 @@
 (() => {
   'use strict';
+  const searchParams = new URLSearchParams(window.location.search);
+  const SHOW_DEV_TOOLS = searchParams.has('dev') || searchParams.has('debug');
+
   const NAV_ITEMS = [
     { type: 'home', id: 'home', label: 'Übersicht' },
     {
@@ -80,8 +83,39 @@
     },
     {
       type: 'group',
-      id: 'anidle',
-      label: 'Anidle',
+      id: 'anime',
+      label: 'Anime Charakter',
+      items: [
+        {
+          type: 'page',
+          id: 'anime-riddle',
+          label: 'Rätsel Chat',
+          url: 'animeCharakterdle.html',
+          description: 'Errate Anime-Charaktere über das Chat-Interface mit KI-Unterstützung.'
+        },
+        {
+          type: 'page',
+          id: 'anime-dataset',
+          label: 'Dataset Verwaltung',
+          url: 'anime-dataset/public/index.html',
+          description: 'Pflege und erweitere den Charakter-Datensatz direkt im Browser.'
+        },
+        {
+          type: 'page',
+          id: 'anime-dataset-game',
+          label: 'Dataset Guess Game',
+          url: 'anime-dataset/public/game.html',
+          description: 'Nutze den Datensatz für eine schnelle Ratesession ohne Chat.'
+        }
+      ]
+    }
+  ];
+
+  if (SHOW_DEV_TOOLS) {
+    NAV_ITEMS.push({
+      type: 'group',
+      id: 'dev',
+      label: 'Dev',
       items: [
         {
           type: 'page',
@@ -96,20 +130,13 @@
           label: 'Anidle Debug',
           url: 'anidleDebug.html',
           description: 'Debug-Ansicht mit tieferen Einsichten in Anidle-Läufe.'
-        }
-      ]
-    },
-    {
-      type: 'group',
-      id: 'experiments',
-      label: 'Experimente & Tools',
-      items: [
+        },
         {
           type: 'page',
-          id: 'animeCharakterdle',
-          label: 'Anime Charakterdle',
-          url: 'animeCharakterdle.html',
-          description: 'Errate Anime-Charaktere mit OpenAI-Unterstützung und eigenem Datensatz.'
+          id: 'legacy-config',
+          label: 'Standalone Konfiguration',
+          url: 'config.html',
+          description: 'Separate Konfigurationsoberfläche aus einer frühen Toolkit-Version.'
         },
         {
           type: 'page',
@@ -119,6 +146,17 @@
           description: 'Zeige gespeicherte Debug-Informationen direkt im Browser an.'
         }
       ]
+    });
+  }
+
+  const EXTERNAL_LINKS = [
+    {
+      id: 'contact',
+      label: 'Kontakt',
+      url: 'https://github.com/Behamot007/Behamot007.github.io/discussions',
+      target: '_blank',
+      rel: 'noopener noreferrer',
+      title: 'Feedback & Verbesserungen auf GitHub diskutieren'
     }
   ];
 
@@ -158,7 +196,7 @@
         name: 'OpenAI Platform',
         url: 'https://platform.openai.com/account/api-keys'
       },
-      usage: ['Anime Charakterdle', 'AI-Experimente'],
+      usage: ['Anime Charakter Rätsel', 'Anime Dataset Tools'],
       fields: [
         {
           id: 'openai-token',
@@ -178,7 +216,7 @@
         name: 'Riot Developer Portal',
         url: 'https://developer.riotgames.com/'
       },
-      usage: ['Arena Stats'],
+      usage: ['Arena Stats', 'Arena Match Analyzer'],
       fields: [
         {
           id: 'riot-api',
@@ -221,6 +259,8 @@
         createGroup(item);
       }
     });
+
+    EXTERNAL_LINKS.forEach(link => createExternalLink(link));
   }
 
   function createHomeButton(item) {
@@ -271,6 +311,22 @@
     wrapper.append(toggle, dropdown);
     navContainer.appendChild(wrapper);
     groupElements.set(group.id, { container: wrapper, toggle, dropdown, data: group });
+  }
+
+  function createExternalLink(link) {
+    const anchor = document.createElement('a');
+    anchor.className = 'nav-button nav-button--link';
+    anchor.href = link.url;
+    anchor.textContent = link.label;
+    anchor.target = link.target || '_blank';
+    anchor.rel = link.rel || 'noopener noreferrer';
+    if (link.title) {
+      anchor.title = link.title;
+      anchor.setAttribute('aria-label', link.title);
+    } else {
+      anchor.setAttribute('aria-label', link.label);
+    }
+    navContainer.appendChild(anchor);
   }
 
   function toggleGroup(id) {
