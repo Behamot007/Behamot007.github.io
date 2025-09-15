@@ -41,7 +41,7 @@
 <body>
 <header>
   <h1>Arena-Statistik (EUW)</h1>
-  <p class="sub">Filtert bei der ID-Suche auf <strong>Arena</strong> (Queues 1700 & 1710) • zeigt Gesamt & pro Champion • Import/Export</p>
+  <p class="sub">Filtert bei der ID-Suche auf <strong>Arena</strong> (Queues 1700, 1701, 1702, 1710, 1711) • zeigt Gesamt & pro Champion • Import/Export</p>
 </header>
 
 <div class="wrap">
@@ -49,7 +49,7 @@
     <div class="field">
       <label for="apiKey">Riot API-Key</label>
       <input id="apiKey" type="password" placeholder="RGAPI-xxxx..." required />
-      <div class="hint">Wird nur im Browser/Proxy verwendet.</div>
+      <div class="hint">Wird nur im Browser verwendet.</div>
     </div>
 
     <div class="field">
@@ -73,12 +73,6 @@
       </select>
     </div>
 
-    <div class="field">
-      <label for="proxy">Proxy-Basis-URL <span class="muted">(gegen CORS)</span></label>
-      <input id="proxy" type="url" placeholder="https://dein-worker.workers.dev" />
-      <div class="hint">Leer lassen für Direktaufrufe. Bei CORS-Fehlern Proxy nutzen (Worker/Express).</div>
-    </div>
-
     <!-- Import/Export -->
     <div class="field">
       <label>Datensatz Import/Export</label>
@@ -86,10 +80,6 @@
         <input id="importFile" type="file" accept="application/json" style="display:none" />
         <button id="importBtn" type="button">Importieren (.json)</button>
         <button id="exportBtn" type="button" disabled>Exportieren (.json)</button>
-        <label class="row" style="gap:6px; margin-left:8px;">
-          <input id="analyzeOnly" type="checkbox" />
-          <span>Nur analysieren (keine neuen Fetches)</span>
-        </label>
       </div>
       <div class="filehint" id="importInfo">Noch kein Datensatz importiert.</div>
     </div>
@@ -128,7 +118,6 @@
     gameName: document.getElementById('gameName'),
     tagLine: document.getElementById('tagLine'),
     limit: document.getElementById('limit'),
-    proxy: document.getElementById('proxy'),
     status: document.getElementById('status'),
     kvs: document.getElementById('kvs'),
     kvSum: document.getElementById('kv-sum'),
@@ -143,14 +132,13 @@
     importBtn: document.getElementById('importBtn'),
     importFile: document.getElementById('importFile'),
     exportBtn: document.getElementById('exportBtn'),
-    analyzeOnly: document.getElementById('analyzeOnly'),
     importInfo: document.getElementById('importInfo'),
   };
 
   // --- Consts ---
   const PLATFORM = 'euw1';    // Summoner-v4
   const REGION   = 'europe';  // Account/Match-v5
-  const ARENA_QUEUES = [1700, 1710]; // Arena Queues
+  const ARENA_QUEUES = [1700, 1701, 1702, 1710, 1711]; // Arena Queues (inkl. frühere Varianten)
 
   // --- DDragon cache ---
   let ddVer = null;
@@ -166,12 +154,6 @@
   }
   function sleep(ms){return new Promise(res=>setTimeout(res,ms))}
   function pct(a,b){return b? (a*100/b).toFixed(1)+'%':'—'}
-  function withProxy(base, url) {
-    if (!base) return url;
-    const u = new URL(base);
-    u.searchParams.set('up', url);
-    return u.toString();
-  }
   async function fetchJson(url, apiKey, {retries=2}={}) {
     let lastErr;
     for (let i=0;i<=retries;i++){
@@ -229,40 +211,28 @@
   }
 
   // --- Riot ID -> PUUID ---
-  async function resolvePlayer(gameName, tagLine, apiKey, proxyBase) {
+  async function resolvePlayer(gameName, tagLine, apiKey) {
     if (tagLine && tagLine.trim().length > 0) {
-      const accUrl = withProxy(
-        proxyBase,
-        `https://${REGION}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`
-      );
+      const accUrl = `https://${REGION}.api.riotgames.com/riot/account/v1/accounts/by-riot-id/${encodeURIComponent(gameName)}/${encodeURIComponent(tagLine)}`;
       const account = await fetchJson(accUrl, apiKey);
-      const sumByPuuidUrl = withProxy(
-        proxyBase,
-        `https://${PLATFORM}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${encodeURIComponent(account.puuid)}`
-      );
+      const sumByPuuidUrl = `https://${PLATFORM}.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/${encodeURIComponent(account.puuid)}`;
       const summoner = await fetchJson(sumByPuuidUrl, apiKey);
       return { puuid: account.puuid, display: `${account.gameName}#${account.tagLine}`, summonerName: summoner.name };
     }
-    const sumUrl = withProxy(
-      proxyBase,
-      `https://${PLATFORM}.api.riotgames.com/lol/summoner/v4/summoners/by-name/${encodeURIComponent(gameName)}`
-    );
+    const sumUrl = `https://${PLATFORM}.api.riotgames.com/lol/summoner/v4/summoners/by-name/${encodeURIComponent(gameName)}`;
     const summoner = await fetchJson(sumUrl, apiKey);
     return { puuid: summoner.puuid, display: `${summoner.name} (ohne Tag)`, summonerName: summoner.name };
   }
 
-  // --- Arena-ID Fetch (1700 & 1710) ---
-  async function fetchArenaMatchIds(puuid, limit, proxyBase, apiKey) {
+  // --- Arena-ID Fetch ---
+  async function fetchArenaMatchIds(puuid, limit, apiKey) {
     const step = 100;
     const all = new Set();
     for (const q of ARENA_QUEUES) {
       let start = 0;
       while (true) {
         if (limit !== -1 && all.size >= limit) break;
-        const url = withProxy(
-          proxyBase,
-          `https://${REGION}.api.riotgames.com/lol/match/v5/matches/by-puuid/${encodeURIComponent(puuid)}/ids?start=${start}&count=${step}&queue=${q}`
-        );
+        const url = `https://${REGION}.api.riotgames.com/lol/match/v5/matches/by-puuid/${encodeURIComponent(puuid)}/ids?start=${start}&count=${step}&queue=${q}`;
         const page = await fetchJson(url, apiKey);
         if (!Array.isArray(page) || page.length === 0) break;
         for (const id of page) {
@@ -285,7 +255,7 @@
       if (p.playerSubteamId != null) set.add(p.playerSubteamId);
       else if (p.subteamId != null) set.add(p.subteamId);
     }
-    return set.size || (info.queueId === 1710 ? 8 : 4);
+    return set.size || (info.queueId >= 1710 ? 8 : 4);
   }
   function getPlacement(me) {
     if (me && typeof me.subteamPlacement === 'number') return me.subteamPlacement;
@@ -380,30 +350,20 @@
   }
 
   // --- Hauptlauf ---
-  async function run(apiKey, gameName, tagLine, limit, proxyBase) {
+  async function run(apiKey, gameName, tagLine, limit) {
     els.kvs.hidden = true;
     els.grid.innerHTML = '';
     setStatus('', false);
 
     await ensureDataDragon();
 
-    // ANALYSE-ONLY: ohne Netz, wenn Datensatz importiert
-    if (els.analyzeOnly.checked && importedDataset && Array.isArray(importedDataset.matches)) {
-      const puuid = importedDataset.puuid;
-      const display = importedDataset.player || 'Importierter Spieler';
-      lastDataset = importedDataset;              // exportierbar
-      els.exportBtn.disabled = false;
-      analyzeMatches(importedDataset.matches, puuid, display);
-      return;
-    }
-
     // Live: erst PUUID holen
     setStatus('Löse Riot ID…', true);
-    const { puuid, display } = await resolvePlayer(gameName.trim(), (tagLine||'').trim(), apiKey, proxyBase);
+    const { puuid, display } = await resolvePlayer(gameName.trim(), (tagLine||'').trim(), apiKey);
 
     // Arena-IDs holen
     setStatus('Lade Arena-Match-IDs…', true);
-    const ids = await fetchArenaMatchIds(puuid, limit, proxyBase, apiKey);
+    const ids = await fetchArenaMatchIds(puuid, limit, apiKey);
     if (ids.length === 0) {
       lastDataset = {
         version: 1, exportedAt: new Date().toISOString(), queues: ARENA_QUEUES,
@@ -416,17 +376,28 @@
     }
 
     // Matches laden und gleichzeitig für Export sammeln
-    const collected = []; // {id, info, metadata?}
+    // Vorhandene Matches aus Import übernehmen
+    const existing = new Map();
+    if (importedDataset && importedDataset.puuid === puuid && Array.isArray(importedDataset.matches)) {
+      for (const m of importedDataset.matches) {
+        const id = m?.id || m?.metadata?.matchId;
+        if (id) existing.set(id, m);
+      }
+    }
+
+    const collected = Array.from(existing.values()); // bereits bekannte Matches
+    const toFetch = ids.filter(id => !existing.has(id));
+
     setStatus('Lade & analysiere Arena-Matches…', true);
     let processed = 0;
-
-    for (const id of ids) {
-      const mUrl = withProxy(proxyBase, `https://${REGION}.api.riotgames.com/lol/match/v5/matches/${id}`);
+    for (const id of toFetch) {
+      const mUrl = `https://${REGION}.api.riotgames.com/lol/match/v5/matches/${id}`;
       try {
         const match = await fetchJson(mUrl, apiKey);
-        collected.push({ id: match?.metadata?.matchId || id, info: match.info, metadata: match.metadata });
+        const obj = { id: match?.metadata?.matchId || id, info: match.info, metadata: match.metadata };
+        collected.push(obj);
         processed++;
-        if (processed % 10 === 0) setStatus(`Geladen: ${processed}/${ids.length}…`, true);
+        if (processed % 10 === 0) setStatus(`Geladen: ${processed}/${toFetch.length}…`, true);
         await sleep(100);
       } catch (e) {
         console.warn('Match fetch failed', id, e);
@@ -444,6 +415,7 @@
       count: collected.length,
       matches: collected
     };
+    importedDataset = lastDataset;
     els.exportBtn.disabled = false;
 
     // Analyse durchführen
@@ -457,24 +429,15 @@
     const gameName = els.gameName.value.trim();
     const tagLine = els.tagLine.value.trim();
     const limit = parseInt(els.limit.value, 10);
-    const proxy = els.proxy.value.trim();
 
-    if (!els.analyzeOnly.checked) {
-      if (!apiKey || !gameName) {
-        setStatus('Bitte API-Key und Riot-ID-Name angeben.', false, true);
-        return;
-      }
-    } else {
-      // Nur analysieren: API-Key/Name entfallen, aber es muss ein Import vorliegen
-      if (!importedDataset) {
-        setStatus('Kein Import-Datensatz vorhanden. Bitte erst eine .json importieren oder „Nur analysieren“ abwählen.', false, true);
-        return;
-      }
+    if (!apiKey || !gameName) {
+      setStatus('Bitte API-Key und Riot-ID-Name angeben.', false, true);
+      return;
     }
 
     els.go.disabled = true;
     try {
-      await run(apiKey, gameName, tagLine, limit, proxy || '');
+      await run(apiKey, gameName, tagLine, limit);
     } catch (e) {
       setStatus('Fehler: ' + e.message, false, true);
     } finally {
@@ -492,12 +455,14 @@
       const obj = JSON.parse(text);
       if (!obj || !Array.isArray(obj.matches)) throw new Error('Ungültiges Format: "matches" fehlt');
       importedDataset = obj;
+      lastDataset = obj;
       els.importInfo.textContent = `Importiert: ${obj.player || 'Unbekannt'} • Matches: ${obj.count ?? obj.matches.length} • Exportiert am: ${obj.exportedAt || '—'}`;
       els.exportBtn.disabled = false; // Re-Export erlauben
-      setStatus('Datensatz importiert. Du kannst „Nur analysieren“ aktivieren und direkt starten.');
+      setStatus('Datensatz importiert. Fehlende Spiele werden beim Analysieren ergänzt.');
     } catch (err) {
       setStatus('Import fehlgeschlagen: ' + err.message, false, true);
       importedDataset = null;
+      lastDataset = null;
       els.importInfo.textContent = 'Import fehlgeschlagen.';
     } finally {
       // Reset, damit gleiche Datei erneut wählbar ist
