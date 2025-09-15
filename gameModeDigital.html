@@ -61,6 +61,84 @@
       z-index: 2;
     }
 
+    #gameArea {
+      position: relative;
+      width: 100%;
+      padding-top: 70px;
+      box-sizing: border-box;
+    }
+
+    .playback-controls {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      gap: 12px;
+      padding: 8px 12px;
+      background: rgba(18, 18, 18, 0.85);
+      border-radius: 999px;
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(6px);
+      z-index: 3;
+    }
+
+    .playback-btn {
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      margin: 0;
+      border-radius: 50%;
+      border: 2px solid #0f5f2a;
+      background: radial-gradient(circle at 30% 30%, #1ed760, #169347 70%, #0f5f2a);
+      color: #121212;
+      font-size: 1.4rem;
+      font-weight: bold;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    }
+
+    .playback-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 18px rgba(0, 0, 0, 0.5);
+      border-color: #1ed760;
+    }
+
+    .playback-btn:active:not(:disabled) {
+      transform: translateY(0);
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
+      background: radial-gradient(circle at 70% 70%, #1ed760, #127638 70%, #0f5f2a);
+    }
+
+    .playback-btn:disabled {
+      background: #2a2a2a;
+      color: #555;
+      border-color: #1b1b1b;
+      box-shadow: none;
+    }
+
+    .playback-btn:focus-visible {
+      outline: 2px solid #ffffff;
+      outline-offset: 2px;
+    }
+
+    .playback-btn .icon {
+      line-height: 1;
+    }
+
+    @media (max-width: 720px) {
+      #gameArea {
+        padding-top: 40px;
+      }
+
+      .playback-controls {
+        top: auto;
+        bottom: 120px;
+        right: 15px;
+      }
+    }
+
     .spotify-auth {
       width: 90%;
       max-width: 400px;
@@ -245,6 +323,14 @@
   </div>
 
   <div id="gameArea" style="display:none; width:100%;">
+    <div class="playback-controls" role="group" aria-label="Spotify-Wiedergabe">
+      <button id="playBtn" class="playback-btn" type="button" disabled aria-label="Song abspielen" title="Song abspielen">
+        <span class="icon" aria-hidden="true">&#9654;</span>
+      </button>
+      <button id="stopBtn" class="playback-btn" type="button" disabled aria-label="Song pausieren" title="Song pausieren">
+        <span class="icon" aria-hidden="true">&#9208;</span>
+      </button>
+    </div>
     <div class="qrContainer">
       <div class="card" id="card">
         <div class="card-face card-front">
@@ -256,8 +342,6 @@
 
     <div class="controls">
       <button id="flipBtn">Umdrehen</button>
-      <button id="playBtn" disabled>Play</button>
-      <button id="stopBtn" disabled>Pause</button>
       <button id="correctBtn" disabled style="display:none">Richtig</button>
       <button id="wrongBtn" disabled style="display:none">Falsch</button>
       <button id="chipsBtn">Chips ausgeben</button>
