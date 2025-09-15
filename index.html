@@ -20,33 +20,28 @@
         <section id="homeView" class="view view--active" aria-labelledby="homeTitle">
           <div class="hero-card">
             <div class="hero-card__body">
-              <h1 id="homeTitle">Alles an einem Ort</h1>
+              <span class="hero-card__eyebrow">Arena Stats jetzt mit Schnellzugriff</span>
+              <h1 id="homeTitle">Arena-Analysen im Rampenlicht</h1>
               <p>
-                Verwalte deine benötigten API-Zugänge und starte die passenden Tools direkt hier auf der
-                Startseite. Keine neuen Tabs mehr &ndash; der Inhalt wird im Arbeitsbereich eingebettet.
+                Starte deine Auswertung mit nur einem Klick in den eingebetteten Arena Stats und verwalte bei
+                Bedarf direkt hier deine notwendigen Konfigurationen.
               </p>
               <div class="hero-card__actions">
-                <button type="button" class="button button--accent" data-nav-target="config-overview">
-                  Zu den Konfigurationen
+                <button type="button" class="button button--accent" data-nav-target="arena-stats">
+                  Arena Stats starten
                 </button>
-                <button type="button" class="button button--ghost" data-nav-target="arena-stats">
-                  Arena Stats öffnen
+                <button type="button" class="button button--ghost" data-nav-target="config-overview">
+                  Konfigurationen verwalten
                 </button>
               </div>
             </div>
           </div>
 
           <div class="home-grid" aria-label="Projektbereiche">
-            <article class="home-card">
-              <h2>Konfigurationen</h2>
-              <p>API-Schlüssel und Tokens zentral speichern. Die Tools greifen automatisch darauf zu.</p>
-              <button type="button" class="link-button" data-nav-target="config-overview">
-                Übersicht anzeigen
-              </button>
-            </article>
-            <article class="home-card">
-              <h2>Arena</h2>
-              <p>Analysiere Matches mit der Riot API oder nutze importierte Datensätze im Analyzer.</p>
+            <article class="home-card home-card--arena">
+              <div class="home-card__badge">Arena Stats im Fokus</div>
+              <h2>Arena Insights</h2>
+              <p>Nutze aktuelle Riot-Daten und importierte Matches, um Trends und Strategien aufzudecken.</p>
               <div class="home-card__links">
                 <button type="button" class="link-button" data-nav-target="arena-stats">Arena Stats</button>
                 <button type="button" class="link-button" data-nav-target="arena-analyzer">Match Analyzer</button>
@@ -59,6 +54,29 @@
                 <button type="button" class="link-button" data-nav-target="generator">QR Karten</button>
                 <button type="button" class="link-button" data-nav-target="play-screen">Play Screen</button>
                 <button type="button" class="link-button" data-nav-target="digital-mode">Digital Mode</button>
+              </div>
+            </article>
+            <article class="home-card home-card--anime">
+              <h2>Anime Charakter Rätsel</h2>
+              <p>Teste dein Wissen mit dem Rätsel-Chat oder pflege den zugrunde liegenden Charakter-Datensatz.</p>
+              <div class="home-card__links">
+                <button type="button" class="link-button" data-nav-target="anime-riddle">Rätsel Chat</button>
+                <button type="button" class="link-button" data-nav-target="anime-dataset">Dataset Verwaltung</button>
+                <button type="button" class="link-button" data-nav-target="anime-dataset-game">Dataset Guess Game</button>
+              </div>
+            </article>
+            <article class="home-card home-card--contact">
+              <h2>Kontakt &amp; Feedback</h2>
+              <p>Diskutiere Ideen, Wünsche und Verbesserungen direkt in den GitHub Discussions.</p>
+              <div class="home-card__links">
+                <a
+                  class="link-button"
+                  href="https://github.com/Behamot007/Behamot007.github.io/discussions"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Zu GitHub Discussions
+                </a>
               </div>
             </article>
           </div>
@@ -95,7 +113,7 @@
         </section>
       </main>
 
-      <footer class="site-footer" aria-label="Seitenende"></footer>
+      <footer class="site-footer" aria-label="Seitenende" hidden></footer>
     </div>
 
     <script src="app.js"></script>
