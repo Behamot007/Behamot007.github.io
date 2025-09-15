@@ -186,6 +186,7 @@
 
 <script>
 (() => {
+  const RIOT_STORAGE_KEY = 'RIOT_API_KEY';
   // --- DOM refs ---
   const els = {
     form: document.getElementById('form'),
@@ -233,6 +234,23 @@
     mateMin: document.getElementById('mateMin'),
     mateContent: document.getElementById('mateContent'),
   };
+
+  if (els.apiKey) {
+    const storedKey = localStorage.getItem(RIOT_STORAGE_KEY);
+    if (storedKey) {
+      els.apiKey.value = storedKey;
+    }
+    const persistKey = () => {
+      localStorage.setItem(RIOT_STORAGE_KEY, els.apiKey.value.trim());
+    };
+    els.apiKey.addEventListener('change', persistKey);
+    els.apiKey.addEventListener('blur', persistKey);
+    window.addEventListener('storage', evt => {
+      if (evt.key === RIOT_STORAGE_KEY) {
+        els.apiKey.value = evt.newValue || '';
+      }
+    });
+  }
 
   // --- Consts ---
   const PLATFORM = 'euw1';    // Summoner-v4

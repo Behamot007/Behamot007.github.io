@@ -1,16 +1,103 @@
 <!DOCTYPE html>
 <html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="./styles.css">
-  <title>Spotify Demo</title>
-</head>
-<body>
-  <h1>Spotify Demo</h1>
-  <nav id="nav"></nav>
-  <script src="pages.js"></script>
-  <script src="navigation.js"></script>
-  <script>buildNavigation('nav');</script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Behamot Toolkit</title>
+    <link rel="stylesheet" href="index.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="site-header">
+        <div class="brand" aria-label="Projekt">
+          <span class="brand__title">Behamot Toolkit</span>
+          <span class="brand__subtitle">Arena-Analysen, Hitster-Helfer &amp; Experimente gebündelt</span>
+        </div>
+        <nav id="mainNav" class="main-nav" aria-label="Hauptnavigation"></nav>
+      </header>
+
+      <main class="site-main">
+        <section id="homeView" class="view view--active" aria-labelledby="homeTitle">
+          <div class="hero-card">
+            <div class="hero-card__body">
+              <h1 id="homeTitle">Alles an einem Ort</h1>
+              <p>
+                Verwalte deine benötigten API-Zugänge und starte die passenden Tools direkt hier auf der
+                Startseite. Keine neuen Tabs mehr &ndash; der Inhalt wird im Arbeitsbereich eingebettet.
+              </p>
+              <div class="hero-card__actions">
+                <button type="button" class="button button--accent" data-nav-target="config-overview">
+                  Zu den Konfigurationen
+                </button>
+                <button type="button" class="button button--ghost" data-nav-target="arena-stats">
+                  Arena Stats öffnen
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="home-grid" aria-label="Projektbereiche">
+            <article class="home-card">
+              <h2>Konfigurationen</h2>
+              <p>API-Schlüssel und Tokens zentral speichern. Die Tools greifen automatisch darauf zu.</p>
+              <button type="button" class="link-button" data-nav-target="config-overview">
+                Übersicht anzeigen
+              </button>
+            </article>
+            <article class="home-card">
+              <h2>Arena</h2>
+              <p>Analysiere Matches mit der Riot API oder nutze importierte Datensätze im Analyzer.</p>
+              <div class="home-card__links">
+                <button type="button" class="link-button" data-nav-target="arena-stats">Arena Stats</button>
+                <button type="button" class="link-button" data-nav-target="arena-analyzer">Match Analyzer</button>
+              </div>
+            </article>
+            <article class="home-card">
+              <h2>Hitster &amp; Spotify</h2>
+              <p>Playlist-Generator, Play-Screens und digitale Modi für deine nächste Musikrunde.</p>
+              <div class="home-card__links">
+                <button type="button" class="link-button" data-nav-target="generator">QR Karten</button>
+                <button type="button" class="link-button" data-nav-target="play-screen">Play Screen</button>
+                <button type="button" class="link-button" data-nav-target="digital-mode">Digital Mode</button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section id="configView" class="view" aria-labelledby="configTitle" hidden>
+          <header class="view-header">
+            <div>
+              <h1 id="configTitle">Konfigurationen</h1>
+              <p class="view-subline">
+                Speichere deine Schlüssel verschlüsselt im Browser-Speicher. Die Einträge werden nicht an
+                Server übertragen.
+              </p>
+            </div>
+          </header>
+          <div id="configGrid" class="config-grid" aria-live="polite"></div>
+        </section>
+
+        <section id="frameView" class="view" aria-labelledby="frameTitle" hidden>
+          <header class="view-header">
+            <div>
+              <h1 id="frameTitle"></h1>
+              <p id="frameDescription" class="view-subline"></p>
+            </div>
+            <div class="view-actions">
+              <button type="button" id="openExternal" class="button button--ghost" hidden>
+                In neuem Tab öffnen
+              </button>
+            </div>
+          </header>
+          <div class="frame-wrapper">
+            <iframe id="contentFrame" title="Arbeitsbereich" loading="lazy" class="content-frame"></iframe>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer" aria-label="Seitenende"></footer>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
 </html>
