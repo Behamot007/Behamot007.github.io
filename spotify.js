@@ -55,7 +55,8 @@ async function getPlaylistTracks(playlistId, token) {
           artist: item.track.artists.map(a => a.name).join(", "),
           url: item.track.external_urls.spotify,
           cover: album.images?.[0]?.url || "",
-          year: releaseDate
+          year: releaseDate,
+          preview: item.track.preview_url || null
         });
       }
     });
