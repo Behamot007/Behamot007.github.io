@@ -112,6 +112,12 @@
       height: auto;
     }
 
+    .preview-info {
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: #333;
+    }
+
     #qrCode canvas {
       max-width: 100%;
       height: auto;
@@ -206,6 +212,8 @@
 
     <div class="controls">
       <button id="flipBtn">Umdrehen</button>
+      <button id="playBtn" disabled>Play</button>
+      <button id="stopBtn" disabled>Stop</button>
       <button id="correctBtn" disabled style="display:none">Richtig</button>
       <button id="wrongBtn" disabled style="display:none">Falsch</button>
       <button id="chipsBtn">Chips ausgeben</button>
@@ -247,6 +255,12 @@
     let flipped = false;
     let players = [];
     let currentPlayerIndex = 0;
+    const audioPlayer = new Audio();
+    audioPlayer.preload = 'auto';
+    const playBtn = document.getElementById('playBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    playBtn.disabled = true;
+    stopBtn.disabled = true;
 
     async function fetchPlaylistTracks(playlistUrl) {
       const playlistId = extractPlaylistId(playlistUrl);
@@ -261,6 +275,26 @@
       return playlistTracks.splice(idx, 1)[0];
     }
 
+    function stopPlayback() {
+      audioPlayer.pause();
+      audioPlayer.currentTime = 0;
+    }
+
+    function prepareTrackPreview(track) {
+      stopPlayback();
+      if (track && track.preview) {
+        audioPlayer.src = track.preview;
+        audioPlayer.load();
+        playBtn.disabled = false;
+        stopBtn.disabled = false;
+      } else {
+        audioPlayer.src = '';
+        audioPlayer.load();
+        playBtn.disabled = true;
+        stopBtn.disabled = true;
+      }
+    }
+
     function updateQRCode(track) {
       if (qr) document.getElementById("qrCode").innerHTML = "";
       qr = new QRCode(document.getElementById("qrCode"), {
@@ -272,11 +306,15 @@
 
     function showTrackInfo(track) {
       const infoDiv = document.getElementById("songInfo");
+      const yearText = track.year ? track.year.slice(0, 4) : '-';
+      const previewText = track.preview ? '🎧 30s Vorschau verfügbar' : 'Keine Spotify-Vorschau verfügbar';
+      const coverHtml = track.cover ? `<img src="${track.cover}" alt="Albumcover">` : '';
       infoDiv.innerHTML = `
         <h3>${track.name}</h3>
         <p>${track.artist}</p>
-        <p>${track.year.slice(0,4)}</p>
-        <img src="${track.cover}">
+        <p>${yearText}</p>
+        <p class="preview-info">${previewText}</p>
+        ${coverHtml}
       `;
     }
 
@@ -411,9 +449,12 @@
       currentTrack = randomTrack();
       if (!currentTrack) {
         alert('Keine weiteren Songs in der Playlist.');
+        prepareTrackPreview(null);
+        document.getElementById('flipBtn').disabled = true;
         return;
       }
       updateQRCode(currentTrack);
+      prepareTrackPreview(currentTrack);
       document.getElementById('flipBtn').disabled = false;
       hideAnswerButtons();
     }
@@ -461,6 +502,24 @@
       if (currentTrack) {
         flipCard();
       }
+    });
+
+    playBtn.addEventListener('click', async () => {
+      if (!currentTrack || !currentTrack.preview) return;
+      try {
+        await audioPlayer.play();
+      } catch (err) {
+        console.error('Fehler beim Abspielen der Vorschau', err);
+        alert('Die Vorschau konnte nicht abgespielt werden. Bitte prüfe deine Spotify-Konfiguration.');
+      }
+    });
+
+    stopBtn.addEventListener('click', () => {
+      stopPlayback();
+    });
+
+    audioPlayer.addEventListener('ended', () => {
+      stopPlayback();
     });
 
     function handleAnswer(correct) {
