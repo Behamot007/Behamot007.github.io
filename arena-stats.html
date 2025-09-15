@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Arena-Statistik (EUW, Riot API) – Gesamt & pro Champion</title>
   <style>
-    :root { --bg:#0b1020; --card:#131a2a; --muted:#8fa1c7; --text:#e9f0ff; --accent:#6aa9ff; --good:#56d364; }
+    :root { --bg:#0b1020; --card:#131a2a; --muted:#8fa1c7; --text:#e9f0ff; --accent:#6aa9ff; --good:#56d364; --bad:#ff6b6b; }
     *{box-sizing:border-box}
     body{margin:0;background:radial-gradient(1000px 600px at 10% -10%,#14203e 0,#0b1020 50%,#090e1a 100%);color:var(--text);font:16px/1.45 system-ui,Segoe UI,Roboto,Arial,sans-serif}
     header{padding:28px 20px 10px; text-align:center}
@@ -24,7 +24,7 @@
     .status{margin:10px 0 18px; font-size:14px; color:var(--muted)}
     .kvs{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:10px; margin:10px 0 18px}
     .kv{background:var(--card); border:1px dashed #28406f; border-radius:12px; padding:10px 12px; font-size:13px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:14px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:14px}
     .card{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.0)); border:1px solid #1f2942; border-radius:16px; padding:14px; display:flex; gap:12px; align-items:center}
     .avatar{width:56px;height:56px;border-radius:12px; overflow:hidden; flex:0 0 auto; border:1px solid #2a395f}
     .avatar img{width:100%;height:100%;object-fit:cover; display:block}
@@ -36,6 +36,43 @@
     .winner{border:2px solid gold; background:linear-gradient(180deg,#3b2b00,#1a1500)}
     .badge{display:inline-block; margin-left:6px; padding:2px 8px; border-radius:999px; border:1px solid #6b5d28; font-size:12px; color:#ffd76a}
     .filehint{font-size:12px;color:#9ab0da}
+    .card{align-items:flex-start}
+    .card-body{display:flex;flex-direction:column;gap:8px}
+    .meta-line{font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:12px}
+    .meta-line span{white-space:nowrap}
+    .card details{background:rgba(10,16,32,.6);border:1px solid #263659;border-radius:12px;padding:10px 12px;margin-top:8px}
+    .card details summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--accent)}
+    .card details summary::-webkit-details-marker{display:none}
+    .card details[open]{border-color:#345b9c}
+    .match-list{display:flex;flex-direction:column;gap:12px;margin-top:10px}
+    .match-entry{background:rgba(11,16,32,.8);border:1px solid #1f2c4a;border-radius:10px;padding:10px}
+    .match-header{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;font-size:12px;color:var(--muted)}
+    .match-result{font-weight:700}
+    .match-result.win{color:var(--good)}
+    .match-result.loss{color:var(--bad)}
+    .match-teams{display:grid;gap:8px;margin-top:8px}
+    .team{border:1px solid #1f2c4a;border-radius:8px;padding:8px;background:rgba(15,22,40,.6)}
+    .team.self{border-color:var(--accent)}
+    .team-header{font-size:12px;font-weight:600;margin-bottom:6px;color:var(--muted)}
+    .team-list{display:flex;flex-direction:column;gap:4px;font-size:12px}
+    .player-name{font-weight:600;color:var(--text)}
+    .player-name.player-main{color:var(--accent)}
+    .player-champ{color:var(--muted)}
+    .player-kda{color:var(--muted)}
+    .section{margin-top:32px}
+    .section-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+    .section-header h2{margin:0;font-size:18px}
+    .mates-input{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+    #mateMin{max-width:120px;padding:8px 10px;border-radius:8px;border:1px solid #1e2a44;background:var(--card);color:var(--text)}
+    .mate-content{overflow-x:auto}
+    .mate-table{width:100%;border-collapse:collapse;font-size:13px;min-width:420px}
+    .mate-table th,.mate-table td{text-align:left;padding:8px;border-bottom:1px solid #1f2c4a}
+    .mate-table tbody tr:hover{background:rgba(20,32,60,.4)}
+    .advanced{margin:24px 0 0}
+    .advanced details{background:var(--card);border:1px solid #1e2a44;border-radius:12px;padding:12px}
+    .advanced summary{cursor:pointer;font-weight:600;color:var(--accent)}
+    .advanced summary::-webkit-details-marker{display:none}
+    .advanced-grid{margin-top:10px;display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
   </style>
 </head>
 <body>
@@ -102,6 +139,44 @@
     <div class="kv"><strong>Win-Rate:</strong> <span id="kv-winrate"></span></div>
   </div>
 
+  <div class="advanced" id="advanced" hidden>
+    <details>
+      <summary>Erweiterte Gesamtstatistiken</summary>
+      <div class="advanced-grid">
+        <div class="kv"><strong>Ø Platzierung:</strong> <span id="adv-avg-placement">—</span></div>
+        <div class="kv"><strong>Beste Platzierung:</strong> <span id="adv-best-placement">—</span></div>
+        <div class="kv"><strong>Schlechteste Platzierung:</strong> <span id="adv-worst-placement">—</span></div>
+        <div class="kv"><strong>Ø Kills:</strong> <span id="adv-avg-kills">—</span></div>
+        <div class="kv"><strong>Ø Deaths:</strong> <span id="adv-avg-deaths">—</span></div>
+        <div class="kv"><strong>Ø Assists:</strong> <span id="adv-avg-assists">—</span></div>
+        <div class="kv"><strong>Ø KDA:</strong> <span id="adv-avg-kda">—</span></div>
+        <div class="kv"><strong>Ø Schaden:</strong> <span id="adv-avg-damage">—</span></div>
+        <div class="kv"><strong>Max Schaden:</strong> <span id="adv-max-damage">—</span></div>
+        <div class="kv"><strong>Gesamt Schaden:</strong> <span id="adv-total-damage">—</span></div>
+        <div class="kv"><strong>Ø Gold:</strong> <span id="adv-avg-gold">—</span></div>
+        <div class="kv"><strong>Max Gold:</strong> <span id="adv-max-gold">—</span></div>
+        <div class="kv"><strong>Ø CS:</strong> <span id="adv-avg-cs">—</span></div>
+        <div class="kv"><strong>Max CS:</strong> <span id="adv-max-cs">—</span></div>
+        <div class="kv"><strong>Ø Dauer:</strong> <span id="adv-avg-duration">—</span></div>
+        <div class="kv"><strong>Längstes Spiel:</strong> <span id="adv-longest-duration">—</span></div>
+        <div class="kv"><strong>Kürzestes Spiel:</strong> <span id="adv-shortest-duration">—</span></div>
+        <div class="kv"><strong>Spiele ≥ 10 Kills:</strong> <span id="adv-highkill-games">—</span></div>
+        <div class="kv"><strong>Spiele ≥ 30k Schaden:</strong> <span id="adv-highdamage-games">—</span></div>
+        <div class="kv"><strong>Spiele ohne Tode:</strong> <span id="adv-nodeath-games">—</span></div>
+      </div>
+    </details>
+  </div>
+
+  <section class="section" id="mateSection" hidden>
+    <div class="section-header">
+      <h2>Mitspieler</h2>
+      <label class="mates-input">Min. gemeinsame Spiele
+        <input id="mateMin" type="number" min="1" value="3" />
+      </label>
+    </div>
+    <div class="mate-content" id="mateContent"></div>
+  </section>
+
   <div class="grid" id="grid"></div>
 
   <div class="footer">
@@ -133,12 +208,39 @@
     importFile: document.getElementById('importFile'),
     exportBtn: document.getElementById('exportBtn'),
     importInfo: document.getElementById('importInfo'),
+    advanced: document.getElementById('advanced'),
+    advAvgPlacement: document.getElementById('adv-avg-placement'),
+    advBestPlacement: document.getElementById('adv-best-placement'),
+    advWorstPlacement: document.getElementById('adv-worst-placement'),
+    advAvgKills: document.getElementById('adv-avg-kills'),
+    advAvgDeaths: document.getElementById('adv-avg-deaths'),
+    advAvgAssists: document.getElementById('adv-avg-assists'),
+    advAvgKda: document.getElementById('adv-avg-kda'),
+    advAvgDamage: document.getElementById('adv-avg-damage'),
+    advMaxDamage: document.getElementById('adv-max-damage'),
+    advTotalDamage: document.getElementById('adv-total-damage'),
+    advAvgGold: document.getElementById('adv-avg-gold'),
+    advMaxGold: document.getElementById('adv-max-gold'),
+    advAvgCs: document.getElementById('adv-avg-cs'),
+    advMaxCs: document.getElementById('adv-max-cs'),
+    advAvgDuration: document.getElementById('adv-avg-duration'),
+    advLongestDuration: document.getElementById('adv-longest-duration'),
+    advShortestDuration: document.getElementById('adv-shortest-duration'),
+    advHighkillGames: document.getElementById('adv-highkill-games'),
+    advHighdamageGames: document.getElementById('adv-highdamage-games'),
+    advNodeathGames: document.getElementById('adv-nodeath-games'),
+    mateSection: document.getElementById('mateSection'),
+    mateMin: document.getElementById('mateMin'),
+    mateContent: document.getElementById('mateContent'),
   };
 
   // --- Consts ---
   const PLATFORM = 'euw1';    // Summoner-v4
   const REGION   = 'europe';  // Account/Match-v5
   const ARENA_QUEUES = [1700, 1701, 1702, 1710, 1711]; // Arena Queues (inkl. frühere Varianten)
+  const nf0 = new Intl.NumberFormat('de-DE');
+  const nf1 = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const nf2 = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   // --- DDragon cache ---
   let ddVer = null;
@@ -147,6 +249,7 @@
   // --- Dataset state ---
   let importedDataset = null; // {version, exportedAt, queues, puuid, player, matches: [{id,info,metadata?}]}
   let lastDataset = null;     // das, was exportiert werden kann (live oder import)
+  let lastTeammateStats = null;
 
   // --- Utils ---
   function setStatus(msg, spinning = false, isError = false) {
@@ -154,6 +257,59 @@
   }
   function sleep(ms){return new Promise(res=>setTimeout(res,ms))}
   function pct(a,b){return b? (a*100/b).toFixed(1)+'%':'—'}
+  function formatDuration(seconds) {
+    if (!seconds) return '—';
+    const total = Math.max(0, seconds);
+    const mins = Math.floor(total / 60);
+    const secs = Math.round(total % 60);
+    return `${mins}m ${secs.toString().padStart(2,'0')}s`;
+  }
+  function ensureSeconds(duration) {
+    if (!duration) return 0;
+    return duration > 100000 ? duration / 1000 : duration;
+  }
+  function formatDate(ts) {
+    if (!ts) return '—';
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric' });
+  }
+  function playerLabel(part) {
+    if (!part) return 'Unbekannt';
+    if (part.riotIdGameName) {
+      if (part.riotIdTagline && part.riotIdTagline !== '0') return `${part.riotIdGameName}#${part.riotIdTagline}`;
+      return part.riotIdGameName;
+    }
+    if (part.gameName) {
+      return part.tagLine ? `${part.gameName}#${part.tagLine}` : part.gameName;
+    }
+    if (part.summonerName) return part.summonerName;
+    if (part.puuid) return part.puuid.slice(0, 8);
+    return 'Unbekannt';
+  }
+  function getTeamIdentifier(part) {
+    if (!part) return 'team-unknown';
+    if (part.playerSubteamId != null) return `subteam-${part.playerSubteamId}`;
+    if (part.subteamId != null) return `subteam-${part.subteamId}`;
+    if (part.teamId != null) return `team-${part.teamId}`;
+    return `solo-${part.puuid || Math.random().toString(36).slice(2,7)}`;
+  }
+  function escapeHtml(str) {
+    return String(str ?? '').replace(/[&<>"']/g, (ch) => {
+      switch (ch) {
+        case '&': return '&amp;';
+        case '<': return '&lt;';
+        case '>': return '&gt;';
+        case '"': return '&quot;';
+        case '\'': return '&#39;';
+        default: return ch;
+      }
+    });
+  }
+  function percentText(count, total) {
+    if (!total) return '—';
+    return nf1.format((count * 100) / total) + '%';
+  }
   async function fetchJson(url, apiKey, {retries=2}={}) {
     let lastErr;
     for (let i=0;i<=retries;i++){
@@ -271,36 +427,204 @@
 
   // --- Analyse-Helfer (nutzt fertige Matches, ohne Live-Fetch) ---
   function analyzeMatches(matchObjs, puuid, display) {
-    const totals = { games: 0, top4: 0, top1: 0 };
-    const statsByChamp = new Map(); // name -> {games, top4, top1, img}
+    const totals = {
+      games: 0,
+      top4: 0,
+      top1: 0,
+      kills: 0,
+      deaths: 0,
+      assists: 0,
+      damage: 0,
+      gold: 0,
+      cs: 0,
+      duration: 0,
+      placementSum: 0,
+      bestPlacement: null,
+      worstPlacement: null,
+      maxDamage: 0,
+      maxGold: 0,
+      maxKills: 0,
+      maxCs: 0,
+      longestDuration: 0,
+      shortestDuration: null,
+      highKillGames: 0,
+      highDamageGames: 0,
+      noDeathGames: 0,
+    };
+    const statsByChamp = new Map();
+    const teammateStats = new Map();
     let processed = 0;
 
     for (const m of matchObjs) {
       const info = m.info || {};
-      const me = (info.participants || []).find(p => p.puuid === puuid);
+      const participants = info.participants || [];
+      if (!participants.length) continue;
+      const me = participants.find(p => p.puuid === puuid);
       if (!me) continue;
+
       const teamCount = getTeamCount(info);
       const placement = getPlacement(me);
       if (placement == null) continue;
 
+      const kills = me.kills || 0;
+      const deaths = me.deaths || 0;
+      const assists = me.assists || 0;
+      const damage = me.totalDamageDealtToChampions || 0;
+      const gold = me.goldEarned || 0;
+      const cs = (me.totalMinionsKilled || 0) + (me.neutralMinionsKilled || 0);
+      const durationSeconds = ensureSeconds(info.gameDuration || info.gameDurationInSeconds || 0);
+      const win = isTop1(placement);
+      const top4 = isTop4(placement, teamCount);
+
       totals.games += 1;
-      if (isTop4(placement, teamCount)) totals.top4 += 1;
-      if (isTop1(placement))            totals.top1 += 1;
+      if (top4) totals.top4 += 1;
+      if (win) totals.top1 += 1;
+      totals.kills += kills;
+      totals.deaths += deaths;
+      totals.assists += assists;
+      totals.damage += damage;
+      totals.gold += gold;
+      totals.cs += cs;
+      totals.duration += durationSeconds;
+      totals.placementSum += placement;
+      totals.bestPlacement = totals.bestPlacement == null ? placement : Math.min(totals.bestPlacement, placement);
+      totals.worstPlacement = totals.worstPlacement == null ? placement : Math.max(totals.worstPlacement, placement);
+      totals.maxDamage = Math.max(totals.maxDamage, damage);
+      totals.maxGold = Math.max(totals.maxGold, gold);
+      totals.maxKills = Math.max(totals.maxKills, kills);
+      totals.maxCs = Math.max(totals.maxCs, cs);
+      totals.longestDuration = Math.max(totals.longestDuration, durationSeconds);
+      totals.shortestDuration = totals.shortestDuration == null ? durationSeconds : Math.min(totals.shortestDuration, durationSeconds);
+      if (kills >= 10) totals.highKillGames += 1;
+      if (damage >= 30000) totals.highDamageGames += 1;
+      if (deaths === 0) totals.noDeathGames += 1;
 
       const asset = champAssetByParticipant(me);
       const key = asset.label;
-      if (!statsByChamp.has(key)) statsByChamp.set(key, { games: 0, top4: 0, top1: 0, img: asset.img });
-      const s = statsByChamp.get(key);
-      s.games += 1;
-      if (isTop4(placement, teamCount)) s.top4 += 1;
-      if (isTop1(placement))            s.top1 += 1;
+      if (!statsByChamp.has(key)) {
+        statsByChamp.set(key, {
+          games: 0,
+          top4: 0,
+          top1: 0,
+          img: asset.img,
+          kills: 0,
+          deaths: 0,
+          assists: 0,
+          damage: 0,
+          gold: 0,
+          cs: 0,
+          placementSum: 0,
+          bestPlacement: null,
+          worstPlacement: null,
+          matches: [],
+        });
+      }
+      const champStats = statsByChamp.get(key);
+      champStats.games += 1;
+      if (top4) champStats.top4 += 1;
+      if (win) champStats.top1 += 1;
+      champStats.kills += kills;
+      champStats.deaths += deaths;
+      champStats.assists += assists;
+      champStats.damage += damage;
+      champStats.gold += gold;
+      champStats.cs += cs;
+      champStats.placementSum += placement;
+      champStats.bestPlacement = champStats.bestPlacement == null ? placement : Math.min(champStats.bestPlacement, placement);
+      champStats.worstPlacement = champStats.worstPlacement == null ? placement : Math.max(champStats.worstPlacement, placement);
+
+      const teams = new Map();
+      participants.forEach((part) => {
+        const teamKey = getTeamIdentifier(part);
+        if (!teams.has(teamKey)) {
+          const numeric = part.playerSubteamId ?? part.subteamId ?? part.teamId ?? null;
+          teams.set(teamKey, { key: teamKey, numericId: numeric, placement: getPlacement(part), participants: [] });
+        }
+        const teamObj = teams.get(teamKey);
+        if (teamObj.placement == null) teamObj.placement = getPlacement(part);
+        const partAsset = champAssetByParticipant(part);
+        teamObj.participants.push({
+          puuid: part.puuid,
+          name: playerLabel(part),
+          champion: partAsset.label,
+          championImg: partAsset.img,
+          kills: part.kills || 0,
+          deaths: part.deaths || 0,
+          assists: part.assists || 0,
+          isMain: part.puuid === puuid,
+        });
+      });
+
+      const myTeamKey = getTeamIdentifier(me);
+      const teamsList = Array.from(teams.values()).map((team) => {
+        team.isSelf = (team.key === myTeamKey);
+        return team;
+      }).sort((a, b) => {
+        if (a.placement != null && b.placement != null) return a.placement - b.placement;
+        if (a.placement != null) return -1;
+        if (b.placement != null) return 1;
+        const aId = a.numericId ?? 0;
+        const bId = b.numericId ?? 0;
+        return aId - bId;
+      });
+
+      teamsList.forEach((team, idx) => {
+        team.display = team.numericId != null ? team.numericId : idx + 1;
+      });
+
+      const myTeam = teamsList.find(team => team.isSelf);
+      const teammates = myTeam ? myTeam.participants.filter(p => !p.isMain) : [];
+
+      const matchEntry = {
+        id: m.id,
+        timestamp: info.gameCreation || info.gameStartTimestamp || 0,
+        placement,
+        teamCount: teamsList.length || teamCount,
+        win,
+        top4,
+        kills,
+        deaths,
+        assists,
+        kda: (kills + assists) / Math.max(1, deaths),
+        damage,
+        gold,
+        cs,
+        duration: durationSeconds,
+        teams: teamsList,
+        teammates,
+      };
+
+      champStats.matches.push(matchEntry);
+
+      for (const mate of teammates) {
+        const mateKey = mate.puuid || mate.name;
+        if (!mateKey) continue;
+        if (!teammateStats.has(mateKey)) {
+          teammateStats.set(mateKey, { puuid: mate.puuid, name: mate.name, games: 0, wins: 0, top4: 0, champions: new Map(), lastSeen: 0 });
+        }
+        const entry = teammateStats.get(mateKey);
+        entry.name = mate.name;
+        entry.games += 1;
+        if (win) entry.wins += 1;
+        if (top4) entry.top4 += 1;
+        entry.lastSeen = Math.max(entry.lastSeen, matchEntry.timestamp || 0);
+        const champLabel = mate.champion;
+        entry.champions.set(champLabel, (entry.champions.get(champLabel) || 0) + 1);
+      }
 
       processed++;
       if (processed % 100 === 0) setStatus(`Analysiert: ${processed}/${matchObjs.length}…`, true);
     }
 
+    for (const champ of statsByChamp.values()) {
+      champ.matches.sort((a, b) => b.timestamp - a.timestamp);
+    }
+
     renderOverall(display, totals);
+    renderAdvancedTotals(totals);
     renderPerChampion(statsByChamp);
+    lastTeammateStats = teammateStats;
+    renderTeammates(teammateStats);
     setStatus(`Fertig. Arena-Spiele: ${totals.games} • Top 4: ${totals.top4} • Top 1: ${totals.top1}`);
   }
 
@@ -315,7 +639,44 @@
     els.kvs.hidden = false;
   }
 
-  // --- Render pro Champion (alle mit >=1 Top1 hervorheben) ---
+  function renderAdvancedTotals(totals) {
+    if (!totals || !totals.games) {
+      els.advanced.hidden = true;
+      return;
+    }
+    els.advanced.hidden = false;
+    const avgPlacement = totals.games ? totals.placementSum / totals.games : 0;
+    const avgKills = totals.games ? totals.kills / totals.games : 0;
+    const avgDeaths = totals.games ? totals.deaths / totals.games : 0;
+    const avgAssists = totals.games ? totals.assists / totals.games : 0;
+    const avgDamage = totals.games ? totals.damage / totals.games : 0;
+    const avgGold = totals.games ? totals.gold / totals.games : 0;
+    const avgCs = totals.games ? totals.cs / totals.games : 0;
+    const avgDuration = totals.games ? totals.duration / totals.games : 0;
+    const avgKda = (totals.kills + totals.assists) / Math.max(1, totals.deaths);
+    els.advAvgPlacement.textContent = nf1.format(avgPlacement);
+    els.advBestPlacement.textContent = totals.bestPlacement != null ? totals.bestPlacement : '—';
+    els.advWorstPlacement.textContent = totals.worstPlacement != null ? totals.worstPlacement : '—';
+    els.advAvgKills.textContent = nf1.format(avgKills);
+    els.advAvgDeaths.textContent = nf1.format(avgDeaths);
+    els.advAvgAssists.textContent = nf1.format(avgAssists);
+    els.advAvgKda.textContent = nf2.format(avgKda);
+    els.advAvgDamage.textContent = nf0.format(Math.round(avgDamage));
+    els.advMaxDamage.textContent = nf0.format(Math.round(totals.maxDamage));
+    els.advTotalDamage.textContent = nf0.format(Math.round(totals.damage));
+    els.advAvgGold.textContent = nf0.format(Math.round(avgGold));
+    els.advMaxGold.textContent = nf0.format(Math.round(totals.maxGold));
+    els.advAvgCs.textContent = nf1.format(avgCs);
+    els.advMaxCs.textContent = nf1.format(totals.maxCs);
+    els.advAvgDuration.textContent = formatDuration(avgDuration);
+    els.advLongestDuration.textContent = totals.longestDuration ? formatDuration(totals.longestDuration) : '—';
+    els.advShortestDuration.textContent = (totals.shortestDuration != null) ? formatDuration(totals.shortestDuration) : '—';
+    els.advHighkillGames.textContent = `${totals.highKillGames} (${percentText(totals.highKillGames, totals.games)})`;
+    els.advHighdamageGames.textContent = `${totals.highDamageGames} (${percentText(totals.highDamageGames, totals.games)})`;
+    els.advNodeathGames.textContent = `${totals.noDeathGames} (${percentText(totals.noDeathGames, totals.games)})`;
+  }
+
+  // --- Render pro Champion ---
   function renderPerChampion(statsByChamp) {
     els.grid.innerHTML = '';
     const rows = Array.from(statsByChamp.entries()).sort((a,b)=>{
@@ -334,25 +695,124 @@
     for (const [champ, info] of rows) {
       const card = document.createElement('div');
       card.className = 'card' + (info.top1 > 0 ? ' winner' : '');
+      const top4Rate = percentText(info.top4, info.games);
+      const winRate = percentText(info.top1, info.games);
+      const avgPlacement = info.games ? nf1.format(info.placementSum / info.games) : '—';
+      const avgKills = info.games ? nf1.format(info.kills / info.games) : '—';
+      const avgDeaths = info.games ? nf1.format(info.deaths / info.games) : '—';
+      const avgAssists = info.games ? nf1.format(info.assists / info.games) : '—';
+      const avgDamage = info.games ? nf0.format(Math.round(info.damage / info.games)) : '—';
+      const avgGold = info.games ? nf0.format(Math.round(info.gold / info.games)) : '—';
+      const avgCs = info.games ? nf1.format(info.cs / info.games) : '—';
+      const kda = info.deaths ? (info.kills + info.assists) / Math.max(1, info.deaths) : (info.kills + info.assists);
+      const badge = info.top1 > 0 ? ` <span class="badge">Top 1 × ${info.top1}</span>` : '';
       card.innerHTML = `
-        <div class="avatar"><img src="${info.img}" alt="${champ}" loading="lazy"></div>
-        <div>
-          <div class="title">${champ}${info.top1>0?` <span class="badge">🏆 Top 1 × ${info.top1}</span>`:''}</div>
-          <div class="meta">
-            Spiele: ${info.games}
-            • Top 4: ${info.top4} (${((info.top4*100/info.games)||0).toFixed(1)}%)
-            • Top 1: ${info.top1} (${((info.top1*100/info.games)||0).toFixed(1)}%)
+        <div class="avatar"><img src="${info.img}" alt="${escapeHtml(champ)}" loading="lazy"></div>
+        <div class="card-body">
+          <div class="title">${escapeHtml(champ)}${badge}</div>
+          <div class="meta-line">
+            <span>Spiele: ${info.games}</span>
+            <span>Top 4: ${info.top4} (${top4Rate})</span>
+            <span>Top 1: ${info.top1} (${winRate})</span>
           </div>
-          <span class="pill success">Arena ✓</span>
+          <div class="meta-line">
+            <span>Ø Platzierung: ${avgPlacement}</span>
+            <span>Beste Platzierung: ${info.bestPlacement ?? '—'}</span>
+            <span>Schlechteste Platzierung: ${info.worstPlacement ?? '—'}</span>
+          </div>
+          <div class="meta-line">
+            <span>Ø K/D/A: ${avgKills}/${avgDeaths}/${avgAssists}</span>
+            <span>Ø KDA: ${nf2.format(kda)}</span>
+            <span>Ø Schaden: ${avgDamage}</span>
+          </div>
+          <div class="meta-line">
+            <span>Ø Gold: ${avgGold}</span>
+            <span>Ø CS: ${avgCs}</span>
+          </div>
+          <details>
+            <summary>Spiele & Teams anzeigen</summary>
+            <div class="match-list">
+              ${renderMatchEntries(info.matches)}
+            </div>
+          </details>
         </div>`;
       els.grid.appendChild(card);
     }
+  }
+
+  function renderMatchEntries(matches) {
+    if (!matches || matches.length === 0) {
+      return '<div class="match-entry">Keine Arena-Spiele mit diesem Champion.</div>';
+    }
+    return matches.map(match => {
+      const date = formatDate(match.timestamp);
+      const placementText = match.placement != null ? `Platz ${match.placement}/${match.teamCount}` : `Platz ?/${match.teamCount}`;
+      const top4Text = match.top4 ? 'Top 4' : 'Außerhalb Top 4';
+      const resultClass = match.win ? 'win' : 'loss';
+      const resultText = match.win ? 'Sieg' : 'Niederlage';
+      const kdaText = `${match.kills}/${match.deaths}/${match.assists} (${nf2.format(match.kda)})`;
+      const damageText = nf0.format(Math.round(match.damage));
+      const goldText = nf0.format(Math.round(match.gold));
+      const csText = nf1.format(match.cs);
+      const durationText = formatDuration(match.duration);
+      const teamsHtml = (match.teams && match.teams.length) ? match.teams.map(team => {
+        const headerLabel = team.isSelf ? 'Eigenes Team' : 'Team';
+        const placement = team.placement != null ? `Platz ${team.placement}` : 'Platz ?';
+        const players = team.participants.map(player => {
+          const name = escapeHtml(player.name);
+          const champ = escapeHtml(player.champion);
+          return `<div><span class="player-name${player.isMain ? ' player-main' : ''}">${name}</span> – <span class="player-champ">${champ}</span> <span class="player-kda">${player.kills}/${player.deaths}/${player.assists}</span></div>`;
+        }).join('');
+        return `<div class="team${team.isSelf ? ' self' : ''}"><div class="team-header">${headerLabel} ${escapeHtml(String(team.display))} – ${placement}</div><div class="team-list">${players}</div></div>`;
+      }).join('') : '<div class="team"><div class="team-header">Keine Teamdaten</div></div>';
+      return `<div class="match-entry"><div class="match-header"><span>${escapeHtml(date)}</span><span>${escapeHtml(placementText)} • ${top4Text}</span><span class="match-result ${resultClass}">${resultText}</span><span>K/D/A: ${kdaText}</span><span>Schaden: ${damageText}</span><span>Gold: ${goldText}</span><span>CS: ${csText}</span><span>Dauer: ${durationText}</span></div><div class="match-teams">${teamsHtml}</div></div>`;
+    }).join('');
+  }
+
+  function renderTeammates(map) {
+    if (map) lastTeammateStats = map;
+    const source = map || lastTeammateStats;
+    if (!source || source.size === 0) {
+      els.mateSection.hidden = true;
+      els.mateContent.innerHTML = '';
+      return;
+    }
+    const min = Math.max(1, parseInt(els.mateMin.value, 10) || 1);
+    const rows = Array.from(source.values()).filter(entry => entry.games >= min)
+      .sort((a, b) => {
+        if (b.games !== a.games) return b.games - a.games;
+        const wrA = a.games ? a.wins / a.games : 0;
+        const wrB = b.games ? b.wins / b.games : 0;
+        if (wrB !== wrA) return wrB - wrA;
+        return (b.lastSeen || 0) - (a.lastSeen || 0);
+      });
+    if (rows.length === 0) {
+      els.mateSection.hidden = false;
+      els.mateContent.innerHTML = `<div class="hint">Keine Mitspieler mit mindestens ${min} gemeinsamen Spielen.</div>`;
+      return;
+    }
+    const body = rows.map(entry => {
+      const wr = percentText(entry.wins, entry.games);
+      const top4 = percentText(entry.top4, entry.games);
+      const champs = Array.from(entry.champions.entries())
+        .sort((a,b) => b[1] - a[1])
+        .slice(0,3)
+        .map(([c,count]) => `${escapeHtml(c)} × ${count}`)
+        .join(', ');
+      return `<tr><td>${escapeHtml(entry.name)}</td><td>${entry.games}</td><td>${entry.wins}</td><td>${wr}</td><td>${top4}</td><td>${champs || '—'}</td></tr>`;
+    }).join('');
+    els.mateContent.innerHTML = `<table class="mate-table"><thead><tr><th>Name</th><th>Spiele</th><th>Siege</th><th>Win-Rate</th><th>Top 4-Rate</th><th>Champions</th></tr></thead><tbody>${body}</tbody></table>`;
+    els.mateSection.hidden = false;
   }
 
   // --- Hauptlauf ---
   async function run(apiKey, gameName, tagLine, limit) {
     els.kvs.hidden = true;
     els.grid.innerHTML = '';
+    els.advanced.hidden = true;
+    els.mateSection.hidden = true;
+    els.mateContent.innerHTML = '';
+    lastTeammateStats = null;
     setStatus('', false);
 
     await ensureDataDragon();
@@ -481,25 +941,84 @@
     setStatus('Datensatz exportiert.');
   });
 
+  els.mateMin.addEventListener('input', () => {
+    if (lastTeammateStats) renderTeammates();
+  });
+
   // Demo
-  els.demo.addEventListener('click', () => {
-    const totals = { games: 42, top4: 28, top1: 10 };
-    const statsByChamp = new Map();
-    statsByChamp.set('Ahri',   { games: 8, top4: 6, top1: 3, img: `https://ddragon.leagueoflegends.com/cdn/14.17.1/img/champion/Ahri.png` });
-    statsByChamp.set('Darius', { games: 5, top4: 3, top1: 2, img: `https://ddragon.leagueoflegends.com/cdn/14.17.1/img/champion/Darius.png` });
-    statsByChamp.set('Kaisa',  { games: 7, top4: 5, top1: 0, img: `https://ddragon.leagueoflegends.com/cdn/14.17.1/img/champion/Kaisa.png` });
-    renderOverall('Demo#EUW', totals);
-    renderPerChampion(statsByChamp);
-    // Demo-Exportdaten
+  els.demo.addEventListener('click', async () => {
+    await ensureDataDragon();
+    const base = Date.now();
+    const demoPuuid = 'demo-puuid';
+    const demoMatches = [
+      {
+        id: 'DEMO_1',
+        info: {
+          queueId: 1700,
+          gameCreation: base - 86400000,
+          gameDuration: 1150,
+          participants: [
+            { puuid: demoPuuid, riotIdGameName: 'Demo', riotIdTagline: 'EUW', championId: 103, championName: 'Ahri', kills: 12, deaths: 3, assists: 9, goldEarned: 15234, totalDamageDealtToChampions: 28045, totalMinionsKilled: 98, neutralMinionsKilled: 24, playerSubteamId: 1, subteamPlacement: 1 },
+            { puuid: 'mate-1', riotIdGameName: 'LuxMain', riotIdTagline: 'EUW', championId: 99, championName: 'Lux', kills: 5, deaths: 4, assists: 15, goldEarned: 14021, totalDamageDealtToChampions: 23500, totalMinionsKilled: 24, neutralMinionsKilled: 6, playerSubteamId: 1, subteamPlacement: 1 },
+            { puuid: 'opp-1a', riotIdGameName: 'BruiserOne', riotIdTagline: 'EUW', championId: 122, championName: 'Darius', kills: 10, deaths: 6, assists: 4, goldEarned: 13500, totalDamageDealtToChampions: 26000, totalMinionsKilled: 85, neutralMinionsKilled: 20, playerSubteamId: 2, subteamPlacement: 2 },
+            { puuid: 'opp-1b', riotIdGameName: 'BruiserTwo', riotIdTagline: 'EUW', championId: 420, championName: 'Illaoi', kills: 6, deaths: 7, assists: 5, goldEarned: 12800, totalDamageDealtToChampions: 21000, totalMinionsKilled: 70, neutralMinionsKilled: 15, playerSubteamId: 2, subteamPlacement: 2 },
+            { puuid: 'opp-2a', riotIdGameName: 'MageOne', riotIdTagline: 'EUW', championId: 61, championName: 'Orianna', kills: 4, deaths: 5, assists: 10, goldEarned: 12000, totalDamageDealtToChampions: 19000, totalMinionsKilled: 65, neutralMinionsKilled: 10, playerSubteamId: 3, subteamPlacement: 3 },
+            { puuid: 'opp-2b', riotIdGameName: 'MageTwo', riotIdTagline: 'EUW', championId: 134, championName: 'Syndra', kills: 7, deaths: 8, assists: 6, goldEarned: 11800, totalDamageDealtToChampions: 20500, totalMinionsKilled: 60, neutralMinionsKilled: 8, playerSubteamId: 3, subteamPlacement: 3 },
+            { puuid: 'opp-3a', riotIdGameName: 'AssassinOne', riotIdTagline: 'EUW', championId: 238, championName: 'Zed', kills: 8, deaths: 7, assists: 3, goldEarned: 12500, totalDamageDealtToChampions: 24000, totalMinionsKilled: 75, neutralMinionsKilled: 18, playerSubteamId: 4, subteamPlacement: 4 },
+            { puuid: 'opp-3b', riotIdGameName: 'AssassinTwo', riotIdTagline: 'EUW', championId: 55, championName: 'Katarina', kills: 11, deaths: 9, assists: 2, goldEarned: 13200, totalDamageDealtToChampions: 25000, totalMinionsKilled: 80, neutralMinionsKilled: 12, playerSubteamId: 4, subteamPlacement: 4 },
+          ],
+        },
+      },
+      {
+        id: 'DEMO_2',
+        info: {
+          queueId: 1700,
+          gameCreation: base - 2 * 86400000,
+          gameDuration: 980,
+          participants: [
+            { puuid: demoPuuid, riotIdGameName: 'Demo', riotIdTagline: 'EUW', championId: 122, championName: 'Darius', kills: 9, deaths: 5, assists: 6, goldEarned: 14200, totalDamageDealtToChampions: 25500, totalMinionsKilled: 90, neutralMinionsKilled: 18, playerSubteamId: 1, subteamPlacement: 3 },
+            { puuid: 'mate-1', riotIdGameName: 'LuxMain', riotIdTagline: 'EUW', championId: 16, championName: 'Soraka', kills: 2, deaths: 3, assists: 14, goldEarned: 12050, totalDamageDealtToChampions: 14500, totalMinionsKilled: 18, neutralMinionsKilled: 4, playerSubteamId: 1, subteamPlacement: 3 },
+            { puuid: 'opp-4a', riotIdGameName: 'TankLord', riotIdTagline: 'EUW', championId: 32, championName: 'Amumu', kills: 3, deaths: 4, assists: 11, goldEarned: 11800, totalDamageDealtToChampions: 16000, totalMinionsKilled: 60, neutralMinionsKilled: 12, playerSubteamId: 2, subteamPlacement: 1 },
+            { puuid: 'opp-4b', riotIdGameName: 'BladeQueen', riotIdTagline: 'EUW', championId: 498, championName: 'Xayah', kills: 8, deaths: 2, assists: 7, goldEarned: 14600, totalDamageDealtToChampions: 27000, totalMinionsKilled: 92, neutralMinionsKilled: 16, playerSubteamId: 2, subteamPlacement: 1 },
+            { puuid: 'opp-5a', riotIdGameName: 'SupportGuru', riotIdTagline: 'EUW', championId: 412, championName: 'Thresh', kills: 1, deaths: 5, assists: 12, goldEarned: 10900, totalDamageDealtToChampions: 9000, totalMinionsKilled: 25, neutralMinionsKilled: 5, playerSubteamId: 3, subteamPlacement: 2 },
+            { puuid: 'opp-5b', riotIdGameName: 'MarksmanMain', riotIdTagline: 'EUW', championId: 236, championName: 'Lucian', kills: 11, deaths: 4, assists: 5, goldEarned: 15050, totalDamageDealtToChampions: 28000, totalMinionsKilled: 95, neutralMinionsKilled: 20, playerSubteamId: 3, subteamPlacement: 2 },
+            { puuid: 'opp-6a', riotIdGameName: 'BruiserKing', riotIdTagline: 'EUW', championId: 86, championName: 'Garen', kills: 5, deaths: 7, assists: 4, goldEarned: 11000, totalDamageDealtToChampions: 18000, totalMinionsKilled: 70, neutralMinionsKilled: 12, playerSubteamId: 4, subteamPlacement: 4 },
+            { puuid: 'opp-6b', riotIdGameName: 'AssassinEdge', riotIdTagline: 'EUW', championId: 91, championName: 'Talon', kills: 7, deaths: 8, assists: 3, goldEarned: 11900, totalDamageDealtToChampions: 19500, totalMinionsKilled: 68, neutralMinionsKilled: 10, playerSubteamId: 4, subteamPlacement: 4 },
+          ],
+        },
+      },
+      {
+        id: 'DEMO_3',
+        info: {
+          queueId: 1700,
+          gameCreation: base - 3 * 86400000,
+          gameDuration: 1025,
+          participants: [
+            { puuid: demoPuuid, riotIdGameName: 'Demo', riotIdTagline: 'EUW', championId: 145, championName: 'KaiSa', kills: 6, deaths: 7, assists: 5, goldEarned: 13000, totalDamageDealtToChampions: 21000, totalMinionsKilled: 88, neutralMinionsKilled: 14, playerSubteamId: 1, subteamPlacement: 4 },
+            { puuid: 'mate-2', riotIdGameName: 'BruiserBuddy', riotIdTagline: 'EUW', championId: 59, championName: 'JarvanIV', kills: 3, deaths: 8, assists: 9, goldEarned: 11500, totalDamageDealtToChampions: 15000, totalMinionsKilled: 55, neutralMinionsKilled: 12, playerSubteamId: 1, subteamPlacement: 4 },
+            { puuid: 'opp-7a', riotIdGameName: 'MagePro', riotIdTagline: 'EUW', championId: 101, championName: 'Xerath', kills: 9, deaths: 4, assists: 11, goldEarned: 14400, totalDamageDealtToChampions: 30000, totalMinionsKilled: 100, neutralMinionsKilled: 18, playerSubteamId: 2, subteamPlacement: 1 },
+            { puuid: 'opp-7b', riotIdGameName: 'ShieldHero', riotIdTagline: 'EUW', championId: 201, championName: 'Braum', kills: 2, deaths: 5, assists: 18, goldEarned: 11200, totalDamageDealtToChampions: 11000, totalMinionsKilled: 35, neutralMinionsKilled: 6, playerSubteamId: 2, subteamPlacement: 1 },
+            { puuid: 'opp-8a', riotIdGameName: 'BladeDance', riotIdTagline: 'EUW', championId: 39, championName: 'Irelia', kills: 8, deaths: 5, assists: 6, goldEarned: 13800, totalDamageDealtToChampions: 24000, totalMinionsKilled: 97, neutralMinionsKilled: 20, playerSubteamId: 3, subteamPlacement: 2 },
+            { puuid: 'opp-8b', riotIdGameName: 'StormEdge', riotIdTagline: 'EUW', championId: 10, championName: 'Kayle', kills: 9, deaths: 6, assists: 7, goldEarned: 14050, totalDamageDealtToChampions: 26000, totalMinionsKilled: 110, neutralMinionsKilled: 15, playerSubteamId: 3, subteamPlacement: 2 },
+            { puuid: 'opp-9a', riotIdGameName: 'ShadowBlade', riotIdTagline: 'EUW', championId: 141, championName: 'Kayn', kills: 10, deaths: 6, assists: 4, goldEarned: 13600, totalDamageDealtToChampions: 25500, totalMinionsKilled: 90, neutralMinionsKilled: 16, playerSubteamId: 4, subteamPlacement: 3 },
+            { puuid: 'opp-9b', riotIdGameName: 'FrostQueen', riotIdTagline: 'EUW', championId: 117, championName: 'Lulu', kills: 1, deaths: 5, assists: 17, goldEarned: 11800, totalDamageDealtToChampions: 9500, totalMinionsKilled: 28, neutralMinionsKilled: 5, playerSubteamId: 4, subteamPlacement: 3 },
+          ],
+        },
+      },
+    ];
+
+    const datasetMatches = demoMatches.map(m => ({ id: m.id, info: m.info }));
+    analyzeMatches(datasetMatches, demoPuuid, 'Demo#EUW');
     lastDataset = {
-      version: 1, exportedAt: new Date().toISOString(), queues: ARENA_QUEUES,
-      puuid: 'demo-puuid', player: 'Demo#EUW', count: 3,
-      matches: [
-        { id: 'DEMO_1', info: { participants: [] } },
-        { id: 'DEMO_2', info: { participants: [] } },
-        { id: 'DEMO_3', info: { participants: [] } },
-      ]
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      queues: ARENA_QUEUES,
+      puuid: demoPuuid,
+      player: 'Demo#EUW',
+      count: datasetMatches.length,
+      matches: datasetMatches,
     };
+    importedDataset = lastDataset;
     els.exportBtn.disabled = false;
     setStatus('Demo-Modus (keine Riot-Calls).');
   });
