@@ -1,32 +1,46 @@
 <!DOCTYPE html>
 <html lang="de">
-<head>
-  <meta charset="UTF-8" />
-  <title>Anime Charakter Rätsel Chat</title>
-  <link rel="stylesheet" href="styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
-  <script defer src="animeCharakterdle.js"></script>
-  <style>
-    #chat {
-      border: 1px solid #333;
-      padding: 10px;
-      height: 300px;
-      overflow-y: auto;
-      margin-bottom: 10px;
-    }
-    #chat .user {
-      color: #1DB954;
-    }
-    #chat .assistant {
-      color: #ffffff;
-    }
-  </style>
-</head>
-<body>
-  <h1>Errate den Anime-Charakter</h1>
-  <div id="chat"></div>
-  <input type="text" id="input" placeholder="Stelle eine Frage..." />
-  <button id="send">Senden</button>
-  <button id="restart">Neues Spiel</button>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Anime Charakter Rätsel – Behamot Toolkit</title>
+    <link rel="stylesheet" href="assets/css/base.css" />
+    <link rel="stylesheet" href="assets/css/pages/anime-chat.css" />
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.2/papaparse.min.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="site-header site-header--compact">
+        <div class="brand" aria-label="Projekt">
+          <span class="brand__title">Behamot Toolkit</span>
+          <span class="brand__subtitle">Anime Charakter Rätsel</span>
+        </div>
+        <nav id="globalNav" class="main-nav" aria-label="Werkzeugnavigation"></nav>
+      </header>
+
+      <main class="site-main">
+        <section class="view view--active anime-view" aria-labelledby="animeTitle">
+          <header class="view-header">
+            <div>
+              <h1 id="animeTitle">Errate den Anime-Charakter</h1>
+              <p class="view-subline">
+                Stelle Fragen an die KI und versuche anhand der Hinweise herauszufinden, welcher Charakter sich versteckt.
+              </p>
+            </div>
+          </header>
+
+          <article class="anime-panel">
+            <div id="chat" aria-live="polite"></div>
+            <div class="anime-actions">
+              <input type="text" id="input" placeholder="Stelle eine Frage..." />
+              <button id="send" class="button button--accent">Senden</button>
+              <button id="restart" class="button button--ghost">Neues Spiel</button>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="assets/js/pages/animeCharakterdle.js"></script>
+  </body>
 </html>
