@@ -1,37 +1,49 @@
 <!DOCTYPE html>
 <html lang="de">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Konfiguration – Behamot Toolkit</title>
-    <link rel="stylesheet" href="assets/css/base.css" />
-  </head>
-  <body>
-    <div class="app-shell">
-      <header class="site-header site-header--compact">
-        <div class="brand" aria-label="Projekt">
-          <span class="brand__title">Behamot Toolkit</span>
-          <span class="brand__subtitle">Zugänge &amp; Tokens verwalten</span>
-        </div>
-        <nav id="globalNav" class="main-nav" aria-label="Sekundärnavigation"></nav>
-      </header>
-
-      <main class="site-main">
-        <section class="view view--active" id="configPage" aria-labelledby="configTitle">
-          <header class="view-header">
-            <div>
-              <h1 id="configTitle">Konfigurationen</h1>
-              <p class="view-subline">
-                Speichere deine Schlüssel verschlüsselt im Browser-Speicher. Die Einträge werden lokal gespeichert und nicht an
-                Server übertragen.
-              </p>
-            </div>
-          </header>
-          <div id="configGrid" class="config-grid" aria-live="polite"></div>
-        </section>
-      </main>
-    </div>
-
-    <script type="module" src="assets/js/pages/config.js"></script>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="./styles.css">
+  <title>Konfiguration</title>
+</head>
+<body>
+  <h1>Konfiguration</h1>
+  <nav id="nav"></nav>
+  <div id="credentials">
+    <h2>Spotify Zugangsdaten</h2>
+    <label>
+      Client ID:
+      <input type="text" id="clientId" placeholder="Client ID">
+    </label>
+    <label>
+      Client Secret:
+      <input type="text" id="clientSecret" placeholder="Client Secret">
+    </label>
+    <label>
+      OpenAPI Token:
+      <input type="text" id="openApiToken" placeholder="Token">
+    </label>
+    <label>
+      Riot API-Key:
+      <input type="password" id="riotApiKey" placeholder="RGAPI-xxxx-xxxx-xxxx">
+    </label>
+    <button onclick="saveCredentials()">Speichern</button>
+  </div>
+  <script src="pages.js"></script>
+  <script src="navigation.js"></script>
+  <script>
+    buildNavigation('nav');
+    document.getElementById('clientId').value = localStorage.getItem('CLIENT_ID') || '';
+    document.getElementById('clientSecret').value = localStorage.getItem('CLIENT_SECRET') || '';
+    document.getElementById('openApiToken').value = localStorage.getItem('OPENAPI_TOKEN') || '';
+    document.getElementById('riotApiKey').value = localStorage.getItem('RIOT_API_KEY') || '';
+    function saveCredentials() {
+      localStorage.setItem('CLIENT_ID', document.getElementById('clientId').value);
+      localStorage.setItem('CLIENT_SECRET', document.getElementById('clientSecret').value);
+      localStorage.setItem('OPENAPI_TOKEN', document.getElementById('openApiToken').value);
+      localStorage.setItem('RIOT_API_KEY', document.getElementById('riotApiKey').value);
+      alert('Credentials gespeichert!');
+    }
+  </script>
+</body>
 </html>
