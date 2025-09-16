@@ -1,83 +1,68 @@
 <!DOCTYPE html>
 <html lang="de">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Playlist → QR Cards – Behamot Toolkit</title>
-    <link rel="stylesheet" href="assets/css/base.css" />
-    <link rel="stylesheet" href="assets/css/pages/generator.css" />
-    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
-  </head>
-  <body>
-    <div class="app-shell">
-      <header class="site-header site-header--compact">
-        <div class="brand" aria-label="Projekt">
-          <span class="brand__title">Behamot Toolkit</span>
-          <span class="brand__subtitle">Spotify Playlist → Hitster Karten</span>
-        </div>
-        <nav id="globalNav" class="main-nav" aria-label="Werkzeugnavigation"></nav>
-      </header>
 
-      <main class="site-main">
-        <section class="view view--active view--tool" aria-labelledby="toolTitle">
-          <header class="view-header">
-            <div>
-              <h1 id="toolTitle">Playlist in QR Karten umwandeln</h1>
-              <p class="view-subline">
-                Importiere eine Spotify-Playlist, generiere QR-Codes und ergänze optional Release-Jahre über eine KI-Abfrage.
-              </p>
-            </div>
-            <div class="view-actions">
-              <button type="button" class="button button--ghost" id="printHint">Druckvorschau öffnen</button>
-            </div>
-          </header>
+<head>
+  <meta charset="UTF-8">
+  <title>Spotify Playlist → Anime QR Cards</title>
+  <link rel="stylesheet" href="./styles.css">
+  </link>
+</head>
 
-          <article class="tool-section" aria-labelledby="setupTitle">
-            <div>
-              <h2 id="setupTitle">Einstellungen</h2>
-            </div>
-            <div class="tool-form">
-              <label for="playlistUrl">
-                Playlist-URL
-                <input id="playlistUrl" type="text" placeholder="https://open.spotify.com/playlist/..." />
-              </label>
-              <div class="tool-form__row">
-                <label for="bgInput">
-                  Karten Hintergrund
-                  <input id="bgInput" type="file" accept="image/*" />
-                </label>
-                <label class="tool-checkbox" for="useAI">
-                  <input type="checkbox" id="useAI" checked />
-                  <span>Release-Jahre via KI ergänzen</span>
-                </label>
-              </div>
-              <div class="tool-form__row">
-                <button type="button" id="startBtn" class="button button--accent">Generieren</button>
-              </div>
-            </div>
-          </article>
+<body>
+  <h1>Spotify Playlist → Anime QR Cards</h1>
 
-          <article class="tool-section" aria-labelledby="logTitle">
-            <div>
-              <h2 id="logTitle">Debug Log</h2>
-            </div>
-            <div id="log" class="tool-log" aria-live="polite"></div>
-          </article>
+  <label>Playlist-URL:</label><br>
+  <input id="playlistUrl" type="text" style="width:400px" placeholder="https://open.spotify.com/playlist/..."><br>
 
-          <article class="tool-section" aria-labelledby="cardsTitle">
-            <div>
-              <h2 id="cardsTitle">Kärtchen</h2>
-              <p class="view-subline">Die Inhalte lassen sich direkt in der Oberfläche bearbeiten.</p>
-            </div>
-            <div id="cardGrid" class="tool-cards"></div>
-          </article>
-        </section>
-      </main>
-    </div>
+  <label>Karten Hintergrund:</label><br>
+  <input id="bgInput" type="file" accept="image/*"><br>
 
-    <script type="module" src="assets/js/pages/generator.js"></script>
-    <script>
-      document.getElementById('printHint').addEventListener('click', () => window.print());
-    </script>
-  </body>
+  <label>
+    <input type="checkbox" id="useAI" checked>
+    AI Infos verwenden
+  </label><br>
+
+  <button id="startBtn">Generieren</button>
+
+  <h2>Debug Log</h2>
+  <div class="log" id="log"></div>
+
+  <h2>Kärtchen</h2>
+  <div class="card-grid" id="cardGrid"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <script src="./spotify.js"></script>
+  <script src="./ai.js"></script>
+  <script src="./cards.js"></script>
+  <script src="./debugLog.js"></script>
+  <script>
+    document.getElementById('startBtn').addEventListener('click', async () => {
+      logEl.textContent = "";
+      cardGrid.innerHTML = "";
+      try {
+        const playlistUrl = document.getElementById('playlistUrl').value.trim();
+        const useAI = document.getElementById('useAI').checked;
+        if (!playlistUrl) {
+          log("⚠ Bitte alle Felder ausfüllen!");
+          return;
+        }
+
+        const playlistId = extractPlaylistId(playlistUrl);
+        const spotifyToken = await getSpotifyAccessToken();
+        const tracks = await getPlaylistTracks(playlistId, spotifyToken);
+
+        let aiInfos = [];
+        if (useAI) {
+          aiInfos = await getAIInfos(tracks);
+        }
+
+        renderCards(tracks, aiInfos, useAI);
+        log("✅ Fertig! Zum Drucken: STRG+P / CMD+P");
+      } catch (e) {
+        log("❌ Fehler: " + e.message);
+      }
+    });
+  </script>
+</body>
+
 </html>

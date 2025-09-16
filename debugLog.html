@@ -1,43 +1,35 @@
 <!DOCTYPE html>
 <html lang="de">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Debug Log – Behamot Toolkit</title>
-    <link rel="stylesheet" href="assets/css/base.css" />
-    <link rel="stylesheet" href="assets/css/pages/debug-log.css" />
-  </head>
-  <body>
-    <div class="app-shell">
-      <header class="site-header site-header--compact">
-        <div class="brand" aria-label="Projekt">
-          <span class="brand__title">Behamot Toolkit</span>
-          <span class="brand__subtitle">Debug Log</span>
-        </div>
-        <nav id="globalNav" class="main-nav" aria-label="Werkzeugnavigation"></nav>
-      </header>
 
-      <main class="site-main">
-        <section class="view view--active debug-view" aria-labelledby="debugTitle">
-          <header class="view-header">
-            <div>
-              <h1 id="debugTitle">Debug Log</h1>
-              <p class="view-subline">
-                Teste Hilfsfunktionen und inspiziere Ausgaben direkt im Browser. Die Daten verlassen deinen Rechner nicht.
-              </p>
-            </div>
-            <div class="view-actions">
-              <button id="runDemo" class="button button--accent">Demo ausführen</button>
-            </div>
-          </header>
+<head>
+  <meta charset="UTF-8">
+  <title>Spotify Playlist → Anime QR Cards</title>
+  <link rel="stylesheet" href="./styles.css">
+  </link>
+</head>
 
-          <article class="surface-card debug-panel">
-            <div id="log" class="debug-log" aria-live="polite"></div>
-          </article>
-        </section>
-      </main>
-    </div>
+<body>
+  <h1>Debug</h1>
 
-    <script type="module" src="assets/js/pages/debugLog.js"></script>
-  </body>
+  <h2>Debug Log</h2>
+  <div class="log" id="log"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
+  <script src="./spotify.js"></script>
+  <script src="./ai.js"></script>
+  <script src="./debugLog.js"></script>
+<script>
+  async function main() {
+    const quiz = await getAnimeQuizHints({
+      title: "Rakudai Kishi no Cavalry",
+      description: "There exist few humans in this world with the ability to manipulate their souls to form powerful weapons. Dubbed 'Blazers', these people study and train at the prestigious Hagun Academy to become Mage-Knights; among the students is so-called failure Ikki Kurogane, the sole F-rated Blazer. However, when the worst student in the academy sees Stella Vermillion, an A-ranked Blazer who also happens to be a princess, naked, she challenges him to a duel with dire stakes—the loser becomes the slave of the winner. There's no possible way that Stella can lose, right? As he tries to prove his strength to a world that believes him to be the weakest, Ikki gains new friends, wisdom, and experience."
+    });
+    log(quiz);
+  }
+
+  main(); // Start
+</script>
+
+</body>
+
 </html>

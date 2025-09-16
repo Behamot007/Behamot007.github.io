@@ -48,32 +48,12 @@ a:hover {
   color: var(--accent-strong);
 }
 
-button { 
+button {
   font: inherit;
   color: inherit;
   border: none;
   background: none;
   cursor: pointer;
-}
-
-input,
-textarea,
-select {
-  font: inherit;
-  color: inherit;
-  background: rgba(8, 14, 28, 0.7);
-  border: 1px solid var(--surface-border);
-  border-radius: 0.95rem;
-  padding: 0.65rem 0.85rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(78, 205, 196, 0.25);
-  outline: none;
 }
 
 button:disabled {
@@ -110,10 +90,6 @@ a:focus-visible {
   top: 0;
   z-index: 20;
   backdrop-filter: blur(18px);
-}
-
-.site-header--compact {
-  padding: clamp(0.6rem, 1.2vw, 1rem) clamp(0.9rem, 3vw, 1.8rem);
 }
 
 .brand {
@@ -158,15 +134,6 @@ a:focus-visible {
   font-size: 0.95rem;
   line-height: 1.2;
   transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
-}
-
-.nav-button--link {
-  background: transparent;
-  border: 1px solid rgba(78, 205, 196, 0.25);
-}
-
-.nav-button--link:hover {
-  background: rgba(78, 205, 196, 0.15);
 }
 
 .nav-button:hover,
@@ -473,7 +440,7 @@ a:focus-visible {
   gap: clamp(1.25rem, 3vw, 1.75rem);
 }
 
-.config-card { 
+.config-card {
   position: relative;
   background: linear-gradient(135deg, rgba(18, 30, 55, 0.96), rgba(18, 30, 55, 0.85));
   border: 1px solid var(--surface-border-strong);
@@ -485,14 +452,6 @@ a:focus-visible {
   box-shadow: var(--shadow-md);
   overflow: hidden;
   transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
-}
-
-.surface-card {
-  background: var(--surface);
-  border: 1px solid var(--surface-border);
-  border-radius: 1.4rem;
-  padding: clamp(1.1rem, 3vw, 1.6rem);
-  box-shadow: var(--shadow-md);
 }
 
 .config-card::before {
