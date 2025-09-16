@@ -6,6 +6,7 @@ const pages = [
   { title: 'Playlist → QR Cards', url: 'generator.html' },
   { title: 'Play Screen', url: 'gameModeScan.html' },
   { title: 'Digital Mode', url: 'gameModeDigital.html' },
+  { title: 'Kostenkalkulation', url: 'bill-splitter.html' },
   { title: 'Anidle', url: 'anidle.html' },
   { title: 'Anidle Debug', url: 'anidleDebug.html' },
   { title: 'Anime Rätsel Chat', url: 'animeCharakterdle.html' },

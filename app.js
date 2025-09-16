@@ -83,6 +83,20 @@
     },
     {
       type: 'group',
+      id: 'everyday',
+      label: 'Alltag & Planung',
+      items: [
+        {
+          type: 'page',
+          id: 'bill-splitter',
+          label: 'Kostenkalkulation',
+          url: 'bill-splitter.html',
+          description: 'Berechne faire Anteile für gemeinsame Rechnungen und Freunde.'
+        }
+      ]
+    },
+    {
+      type: 'group',
       id: 'anime',
       label: 'Anime Charakter',
       items: [

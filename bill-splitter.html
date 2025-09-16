@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kostenaufteilung für gemeinsame Rechnungen</title>
+    <link rel="stylesheet" href="bill-splitter.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="page-header">
+        <div class="page-header__text">
+          <p class="page-eyebrow">Gemeinsam rechnen, fair teilen</p>
+          <h1>Gemeinsame Kostenkalkulation</h1>
+          <p>
+            Erfasse Ausgaben, tagge die beteiligten Personen und erhalte automatisch aufgerundete
+            Beträge, damit jede Person ihren fairen Anteil bezahlt.
+          </p>
+        </div>
+        <div class="header-actions">
+          <a class="button button--ghost" href="index.html">Zurück zur Toolkit-Übersicht</a>
+        </div>
+      </header>
+
+      <main class="page-content">
+        <section class="card" aria-labelledby="peopleTitle">
+          <div class="card__header">
+            <h2 id="peopleTitle">Teilnehmende Personen</h2>
+            <p class="card__subtitle">
+              Vergib Namen für alle Personen, die sich die Rechnung teilen. Die Farben helfen dir bei der
+              Zuordnung in den Ausgaben.
+            </p>
+          </div>
+          <form id="personForm" class="form-inline" autocomplete="off">
+            <label class="form-field" for="personName">
+              <span class="form-label">Name</span>
+              <input id="personName" name="personName" type="text" required placeholder="z. B. Alex" />
+            </label>
+            <button type="submit" class="button button--primary">Person hinzufügen</button>
+          </form>
+          <p id="personFeedback" class="form-feedback" role="status" aria-live="polite"></p>
+          <div
+            id="personList"
+            class="person-list"
+            role="list"
+            aria-live="polite"
+            aria-label="Aktive Personen"
+          ></div>
+        </section>
+
+        <section class="card" aria-labelledby="expensesTitle">
+          <div class="card__header">
+            <h2 id="expensesTitle">Einzelausgaben erfassen</h2>
+            <p class="card__subtitle">
+              Jede Ausgabe kann mehreren Personen zugeordnet werden. Du kannst die Zuordnung auch nach dem
+              Speichern über die farbigen Tags anpassen.
+            </p>
+          </div>
+          <form id="expenseForm" class="stacked-form" autocomplete="off">
+            <div class="form-grid">
+              <label class="form-field" for="expenseName">
+                <span class="form-label">Beschreibung</span>
+                <input
+                  id="expenseName"
+                  name="expenseName"
+                  type="text"
+                  placeholder="z. B. Pizza Margherita"
+                  required
+                />
+              </label>
+              <label class="form-field" for="expenseAmount">
+                <span class="form-label">Betrag in €</span>
+                <input
+                  id="expenseAmount"
+                  name="expenseAmount"
+                  type="text"
+                  inputmode="decimal"
+                  pattern="[0-9]+([,\.]?[0-9]{0,4})?"
+                  placeholder="0,00"
+                  required
+                />
+              </label>
+            </div>
+            <fieldset class="form-fieldset">
+              <legend>Personen-Tagging</legend>
+              <div id="expenseParticipants" class="participant-selector"></div>
+            </fieldset>
+            <div class="form-actions">
+              <button type="submit" class="button button--primary">Ausgabe speichern</button>
+              <button type="button" id="expenseResetBtn" class="button button--secondary">Zurücksetzen</button>
+            </div>
+          </form>
+          <p id="expenseFeedback" class="form-feedback" role="status" aria-live="polite"></p>
+          <div
+            id="expenseList"
+            class="expense-list"
+            role="list"
+            aria-live="polite"
+            aria-label="Erfasste Ausgaben"
+          ></div>
+        </section>
+
+        <section class="card card--summary" aria-labelledby="summaryTitle">
+          <div class="card__header">
+            <h2 id="summaryTitle">Kostenübersicht pro Person</h2>
+            <p class="card__subtitle">
+              Zwischenwerte werden mit allen Nachkommastellen berechnet. Endbeträge werden auf zwei
+              Nachkommastellen <strong>aufgerundet</strong>, damit keine Person zu wenig zahlt.
+            </p>
+          </div>
+          <div id="summaryEmpty" class="empty-state">
+            Füge Personen und Ausgaben hinzu, um die Aufteilung zu berechnen.
+          </div>
+          <div id="summaryTableWrapper" class="summary-table-wrapper" hidden>
+            <table class="summary-table">
+              <thead>
+                <tr>
+                  <th scope="col">Person</th>
+                  <th scope="col">Zwischensumme</th>
+                  <th scope="col">Aufgerundet</th>
+                  <th scope="col">Aufschlag</th>
+                </tr>
+              </thead>
+              <tbody id="summaryBody"></tbody>
+            </table>
+          </div>
+          <div id="personBreakdown" class="summary-breakdown"></div>
+          <div id="summaryTotals" class="summary-totals" hidden>
+            <div class="summary-total"><span>Gesamtausgaben:</span> <strong id="totalsActual"></strong></div>
+            <div class="summary-total"><span>Summe aufgerundet:</span> <strong id="totalsRounded"></strong></div>
+            <div class="summary-total summary-total--accent">
+              <span>Aufrundungsreserve:</span> <strong id="roundingDifference"></strong>
+            </div>
+            <p id="roundingNote" class="summary-note"></p>
+          </div>
+          <p id="unassignedInfo" class="summary-unassigned" hidden></p>
+        </section>
+
+        <section
+          id="experimentalSection"
+          class="card card--experimental"
+          aria-labelledby="experimentalTitle"
+          hidden
+        >
+          <div class="card__header">
+            <div>
+              <span class="badge badge--experimental">Experimentell</span>
+              <h2 id="experimentalTitle">Kassenbon per KI vorbefüllen</h2>
+              <p class="card__subtitle">
+                Aktiviere das Feature über den URL-Parameter <code>?receiptAI</code> oder
+                <code>&amp;receiptAI</code>. Dein hinterlegtes OpenAI-Token wird für die Analyse verwendet.
+              </p>
+            </div>
+          </div>
+          <p>
+            Lade ein Foto deines Kassenbons hoch oder mache direkt über die Kamera eines Geräts ein Bild.
+            Die KI versucht, die Positionen zu erkennen und schlägt passende Zuordnungen zu den vorhandenen
+            Personen vor.
+          </p>
+          <div class="experimental-upload">
+            <label class="file-input">
+              <span class="file-input__label">Foto aufnehmen oder wählen</span>
+              <input type="file" id="receiptInput" accept="image/*" capture="environment" />
+            </label>
+            <button type="button" id="analyzeReceiptBtn" class="button button--primary" disabled>
+              Ausgaben übernehmen
+            </button>
+          </div>
+          <p class="card__note">
+            Hinweis: Das ausgewählte Bild wird zur Analyse an die OpenAI API gesendet. Überprüfe die
+            Ergebnisse vor dem Speichern.
+          </p>
+          <p id="experimentalStatus" class="form-feedback" role="status" aria-live="polite"></p>
+        </section>
+      </main>
+    </div>
+
+    <script src="ai.js"></script>
+    <script src="bill-splitter.js"></script>
+  </body>
+</html>
