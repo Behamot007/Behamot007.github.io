@@ -415,6 +415,21 @@ a:focus-visible {
   gap: 0.5rem;
 }
 
+.home-card--sharing .home-card__badge {
+  background: rgba(255, 159, 89, 0.18);
+  color: #ffb169;
+}
+
+.home-card--sharing .link-button {
+  background: rgba(255, 159, 89, 0.14);
+  border-color: rgba(255, 159, 89, 0.25);
+}
+
+.home-card--sharing .link-button:hover {
+  background: rgba(255, 159, 89, 0.2);
+  border-color: rgba(255, 159, 89, 0.4);
+}
+
 .link-button {
   display: inline-flex;
   align-items: center;
