@@ -108,19 +108,24 @@
           <div id="configGrid" class="config-grid" aria-live="polite"></div>
         </section>
 
-        <section id="frameView" class="view" aria-labelledby="frameTitle" hidden>
+        <section id="frameView" class="view view--frame" aria-labelledby="frameTitle" hidden>
           <header class="view-header">
             <div>
               <h1 id="frameTitle"></h1>
               <p id="frameDescription" class="view-subline"></p>
             </div>
-            <div class="view-actions">
-              <button type="button" id="openExternal" class="button button--ghost" hidden>
-                In neuem Tab öffnen
-              </button>
-            </div>
           </header>
           <div class="frame-wrapper">
+            <button
+              type="button"
+              id="openExternal"
+              class="frame-external-button"
+              hidden
+              aria-label="In neuem Tab öffnen"
+            >
+              <span class="sr-only">In neuem Tab öffnen</span>
+              <span aria-hidden="true" class="frame-external-button__icon">↗︎</span>
+            </button>
             <iframe id="contentFrame" title="Arbeitsbereich" loading="lazy" class="content-frame"></iframe>
           </div>
         </section>
