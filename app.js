@@ -245,6 +245,11 @@
   ];
 
   const navContainer = document.getElementById('mainNav');
+  const navToggleButton = document.getElementById('navToggle');
+  const mobileNavQuery =
+    typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      ? window.matchMedia('(max-width: 720px)')
+      : null;
   const viewMap = {
     home: document.getElementById('homeView'),
     config: document.getElementById('configView'),
@@ -265,6 +270,7 @@
   let activeNavId = null;
   let currentFrameUrl = '';
   let highlightTimeout = null;
+  let isMobileNavOpen = false;
 
   function buildNavigation() {
     NAV_ITEMS.forEach(item => {
@@ -344,6 +350,32 @@
     navContainer.appendChild(anchor);
   }
 
+  function isMobileViewport() {
+    if (mobileNavQuery) {
+      return mobileNavQuery.matches;
+    }
+    return typeof window !== 'undefined' ? window.innerWidth <= 720 : false;
+  }
+
+  function setMobileNavState(open) {
+    isMobileNavOpen = open;
+    if (navToggleButton) {
+      navToggleButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+      navToggleButton.classList.toggle('is-active', open);
+    }
+    if (navContainer) {
+      navContainer.classList.toggle('main-nav--open', open);
+    }
+  }
+
+  function toggleMobileNav(force) {
+    const shouldOpen = typeof force === 'boolean' ? force : !isMobileNavOpen;
+    setMobileNavState(shouldOpen);
+    if (!shouldOpen) {
+      closeAllGroups();
+    }
+  }
+
   function toggleGroup(id) {
     const group = groupElements.get(id);
     if (!group) return;
@@ -414,6 +446,10 @@
         break;
       default:
         showHome();
+    }
+
+    if (isMobileViewport()) {
+      toggleMobileNav(false);
     }
 
     if (options.updateHash !== false) {
@@ -681,8 +717,52 @@
 
   function bindOutsideClick() {
     document.addEventListener('click', evt => {
-      if (!navContainer.contains(evt.target)) {
-        closeAllGroups();
+      const clickedInsideNav = navContainer ? navContainer.contains(evt.target) : false;
+      const clickedToggle = navToggleButton ? navToggleButton.contains(evt.target) : false;
+      if (clickedInsideNav || clickedToggle) return;
+
+      closeAllGroups();
+      if (isMobileNavOpen && isMobileViewport()) {
+        toggleMobileNav(false);
+      }
+    });
+  }
+
+  function bindMobileNavigation() {
+    if (!navToggleButton) return;
+
+    setMobileNavState(false);
+
+    navToggleButton.addEventListener('click', () => {
+      toggleMobileNav();
+    });
+
+    if (navContainer) {
+      navContainer.addEventListener('click', evt => {
+        const link = evt.target.closest('a.nav-button--link');
+        if (link && isMobileViewport()) {
+          toggleMobileNav(false);
+        }
+      });
+    }
+
+    const handleBreakpointChange = event => {
+      if (!event.matches) {
+        toggleMobileNav(false);
+      }
+    };
+
+    if (mobileNavQuery) {
+      if (typeof mobileNavQuery.addEventListener === 'function') {
+        mobileNavQuery.addEventListener('change', handleBreakpointChange);
+      } else if (typeof mobileNavQuery.addListener === 'function') {
+        mobileNavQuery.addListener(handleBreakpointChange);
+      }
+    }
+
+    document.addEventListener('keydown', evt => {
+      if (evt.key === 'Escape' && isMobileNavOpen && isMobileViewport()) {
+        toggleMobileNav(false);
       }
     });
   }
@@ -713,6 +793,7 @@
     buildConfigCards();
     bindNavTargets();
     bindFrameLoading();
+    bindMobileNavigation();
     bindOutsideClick();
     handleHashNavigation();
   }
