@@ -7,14 +7,16 @@
   <title>Digital Mode</title>
   <style>
     body {
-      font-family: sans-serif;
+      font-family: 'Inter', 'Segoe UI', sans-serif;
       margin: 0;
-      padding: 20px 20px 100px;
-      background: #121212;
-      color: white;
+      padding: 20px 20px 120px;
+      min-height: 100vh;
+      background: radial-gradient(circle at top, #1f1f1f, #0c0c0c 55%);
+      color: #f8f8f8;
       display: flex;
       flex-direction: column;
       align-items: center;
+      letter-spacing: 0.01em;
     }
 
     h1 {
@@ -34,31 +36,64 @@
     }
 
     button {
-      background: #1DB954;
+      background: linear-gradient(135deg, #1db954, #159944);
       color: white;
       cursor: pointer;
-      font-weight: bold;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      box-shadow: 0 12px 25px rgba(16, 16, 16, 0.4);
     }
 
     button:active {
-      background: #14833b;
+      background: linear-gradient(135deg, #169347, #0e6b2f);
+      transform: translateY(1px);
+      box-shadow: 0 10px 18px rgba(0, 0, 0, 0.4);
     }
 
     button:disabled {
-      background: #555;
-      color: #888;
+      background: #333;
+      color: #777;
       cursor: not-allowed;
+      box-shadow: none;
     }
 
 
     .controls {
+      width: 100%;
+      max-width: 500px;
       display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 20px;
-      flex-wrap: wrap;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      margin-top: 30px;
       position: relative;
       z-index: 2;
+    }
+
+    .control-row {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .control-row button,
+    .answer-controls button {
+      width: 100%;
+      max-width: none;
+    }
+
+    .chip-controls {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .chip-controls button {
+      flex: 1;
+      width: auto;
+      max-width: none;
     }
 
     #gameArea {
@@ -66,33 +101,39 @@
       width: 100%;
       padding-top: 70px;
       box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
     .playback-controls {
-      position: absolute;
-      top: 20px;
-      right: 20px;
+      position: relative;
+      top: auto;
+      right: auto;
+      margin: 0 auto 25px;
       display: flex;
-      gap: 12px;
-      padding: 8px 12px;
-      background: rgba(18, 18, 18, 0.85);
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 24px;
+      background: linear-gradient(135deg, rgba(37, 37, 37, 0.9), rgba(18, 18, 18, 0.95));
       border-radius: 999px;
-      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.45);
-      backdrop-filter: blur(6px);
+      box-shadow: 0 18px 32px rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(12px);
       z-index: 3;
     }
 
     .playback-btn {
-      width: 44px;
-      height: 44px;
+      width: 52px;
+      height: 52px;
       padding: 0;
       margin: 0;
       border-radius: 50%;
       border: 2px solid #0f5f2a;
       background: radial-gradient(circle at 30% 30%, #1ed760, #169347 70%, #0f5f2a);
       color: #121212;
-      font-size: 1.4rem;
-      font-weight: bold;
+      font-size: 1.6rem;
+      font-weight: 700;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -129,13 +170,23 @@
 
     @media (max-width: 720px) {
       #gameArea {
-        padding-top: 40px;
+        padding-top: 30px;
+      }
+
+      .control-row {
+        grid-template-columns: 1fr;
       }
 
       .playback-controls {
-        top: auto;
-        bottom: 120px;
-        right: 15px;
+        padding: 12px 18px;
+      }
+
+      .answer-controls {
+        grid-template-columns: 1fr;
+      }
+
+      .chip-controls {
+        flex-direction: column;
       }
     }
 
@@ -184,11 +235,12 @@
 
     .card {
       width: 100%;
-      min-height: 250px;
+      min-height: 280px;
       transform-style: preserve-3d;
       transition: transform 0.8s ease;
-      border-radius: 12px;
+      border-radius: 18px;
       position: relative;
+      box-shadow: 0 24px 40px rgba(0, 0, 0, 0.45);
     }
 
     .card.flipped {
@@ -200,16 +252,18 @@
       top: 0;
       left: 0;
       width: 100%;
-      min-height: 250px;
+      min-height: 280px;
       backface-visibility: hidden;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 15px;
+      padding: 20px;
       box-sizing: border-box;
-      border-radius: 12px;
-      background: #d3cece;
+      border-radius: 18px;
+      background: linear-gradient(160deg, #ffffff, #d7f5e5);
+      color: #0b0b0b;
+      text-align: center;
     }
 
     .card-back {
@@ -218,16 +272,11 @@
     }
 
     .card-back img {
-      margin-top: 10px;
-      border-radius: 8px;
-      max-width: 80%;
-      height: auto;
+      display: none;
     }
 
     .playback-info {
-      margin-top: 10px;
-      font-size: 0.9rem;
-      color: #333;
+      display: none;
     }
 
     #qrCode canvas {
@@ -243,22 +292,26 @@
       display: flex;
       gap: 10px;
       justify-content: center;
-      padding: 10px;
-      background: rgba(0,0,0,0.8);
+      padding: 12px 16px;
+      background: linear-gradient(180deg, rgba(10, 10, 10, 0) 0%, rgba(10, 10, 10, 0.85) 40%, rgba(10, 10, 10, 0.95) 100%);
+      backdrop-filter: blur(6px);
     }
 
     .player {
-      background: #232323;
-      padding: 10px;
-      border-radius: 8px;
+      background: rgba(35, 35, 35, 0.85);
+      padding: 12px 14px;
+      border-radius: 10px;
       border: 2px solid transparent;
       min-width: 100px;
       text-align: center;
       cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     }
 
     .player.active {
       border-color: #1DB954;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+      transform: translateY(-4px);
     }
 
 
@@ -266,6 +319,43 @@
       margin-top: 5px;
       font-size: 0.9rem;
       color: #aaa;
+    }
+
+    .answer-controls {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      max-height: 0;
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+      overflow: hidden;
+      transition: opacity 0.25s ease, transform 0.25s ease, max-height 0.25s ease;
+    }
+
+    .answer-controls.visible {
+      max-height: 200px;
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .answer-btn {
+      font-size: 1.05rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 14px 18px;
+      box-shadow: 0 18px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .answer-btn.correct {
+      background: linear-gradient(135deg, #1db954, #19b67d);
+    }
+
+    .answer-btn.wrong {
+      background: linear-gradient(135deg, #ff5252, #c81d5b);
     }
 
     .modal {
@@ -327,7 +417,7 @@
       <button id="playBtn" class="playback-btn" type="button" disabled aria-label="Song abspielen" title="Song abspielen">
         <span class="icon" aria-hidden="true">&#9654;</span>
       </button>
-      <button id="stopBtn" class="playback-btn" type="button" disabled aria-label="Song pausieren" title="Song pausieren">
+      <button id="stopBtn" class="playback-btn" type="button" disabled aria-label="Song pausieren oder fortsetzen" title="Song pausieren oder fortsetzen">
         <span class="icon" aria-hidden="true">&#9208;</span>
       </button>
     </div>
@@ -341,10 +431,14 @@
     </div>
 
     <div class="controls">
-      <button id="flipBtn">Umdrehen</button>
-      <button id="correctBtn" disabled style="display:none">Richtig</button>
-      <button id="wrongBtn" disabled style="display:none">Falsch</button>
-      <button id="chipsBtn">Chips ausgeben</button>
+      <div class="control-row">
+        <button id="flipBtn">Umdrehen</button>
+        <button id="chipsBtn">Chips ausgeben</button>
+      </div>
+      <div class="answer-controls" id="answerControls">
+        <button id="correctBtn" class="answer-btn correct" type="button" disabled>Richtig</button>
+        <button id="wrongBtn" class="answer-btn wrong" type="button" disabled>Falsch</button>
+      </div>
     </div>
 
     <h2 id="currentPlayerDisplay"></h2>
@@ -364,7 +458,7 @@
       <label for="chipPlayerSelect">Aktion für Spieler:</label>
       <select id="chipPlayerSelect"></select>
       <p id="chipCoins"></p>
-      <div class="controls" style="margin-top:10px;">
+      <div class="chip-controls">
         <button id="modalSkipBtn">Überspringen</button>
         <button id="stealBtn">Klauen</button>
         <button id="giftBtn">Song gutschreiben</button>
@@ -451,7 +545,14 @@
       const hasTrack = Boolean(currentTrack);
       const connected = isSpotifyConnected();
       playBtn.disabled = !(hasTrack && connected);
-      stopBtn.disabled = !connected;
+      stopBtn.disabled = !(connected && hasTrack);
+      const pauseIcon = stopBtn.querySelector('.icon');
+      const pauseLabel = isPlaying ? 'Song pausieren' : 'Song fortsetzen';
+      if (pauseIcon) {
+        pauseIcon.innerHTML = isPlaying ? '&#9208;' : '&#9199;';
+      }
+      stopBtn.setAttribute('aria-label', pauseLabel);
+      stopBtn.setAttribute('title', pauseLabel);
     }
 
     function updateSpotifyAuthUI() {
@@ -748,35 +849,33 @@
     function showTrackInfo(track) {
       const infoDiv = document.getElementById("songInfo");
       const yearText = track.year ? track.year.slice(0, 4) : '-';
-      const playbackText = isSpotifyConnected()
-        ? '⏯ Über deinen Spotify Account steuerbar'
-        : '🔒 Verbinde Spotify, um den Song abzuspielen';
-      const coverHtml = track.cover ? `<img src="${track.cover}" alt="Albumcover">` : '';
       infoDiv.innerHTML = `
         <h3>${track.name}</h3>
         <p>${track.artist}</p>
         <p>${yearText}</p>
-        <p class="playback-info">${playbackText}</p>
-        ${coverHtml}
       `;
     }
 
     function showAnswerButtons() {
       const c = document.getElementById('correctBtn');
       const w = document.getElementById('wrongBtn');
-      c.style.display = 'inline-block';
-      w.style.display = 'inline-block';
+      const container = document.getElementById('answerControls');
       c.disabled = false;
       w.disabled = false;
+      if (container) {
+        container.classList.add('visible');
+      }
     }
 
     function hideAnswerButtons() {
       const c = document.getElementById('correctBtn');
       const w = document.getElementById('wrongBtn');
-      c.style.display = 'none';
-      w.style.display = 'none';
       c.disabled = true;
       w.disabled = true;
+      const container = document.getElementById('answerControls');
+      if (container) {
+        container.classList.remove('visible');
+      }
     }
 
     function flipCard() {
@@ -957,8 +1056,18 @@
       await startSpotifyPlayback(trackId);
     });
 
-    stopBtn.addEventListener('click', () => {
-      stopPlayback(true);
+    stopBtn.addEventListener('click', async () => {
+      if (!currentTrack) return;
+      const trackId = extractSpotifyTrackId(currentTrack.url);
+      if (!trackId) {
+        alert('Spotify-Track-ID konnte nicht ermittelt werden.');
+        return;
+      }
+      if (isPlaying) {
+        await stopPlayback(true);
+      } else {
+        await startSpotifyPlayback(trackId);
+      }
     });
 
     function handleAnswer(correct) {
