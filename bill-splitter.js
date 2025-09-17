@@ -20,9 +20,6 @@
     '#5eead4',
   ];
 
-  const searchParams = new URLSearchParams(window.location.search);
-  const showExperimental = searchParams.has('receiptAI');
-
   const personForm = document.getElementById('personForm');
   const personNameInput = document.getElementById('personName');
   const personFeedbackEl = document.getElementById('personFeedback');
@@ -71,7 +68,7 @@
   let isAnalyzing = false;
 
   if (experimentalSection) {
-    experimentalSection.hidden = !showExperimental;
+    experimentalSection.hidden = false;
   }
 
   function generateId() {
@@ -144,11 +141,11 @@
 
   function updateAnalyzeButtonState() {
     if (!analyzeReceiptBtn) return;
-    analyzeReceiptBtn.disabled = !showExperimental || !receiptFile || state.persons.length === 0 || isAnalyzing;
+    analyzeReceiptBtn.disabled = !receiptFile || state.persons.length === 0 || isAnalyzing;
   }
 
   function updateExperimentalDefaultMessage() {
-    if (!showExperimental || !experimentalStatusEl) return;
+    if (!experimentalStatusEl) return;
     if (state.persons.length === 0) {
       if (
         !experimentalStatusEl.textContent ||
@@ -194,7 +191,7 @@
     renderExpenses();
     renderSummary();
     updateAnalyzeButtonState();
-    if (showExperimental && experimentalStatusEl) {
+    if (experimentalStatusEl) {
       if (experimentalStatusEl.textContent === DEFAULT_EXPERIMENTAL_HINT) {
         setFeedback(experimentalStatusEl, '', 'info');
       }
@@ -673,27 +670,28 @@
     const personNames = state.persons.map(person => person.name).join(', ') || 'keine Personen';
 
     const systemPrompt = `Du extrahierst Positionen aus fotografierten Kassenbons. Gib ausschließlich valides JSON zurück.
-Schema:
-{
-  "expenses": [
-    {
-      "title": "Artikelname",
-      "amount": 0.00,
-      "suggested_participants": ["Name"]
-    }
-  ]
-}
-Regeln:
-- "amount" ist der Preis pro Position in Euro mit Punkt als Dezimaltrennzeichen.
-- Gib maximal 20 Positionen zurück.
-- Verwende nur Namen aus der Personenliste für "suggested_participants". Wenn keine Zuordnung möglich ist, gib ein leeres Array zurück.
-- Ignoriere Gesamt- oder Wechselgeld-Zeilen.`;
+  Schema:
+  {
+    "expenses": [
+      {
+        "title": "Artikelname",
+        "amount": 0.00,
+        "suggested_participants": ["Name"]
+      }
+    ]
+  }
+  Regeln:
+  - "amount" ist der Preis pro Position in Euro mit Punkt als Dezimaltrennzeichen.
+  - Gib maximal 20 Positionen zurück.
+  - Verwende nur Namen aus der Personenliste für "suggested_participants". Wenn keine Zuordnung möglich ist, gib ein leeres Array zurück.
+  - Ignoriere Gesamt- oder Wechselgeld-Zeilen.
+  - Antworte ausschließlich mit reinem JSON ohne Markdown, Backticks oder erläuternden Text.`;
 
     const userPrompt = `Personenliste: ${personNames}.
-Analysiere den folgenden Kassenbon (${mimeType}). Der Inhalt ist Base64-kodiert:
-${base64Image}
+  Analysiere den folgenden Kassenbon (${mimeType}). Der Inhalt ist Base64-kodiert:
+  ${base64Image}
 
-Liefere das JSON gemäß Schema.`;
+  Liefere das JSON gemäß Schema. Die Antwort muss mit '{' beginnen und ohne zusätzlichen Text mit '}' enden.`;
 
     return await callAI({
       systemPrompt,
