@@ -224,6 +224,53 @@
       line-height: 1.4;
     }
 
+    .spotify-device {
+      width: 90%;
+      max-width: 400px;
+      background: #1a1a1a;
+      border-radius: 12px;
+      padding: 15px;
+      margin: 0 0 20px;
+      box-sizing: border-box;
+      display: none;
+      gap: 12px;
+      flex-direction: column;
+    }
+
+    .spotify-device__label {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .spotify-device__controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .spotify-device__controls select {
+      flex: 1;
+      min-width: 180px;
+      border-radius: 8px;
+      border: none;
+      padding: 10px;
+      background: #2a2a2a;
+      color: #f0f0f0;
+    }
+
+    .spotify-device__controls button {
+      flex: none;
+      width: auto;
+      max-width: none;
+    }
+
+    .spotify-device__hint {
+      font-size: 0.85rem;
+      color: #9c9c9c;
+      line-height: 1.4;
+      margin: 0;
+    }
+
     .qrContainer {
       perspective: 1000px;
       margin: 20px auto 80px;
@@ -409,6 +456,14 @@
         Melde dich mit deinem Spotify Account an, um Songs direkt aus dem Spiel heraus abspielen oder pausieren zu können.
       </p>
     </div>
+    <div id="spotifyDeviceContainer" class="spotify-device">
+      <label for="spotifyDeviceSelect" class="spotify-device__label">Ausgabegerät auswählen</label>
+      <div class="spotify-device__controls">
+        <select id="spotifyDeviceSelect"></select>
+        <button type="button" id="spotifyDeviceRefreshBtn">Geräte aktualisieren</button>
+      </div>
+      <p id="spotifyDeviceHint" class="spotify-device__hint"></p>
+    </div>
     <button id="startBtn">Start</button>
   </div>
 
@@ -478,6 +533,7 @@
     let players = [];
     let currentPlayerIndex = 0;
     let isPlaying = false;
+    let wasSpotifyConnected = false;
 
     const playBtn = document.getElementById('playBtn');
     const stopBtn = document.getElementById('stopBtn');
@@ -485,6 +541,10 @@
     const spotifyConnectBtn = document.getElementById('spotifyConnectBtn');
     const spotifyDisconnectBtn = document.getElementById('spotifyDisconnectBtn');
     const spotifyHintEl = document.getElementById('spotifyHint');
+    const spotifyDeviceContainer = document.getElementById('spotifyDeviceContainer');
+    const spotifyDeviceSelect = document.getElementById('spotifyDeviceSelect');
+    const spotifyDeviceRefreshBtn = document.getElementById('spotifyDeviceRefreshBtn');
+    const spotifyDeviceHintEl = document.getElementById('spotifyDeviceHint');
 
     playBtn.disabled = true;
     stopBtn.disabled = true;
@@ -493,17 +553,21 @@
     const SPOTIFY_REFRESH_STORAGE_KEY = 'SPOTIFY_REFRESH_TOKEN';
     const SPOTIFY_EXPIRY_STORAGE_KEY = 'SPOTIFY_TOKEN_EXPIRY';
     const SPOTIFY_AUTH_STATE_KEY = 'SPOTIFY_AUTH_STATE';
+    const SPOTIFY_DEVICE_STORAGE_KEY = 'SPOTIFY_SELECTED_DEVICE';
     const SPOTIFY_SCOPES = ['user-read-playback-state', 'user-modify-playback-state'];
     const SPOTIFY_REDIRECT_URI = window.location.origin + window.location.pathname;
 
     let spotifyAccessToken = null;
     let spotifyRefreshToken = null;
     let spotifyTokenExpiry = 0;
+    let availableSpotifyDevices = [];
+    let selectedSpotifyDeviceId = null;
 
     function loadSpotifyAuthFromStorage() {
       spotifyAccessToken = localStorage.getItem(SPOTIFY_ACCESS_STORAGE_KEY);
       spotifyRefreshToken = localStorage.getItem(SPOTIFY_REFRESH_STORAGE_KEY);
       spotifyTokenExpiry = parseInt(localStorage.getItem(SPOTIFY_EXPIRY_STORAGE_KEY), 10) || 0;
+      selectedSpotifyDeviceId = localStorage.getItem(SPOTIFY_DEVICE_STORAGE_KEY);
     }
 
     function saveSpotifyTokens({ access_token, refresh_token, expires_in }) {
@@ -555,6 +619,142 @@
       stopBtn.setAttribute('title', pauseLabel);
     }
 
+    function updateSpotifyDeviceHint() {
+      if (!spotifyDeviceHintEl) return;
+      if (!isSpotifyConnected()) {
+        spotifyDeviceHintEl.textContent = '';
+        return;
+      }
+      if (!availableSpotifyDevices.length) {
+        spotifyDeviceHintEl.textContent = 'Öffne die Spotify App auf dem gewünschten Gerät und klicke auf „Geräte aktualisieren“. ' +
+          'Nur aktive Geräte können hier ausgewählt werden.';
+        return;
+      }
+      const selectedDevice = availableSpotifyDevices.find(device => device.id === selectedSpotifyDeviceId);
+      if (selectedDevice) {
+        if (selectedDevice.is_active) {
+          spotifyDeviceHintEl.textContent = `Wiedergabe über „${selectedDevice.name}“ (aktiv).`;
+        } else {
+          spotifyDeviceHintEl.textContent = `Gerät „${selectedDevice.name}“ ausgewählt. Stelle sicher, dass Spotify dort geöffnet ist.`;
+        }
+      } else {
+        spotifyDeviceHintEl.textContent = 'Wähle ein Gerät für die Wiedergabe oder aktualisiere die Liste.';
+      }
+    }
+
+    function setSelectedSpotifyDevice(deviceId, persist = true) {
+      selectedSpotifyDeviceId = deviceId || null;
+      if (persist) {
+        if (selectedSpotifyDeviceId) {
+          localStorage.setItem(SPOTIFY_DEVICE_STORAGE_KEY, selectedSpotifyDeviceId);
+        } else {
+          localStorage.removeItem(SPOTIFY_DEVICE_STORAGE_KEY);
+        }
+      }
+      if (spotifyDeviceSelect) {
+        spotifyDeviceSelect.value = selectedSpotifyDeviceId || '';
+      }
+      updateSpotifyDeviceHint();
+    }
+
+    function renderDeviceSelection() {
+      if (!spotifyDeviceContainer) return;
+      const connected = isSpotifyConnected();
+      spotifyDeviceContainer.style.display = connected ? 'flex' : 'none';
+
+      if (!connected) {
+        availableSpotifyDevices = [];
+        if (spotifyDeviceSelect) {
+          spotifyDeviceSelect.innerHTML = '';
+          spotifyDeviceSelect.disabled = true;
+        }
+        if (spotifyDeviceHintEl) {
+          spotifyDeviceHintEl.textContent = '';
+        }
+        return;
+      }
+
+      if (!spotifyDeviceSelect) return;
+
+      spotifyDeviceSelect.innerHTML = '';
+      if (!availableSpotifyDevices.length) {
+        spotifyDeviceSelect.disabled = true;
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Keine Geräte gefunden';
+        spotifyDeviceSelect.appendChild(option);
+        updateSpotifyDeviceHint();
+        return;
+      }
+
+      spotifyDeviceSelect.disabled = false;
+      availableSpotifyDevices.forEach(device => {
+        const option = document.createElement('option');
+        option.value = device.id;
+        const status = device.is_active ? ' • aktiv' : '';
+        option.textContent = `${device.name}${status}`;
+        spotifyDeviceSelect.appendChild(option);
+      });
+
+      const previousId = selectedSpotifyDeviceId;
+      let chosenId = previousId && availableSpotifyDevices.some(d => d.id === previousId)
+        ? previousId
+        : null;
+
+      if (!chosenId) {
+        const activeDevice = availableSpotifyDevices.find(d => d.is_active);
+        if (activeDevice) {
+          chosenId = activeDevice.id;
+        } else {
+          chosenId = availableSpotifyDevices[0].id;
+        }
+      }
+
+      setSelectedSpotifyDevice(chosenId, chosenId !== previousId);
+    }
+
+    async function fetchSpotifyDevices(retry = true) {
+      const token = await ensureSpotifyAccessToken();
+      if (!token) return [];
+      const resp = await fetch('https://api.spotify.com/v1/me/player/devices', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (resp.status === 401 && retry) {
+        const refreshed = await refreshSpotifyAccessToken();
+        if (refreshed) {
+          return fetchSpotifyDevices(false);
+        }
+        updateSpotifyAuthUI();
+        return [];
+      }
+
+      if (!resp.ok) {
+        const errorText = await resp.text();
+        console.error('Spotify Geräte Fehler:', errorText);
+        return [];
+      }
+
+      const data = await resp.json();
+      return data.devices || [];
+    }
+
+    async function refreshSpotifyDevices(showAlertOnEmpty = false) {
+      if (!isSpotifyConnected()) {
+        availableSpotifyDevices = [];
+        renderDeviceSelection();
+        return;
+      }
+      const devices = await fetchSpotifyDevices();
+      availableSpotifyDevices = devices;
+      if (!devices.length && showAlertOnEmpty) {
+        alert('Kein aktives Spotify-Gerät gefunden. Öffne Spotify auf dem gewünschten Gerät und versuche es erneut.');
+      }
+      renderDeviceSelection();
+    }
+
     function updateSpotifyAuthUI() {
       const connected = isSpotifyConnected();
       if (spotifyStatusEl) {
@@ -567,6 +767,11 @@
           ? 'Öffne die Spotify App auf dem gewünschten Gerät und halte sie aktiv, damit die Wiedergabe hier gesteuert werden kann.'
           : 'Melde dich mit deinem Spotify Account an, um Songs direkt aus dem Spiel heraus abspielen oder pausieren zu können.';
       }
+      if (connected && !wasSpotifyConnected) {
+        refreshSpotifyDevices(false);
+      }
+      wasSpotifyConnected = connected;
+      renderDeviceSelection();
       if (connected && flipped && currentTrack) {
         showTrackInfo(currentTrack);
       }
@@ -684,7 +889,8 @@
         return false;
       }
 
-      const resp = await fetch(`https://api.spotify.com/v1/me/player/play`, {
+      const deviceQuery = selectedSpotifyDeviceId ? `?device_id=${encodeURIComponent(selectedSpotifyDeviceId)}` : '';
+      const resp = await fetch(`https://api.spotify.com/v1/me/player/play${deviceQuery}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -706,6 +912,7 @@
       if (resp.status === 404) {
         alert('Kein aktives Spotify-Gerät gefunden. Öffne Spotify auf dem gewünschten Gerät und versuche es erneut.');
         updatePlaybackButtonState();
+        updateSpotifyDeviceHint();
         return false;
       }
 
@@ -724,6 +931,68 @@
       }
 
       isPlaying = true;
+      if (selectedSpotifyDeviceId) {
+        availableSpotifyDevices = availableSpotifyDevices.map(device => ({
+          ...device,
+          is_active: device.id === selectedSpotifyDeviceId
+        }));
+        renderDeviceSelection();
+      }
+      updatePlaybackButtonState();
+      return true;
+    }
+
+    async function resumeSpotifyPlayback(retry = true) {
+      const token = await ensureSpotifyAccessToken();
+      if (!token) return false;
+
+      const deviceQuery = selectedSpotifyDeviceId ? `?device_id=${encodeURIComponent(selectedSpotifyDeviceId)}` : '';
+      const resp = await fetch(`https://api.spotify.com/v1/me/player/play${deviceQuery}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: '{}'
+      });
+
+      if (resp.status === 401 && retry) {
+        const refreshed = await refreshSpotifyAccessToken();
+        if (refreshed) {
+          return resumeSpotifyPlayback(false);
+        }
+        updateSpotifyAuthUI();
+        return false;
+      }
+
+      if (resp.status === 404) {
+        alert('Kein aktives Spotify-Gerät gefunden. Öffne Spotify auf dem gewünschten Gerät und versuche es erneut.');
+        updateSpotifyDeviceHint();
+        updatePlaybackButtonState();
+        return false;
+      }
+
+      if (resp.status === 403) {
+        alert('Zum Steuern der Wiedergabe wird ein Spotify Premium Account benötigt.');
+        updatePlaybackButtonState();
+        return false;
+      }
+
+      if (!resp.ok) {
+        const errorText = await resp.text();
+        console.warn('Spotify Resume Fehler:', errorText);
+        updatePlaybackButtonState();
+        return false;
+      }
+
+      isPlaying = true;
+      if (selectedSpotifyDeviceId) {
+        availableSpotifyDevices = availableSpotifyDevices.map(device => ({
+          ...device,
+          is_active: device.id === selectedSpotifyDeviceId
+        }));
+        renderDeviceSelection();
+      }
       updatePlaybackButtonState();
       return true;
     }
@@ -732,7 +1001,8 @@
       const token = await ensureSpotifyAccessToken();
       if (!token) return false;
 
-      const resp = await fetch('https://api.spotify.com/v1/me/player/pause', {
+      const deviceQuery = selectedSpotifyDeviceId ? `?device_id=${encodeURIComponent(selectedSpotifyDeviceId)}` : '';
+      const resp = await fetch(`https://api.spotify.com/v1/me/player/pause${deviceQuery}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -752,6 +1022,10 @@
         const errorText = await resp.text();
         console.warn('Spotify Pause Fehler:', errorText);
         return false;
+      }
+
+      if (resp.status === 404) {
+        updateSpotifyDeviceHint();
       }
 
       return true;
@@ -805,6 +1079,20 @@
       updateSpotifyAuthUI();
     });
 
+    if (spotifyDeviceRefreshBtn) {
+      spotifyDeviceRefreshBtn.addEventListener('click', () => {
+        refreshSpotifyDevices(true);
+      });
+    }
+
+    if (spotifyDeviceSelect) {
+      spotifyDeviceSelect.addEventListener('change', () => {
+        const deviceId = spotifyDeviceSelect.value || null;
+        setSelectedSpotifyDevice(deviceId, true);
+        renderDeviceSelection();
+      });
+    }
+
     initSpotifyAuth();
 
     async function fetchPlaylistTracks(playlistUrl) {
@@ -834,7 +1122,7 @@
     }
 
     function prepareTrackPreview() {
-      stopPlayback();
+      updatePlaybackButtonState();
     }
 
     function updateQRCode(track) {
@@ -1058,15 +1346,10 @@
 
     stopBtn.addEventListener('click', async () => {
       if (!currentTrack) return;
-      const trackId = extractSpotifyTrackId(currentTrack.url);
-      if (!trackId) {
-        alert('Spotify-Track-ID konnte nicht ermittelt werden.');
-        return;
-      }
       if (isPlaying) {
         await stopPlayback(true);
       } else {
-        await startSpotifyPlayback(trackId);
+        await resumeSpotifyPlayback();
       }
     });
 
