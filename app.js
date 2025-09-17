@@ -255,6 +255,7 @@
   const frameDescriptionEl = document.getElementById('frameDescription');
   const openExternalBtn = document.getElementById('openExternal');
   const configGridEl = document.getElementById('configGrid');
+  const frameViewEl = viewMap.frame;
 
   const navIndex = new Map();
   const navButtons = new Map();
@@ -440,6 +441,9 @@
     document.title = 'Behamot Toolkit';
     frameEl.dataset.src = frameEl.dataset.src || '';
     openExternalBtn.hidden = true;
+    if (frameViewEl) {
+      frameViewEl.classList.remove('view--frame-header-hidden');
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -478,6 +482,10 @@
     document.title = `Behamot Toolkit – ${item.label}`;
     frameTitleEl.textContent = item.label;
 
+    if (frameViewEl) {
+      frameViewEl.classList.remove('view--frame-header-hidden');
+    }
+
     if (item.description) {
       frameDescriptionEl.textContent = item.description;
       frameDescriptionEl.hidden = false;
@@ -497,9 +505,33 @@
       frameEl.classList.add('content-frame--loading');
       frameEl.dataset.src = currentFrameUrl;
       frameEl.src = currentFrameUrl || 'about:blank';
+    } else {
+      handleFrameLoad();
     }
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function handleFrameLoad() {
+    frameEl.classList.remove('content-frame--loading');
+
+    if (!frameViewEl) return;
+
+    try {
+      const doc = frameEl.contentDocument;
+      if (!doc) {
+        frameViewEl.classList.remove('view--frame-header-hidden');
+        return;
+      }
+
+      const hasPageHeader = Boolean(
+        doc.querySelector('header, .page-header, .app-header, [data-page-header]')
+      );
+
+      frameViewEl.classList.toggle('view--frame-header-hidden', hasPageHeader);
+    } catch (error) {
+      frameViewEl.classList.remove('view--frame-header-hidden');
+    }
   }
 
   function buildConfigCards() {
@@ -639,9 +671,7 @@
   }
 
   function bindFrameLoading() {
-    frameEl.addEventListener('load', () => {
-      frameEl.classList.remove('content-frame--loading');
-    });
+    frameEl.addEventListener('load', handleFrameLoad);
 
     openExternalBtn.addEventListener('click', () => {
       if (!currentFrameUrl) return;
