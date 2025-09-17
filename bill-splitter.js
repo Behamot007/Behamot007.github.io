@@ -4,6 +4,7 @@
   const state = {
     persons: [],
     expenses: [],
+    autoSelectAllParticipants: false,
   };
 
   const PERSON_COLORS = [
@@ -34,8 +35,10 @@
   const expenseFeedbackEl = document.getElementById('expenseFeedback');
   const expenseListEl = document.getElementById('expenseList');
   const expenseResetBtn = document.getElementById('expenseResetBtn');
+  const autoSelectAllToggle = document.getElementById('autoSelectAllToggle');
 
   const summaryEmptyEl = document.getElementById('summaryEmpty');
+  const summaryContentEl = document.getElementById('summaryContent');
   const summaryTableWrapperEl = document.getElementById('summaryTableWrapper');
   const summaryBodyEl = document.getElementById('summaryBody');
   const personBreakdownEl = document.getElementById('personBreakdown');
@@ -248,6 +251,7 @@
 
     state.expenses.push(expense);
     form.reset();
+    renderParticipantSelector({ forceSelectAll: state.autoSelectAllParticipants });
     setFeedback(expenseFeedbackEl, `Ausgabe „${name}” gespeichert.`, 'success');
     renderExpenses();
     renderSummary();
@@ -315,8 +319,37 @@
     });
   }
 
-  function renderParticipantSelector() {
+  function updateAutoSelectToggleState() {
+    if (!autoSelectAllToggle) return;
+    const hasPersons = state.persons.length > 0;
+    const wrapper = autoSelectAllToggle.closest('.form-toggle');
+
+    autoSelectAllToggle.disabled = !hasPersons;
+
+    if (!hasPersons) {
+      autoSelectAllToggle.checked = false;
+      state.autoSelectAllParticipants = false;
+      wrapper?.classList.add('form-toggle--disabled');
+    } else {
+      autoSelectAllToggle.checked = state.autoSelectAllParticipants;
+      wrapper?.classList.remove('form-toggle--disabled');
+    }
+  }
+
+  function renderParticipantSelector(options = {}) {
     if (!expenseParticipantsEl) return;
+    updateAutoSelectToggleState();
+
+    const { forceSelectAll = false } = options;
+
+    const existingInputs = Array.from(
+      expenseParticipantsEl.querySelectorAll("input[name='participants']")
+    );
+    const previouslyRenderedIds = new Set(existingInputs.map(input => input.value));
+    const previouslyCheckedIds = forceSelectAll
+      ? new Set(state.persons.map(person => person.id))
+      : new Set(existingInputs.filter(input => input.checked).map(input => input.value));
+
     expenseParticipantsEl.innerHTML = '';
 
     if (state.persons.length === 0) {
@@ -337,6 +370,13 @@
       input.className = 'person-checkbox__input';
       input.name = 'participants';
       input.value = person.id;
+
+      const shouldDefaultSelect =
+        state.autoSelectAllParticipants &&
+        (forceSelectAll || previouslyRenderedIds.size === 0 || !previouslyRenderedIds.has(person.id));
+      const shouldCheck = previouslyCheckedIds.has(person.id) || shouldDefaultSelect;
+      input.checked = shouldCheck;
+      input.defaultChecked = shouldCheck;
 
       const text = document.createElement('span');
       text.className = 'person-checkbox__label';
@@ -487,10 +527,13 @@
     if (state.persons.length === 0 || state.expenses.length === 0) {
       summaryEmptyEl.hidden = false;
       summaryTableWrapperEl.hidden = true;
+      summaryContentEl && (summaryContentEl.hidden = true);
       summaryTotalsEl && (summaryTotalsEl.hidden = true);
+      summaryBodyEl.innerHTML = '';
       personBreakdownEl && (personBreakdownEl.innerHTML = '');
       if (unassignedInfoEl) {
         unassignedInfoEl.hidden = true;
+        unassignedInfoEl.textContent = '';
       }
       return;
     }
@@ -498,31 +541,43 @@
     const { perPerson, totals } = calculateTotals();
 
     summaryEmptyEl.hidden = true;
+    summaryContentEl && (summaryContentEl.hidden = false);
     summaryTableWrapperEl.hidden = false;
 
     summaryBodyEl.innerHTML = '';
     perPerson.forEach(entry => {
       const row = document.createElement('tr');
+      row.className = 'summary-table__row';
 
       const nameCell = document.createElement('th');
       nameCell.scope = 'row';
+      nameCell.className = 'summary-table__name';
       nameCell.textContent = entry.person.name;
       nameCell.style.setProperty('color', entry.person.color);
 
       const rawCell = document.createElement('td');
+      rawCell.className = 'summary-table__cell';
+      rawCell.dataset.label = 'Zwischensumme';
       rawCell.textContent = formatPreciseEuro(entry.rawShare);
 
       const roundedCell = document.createElement('td');
+      roundedCell.className = 'summary-table__cell summary-table__cell--highlight';
+      roundedCell.dataset.label = 'Aufgerundet';
       roundedCell.textContent = formatCurrency(entry.roundedShare);
 
       const diffCell = document.createElement('td');
+      diffCell.className = 'summary-table__cell summary-table__cell--diff';
+      diffCell.dataset.label = 'Aufschlag';
       const diff = entry.roundingDifference;
       if (diff > 0) {
         diffCell.textContent = `+${formatCurrency(diff)}`;
+        diffCell.dataset.state = 'plus';
       } else if (diff < 0) {
         diffCell.textContent = `-${formatCurrency(Math.abs(diff))}`;
+        diffCell.dataset.state = 'minus';
       } else {
         diffCell.textContent = formatCurrency(0);
+        diffCell.dataset.state = 'even';
       }
 
       row.append(nameCell, rawCell, roundedCell, diffCell);
@@ -537,21 +592,16 @@
       const normalizedReserve = Math.abs(totals.roundingReserve) < 1e-8 ? 0 : totals.roundingReserve;
       if (normalizedReserve > 0) {
         roundingDifferenceEl.textContent = `+${formatCurrency(normalizedReserve)}`;
-      } else if (normalizedReserve < 0) {
-        roundingDifferenceEl.textContent = `-${formatCurrency(Math.abs(normalizedReserve))}`;
-      } else {
-        roundingDifferenceEl.textContent = formatCurrency(0);
-      }
-
-      if (normalizedReserve > 0) {
         roundingDifferenceEl.parentElement?.classList.add('summary-total--accent');
         roundingNoteEl.textContent =
           'Durch das Aufrunden entsteht eine kleine Reserve. Sie stellt sicher, dass niemand zu wenig zahlt.';
       } else if (normalizedReserve < 0) {
+        roundingDifferenceEl.textContent = `-${formatCurrency(Math.abs(normalizedReserve))}`;
         roundingDifferenceEl.parentElement?.classList.add('summary-total--accent');
         roundingNoteEl.textContent =
           'Achtung: Die aufgerundeten Beträge liegen unter den tatsächlichen Kosten. Prüfe die Zuordnungen erneut.';
       } else {
+        roundingDifferenceEl.textContent = formatCurrency(0);
         roundingDifferenceEl.parentElement?.classList.remove('summary-total--accent');
         roundingNoteEl.textContent = 'Die gerundeten Beiträge entsprechen exakt der Summe der Ausgaben.';
       }
@@ -747,6 +797,13 @@ Liefere das JSON gemäß Schema.`;
   expenseResetBtn?.addEventListener('click', () => {
     expenseForm?.reset();
     setFeedback(expenseFeedbackEl, '', 'info');
+    renderParticipantSelector({ forceSelectAll: state.autoSelectAllParticipants });
+  });
+
+  autoSelectAllToggle?.addEventListener('change', () => {
+    if (!autoSelectAllToggle) return;
+    state.autoSelectAllParticipants = autoSelectAllToggle.checked;
+    renderParticipantSelector({ forceSelectAll: state.autoSelectAllParticipants });
   });
 
   expenseListEl?.addEventListener('click', event => {

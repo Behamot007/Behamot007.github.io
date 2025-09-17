@@ -84,6 +84,21 @@
             <fieldset class="form-fieldset">
               <legend>Personen-Tagging</legend>
               <div id="expenseParticipants" class="participant-selector"></div>
+              <label class="form-toggle" for="autoSelectAllToggle">
+                <input
+                  type="checkbox"
+                  id="autoSelectAllToggle"
+                  class="form-toggle__input"
+                  autocomplete="off"
+                />
+                <div class="form-toggle__content">
+                  <span class="form-toggle__title">Alle Personen automatisch auswählen</span>
+                  <span class="form-toggle__hint"
+                    >Neue Ausgaben starten direkt mit allen Personen markiert. Du kannst die
+                    Auswahl jederzeit anpassen.</span
+                  >
+                </div>
+              </label>
             </fieldset>
             <div class="form-actions">
               <button type="submit" class="button button--primary">Ausgabe speichern</button>
@@ -111,27 +126,38 @@
           <div id="summaryEmpty" class="empty-state">
             Füge Personen und Ausgaben hinzu, um die Aufteilung zu berechnen.
           </div>
-          <div id="summaryTableWrapper" class="summary-table-wrapper" hidden>
-            <table class="summary-table">
-              <thead>
-                <tr>
-                  <th scope="col">Person</th>
-                  <th scope="col">Zwischensumme</th>
-                  <th scope="col">Aufgerundet</th>
-                  <th scope="col">Aufschlag</th>
-                </tr>
-              </thead>
-              <tbody id="summaryBody"></tbody>
-            </table>
-          </div>
-          <div id="personBreakdown" class="summary-breakdown"></div>
-          <div id="summaryTotals" class="summary-totals" hidden>
-            <div class="summary-total"><span>Gesamtausgaben:</span> <strong id="totalsActual"></strong></div>
-            <div class="summary-total"><span>Summe aufgerundet:</span> <strong id="totalsRounded"></strong></div>
-            <div class="summary-total summary-total--accent">
-              <span>Aufrundungsreserve:</span> <strong id="roundingDifference"></strong>
+          <div id="summaryContent" class="summary-content" hidden>
+            <div class="summary-content__primary">
+              <div id="summaryTableWrapper" class="summary-table-wrapper" hidden>
+                <table class="summary-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Person</th>
+                      <th scope="col">Zwischensumme</th>
+                      <th scope="col">Aufgerundet</th>
+                      <th scope="col">Aufschlag</th>
+                    </tr>
+                  </thead>
+                  <tbody id="summaryBody"></tbody>
+                </table>
+              </div>
+              <div id="personBreakdown" class="summary-breakdown"></div>
             </div>
-            <p id="roundingNote" class="summary-note"></p>
+            <aside id="summaryTotals" class="summary-totals" hidden>
+              <div class="summary-total">
+                <span>Gesamtausgaben</span>
+                <strong id="totalsActual"></strong>
+              </div>
+              <div class="summary-total">
+                <span>Summe aufgerundet</span>
+                <strong id="totalsRounded"></strong>
+              </div>
+              <div class="summary-total summary-total--accent">
+                <span>Aufrundungsreserve</span>
+                <strong id="roundingDifference"></strong>
+              </div>
+              <p id="roundingNote" class="summary-note"></p>
+            </aside>
           </div>
           <p id="unassignedInfo" class="summary-unassigned" hidden></p>
         </section>
