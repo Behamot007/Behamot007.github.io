@@ -18,7 +18,7 @@ jobs:
           npm run build
 
       - name: Deploy via rsync/ssh
-        uses: burnett01/rsync-deployments@v7
+        uses: burnett01/rsync-deployments@7.1.0
         with:
           switches: -avzr --delete
           path: dist/           # oder . für statische Dateien
