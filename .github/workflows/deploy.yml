@@ -1,0 +1,28 @@
+name: Deploy Website
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build (optional)
+        run: |
+          npm install
+          npm run build
+
+      - name: Deploy via rsync/ssh
+        uses: burnett01/rsync-deployments@v7
+        with:
+          switches: -avzr --delete
+          path: dist/           # oder . für statische Dateien
+          remote_path: /var/www/behamot.de/
+          remote_host: 213.160.73.172
+          remote_user: deploy
+          remote_key: ${{ secrets.DEPLOY_KEY }}
