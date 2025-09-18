@@ -12,30 +12,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install dependencies
-        if: hashFiles('package.json') != ''
-        run: npm install
-
       - name: Build (optional)
-        if: hashFiles('package.json') != ''
-        run: npm run build
-
-      - name: Determine deploy path
-        id: deploy-path
         run: |
-          if [ -d dist ]; then
-            echo "path=dist/" >> "$GITHUB_OUTPUT"
-          elif [ -d build ]; then
-            echo "path=build/" >> "$GITHUB_OUTPUT"
-          else
-            echo "path=." >> "$GITHUB_OUTPUT"
-          fi
+          npm install
+          npm run build
 
       - name: Deploy via rsync/ssh
         uses: burnett01/rsync-deployments@7.1.0
         with:
-          switches: -avzr --delete --exclude '.git/' --exclude '.github/'
-          path: ${{ steps.deploy-path.outputs.path }}
+          switches: -avzr --delete
+          path: dist/           # oder . für statische Dateien
           remote_path: /var/www/behamot.de/
           remote_host: 213.160.73.172
           remote_user: behamot
