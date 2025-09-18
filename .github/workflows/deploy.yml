@@ -38,5 +38,5 @@ jobs:
           path: ${{ steps.deploy-path.outputs.path }}
           remote_path: /var/www/behamot.de/
           remote_host: 213.160.73.172
-          remote_user: deploy
+          remote_user: behamot
           remote_key: ${{ secrets.DEPLOY_KEY }}
