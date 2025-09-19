@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./anime-dataset
+    image: behamot007/anime-backend:latest
+    environment:
+      - NODE_ENV=production
+      - PORT=${BACKEND_PORT:-3000}
+      - DATASET_PATH=${BACKEND_DATASET_PATH:-/app/dataset/characters.jsonl}
+      - API_TOKEN=${BACKEND_API_TOKEN:-}
+    volumes:
+      - ./anime-dataset/dataset:/app/dataset
+    networks:
+      - internal
+    expose:
+      - "${BACKEND_PORT:-3000}"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    image: behamot007/anime-frontend:latest
+    depends_on:
+      - backend
+    environment:
+      - BACKEND_API_BASE=${FRONTEND_BACKEND_API_BASE:-http://backend:3000}
+    ports:
+      - "8080:80"
+    networks:
+      - internal
+      - public
+
+networks:
+  internal:
+    driver: bridge
+  public:
+    driver: bridge
