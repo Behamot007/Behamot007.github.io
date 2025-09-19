@@ -33,8 +33,7 @@ jobs:
 
       - name: Ensure workspace permissions
         run: |
-          chmod -R a+rX .git
-
+          chmod -R a+rwX .git
       - name: Deploy via rsync/ssh
         uses: burnett01/rsync-deployments@7.1.0
         with:
