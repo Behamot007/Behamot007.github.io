@@ -42,4 +42,5 @@ jobs:
           remote_path: /var/www/behamot.de/
           remote_host: 213.160.73.172
           remote_user: behamot
+          become: true
           remote_key: ${{ secrets.DEPLOY_KEY }}
