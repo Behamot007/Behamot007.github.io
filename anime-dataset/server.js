@@ -5,10 +5,8 @@ import bodyParser from "body-parser";
 import cors from "cors";
 
 const app = express();
-const PORT = Number.parseInt(process.env.PORT, 10) || 3000;
-const DATASET_PATH = path.resolve(
-  process.env.DATASET_PATH ?? "dataset/characters.jsonl"
-);
+const PORT = 3000;
+const DATASET_PATH = path.resolve("dataset/characters.jsonl");
 
 app.use(cors());
 app.use(bodyParser.json({ limit: "10mb" }));
@@ -24,7 +22,6 @@ function loadCharacters() {
 // Dataset speichern
 function saveCharacters(chars) {
   const text = chars.map(c => JSON.stringify(c)).join("\n");
-  fs.mkdirSync(path.dirname(DATASET_PATH), { recursive: true });
   fs.writeFileSync(DATASET_PATH, text, "utf-8");
 }
 
