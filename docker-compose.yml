@@ -1,9 +1,25 @@
 
 services:
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-app}
+      - POSTGRES_USER=${POSTGRES_USER:-app}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-change-me}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - internal
+
   backend:
     build:
       context: ./anime-dataset
     image: behamot007/anime-backend:latest
+    depends_on:
+      - postgres
     environment:
       - NODE_ENV=production
       - PORT=${BACKEND_PORT:-3000}
@@ -36,3 +52,7 @@ networks:
     driver: bridge
   public:
     driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
