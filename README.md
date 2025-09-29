@@ -44,6 +44,29 @@ Der Befehl `docker compose up -d --build` baut beide Images (`backend`, `fronten
     - anime-dataset-data:/app/dataset
   ```
 
+### Persistente PostgreSQL-Datenbank
+
+Für zusätzliche Services, die eine relationale Datenbank benötigen, steht ein vorkonfigurierter PostgreSQL-Container bereit:
+
+```yaml
+postgres:
+  image: postgres:15
+  restart: unless-stopped
+  environment:
+    POSTGRES_DB: ${POSTGRES_DB:-app}
+    POSTGRES_USER: ${POSTGRES_USER:-app}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+  volumes:
+    - postgres_data:/var/lib/postgresql/data
+  ports:
+    - "${POSTGRES_PORT:-5432}:5432"
+```
+
+- Über das benannte Volume `postgres_data` bleiben Daten über Container-Neustarts hinweg erhalten.
+- Mit `restart: unless-stopped` startet der Datenbank-Container automatisch nach einem Server-Reboot.
+- Passe die Zugangsdaten in `.env` an und hinterlege starke Passwörter oder verwende ein Secret-Management.
+- Für Backups können `pg_dump` oder Automatisierungstools wie `pgBackRest` eingesetzt werden.
+
 ## Deployment auf einem Server
 
 1. Repository klonen oder Artefakte per CI/CD bereitstellen.
