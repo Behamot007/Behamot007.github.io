@@ -61,9 +61,21 @@
     return result?.tracks ?? [];
   }
 
-  function extractPlaylistId(url) {
-    const match = url?.match(/playlist\/([a-zA-Z0-9]+)/);
-    return match ? match[1] : null;
+  function extractPlaylistId(value) {
+    if (!value) return null;
+    const input = String(value).trim();
+    const urlMatch = input.match(/playlist\/([a-zA-Z0-9]+)/);
+    if (urlMatch) {
+      return urlMatch[1];
+    }
+    const uriMatch = input.match(/^spotify:playlist:([a-zA-Z0-9]+)/i);
+    if (uriMatch) {
+      return uriMatch[1];
+    }
+    if (/^[a-zA-Z0-9]{16,64}$/.test(input)) {
+      return input;
+    }
+    return null;
   }
 
   window.spotifyApi = {
