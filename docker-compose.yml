@@ -25,6 +25,10 @@ services:
       - PORT=${BACKEND_PORT:-3000}
       - DATASET_PATH=${BACKEND_DATASET_PATH:-/app/dataset/characters.jsonl}
       - API_TOKEN=${BACKEND_API_TOKEN:-}
+      - SPOTIFY_CLIENT_ID=${SPOTIFY_CLIENT_ID:-}
+      - SPOTIFY_CLIENT_SECRET=${SPOTIFY_CLIENT_SECRET:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
     volumes:
       - ./anime-dataset/dataset:/app/dataset
     networks:
