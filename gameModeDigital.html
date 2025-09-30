@@ -200,6 +200,15 @@
       margin: 0 0 22px;
       box-sizing: border-box;
       box-shadow: 0 18px 36px rgba(0, 0, 0, 0.4);
+      transition: opacity 0.3s ease;
+    }
+
+    .setup-step--completed {
+      opacity: 0.85;
+    }
+
+    .is-hidden {
+      display: none !important;
     }
 
     .setup-step h2 {
@@ -225,9 +234,6 @@
       max-width: none;
     }
 
-    #deviceStep {
-      display: none;
-    }
 
     .playlist-select-row {
       display: flex;
@@ -547,7 +553,7 @@
 
   <div id="setup">
     <section class="setup-step" id="spotifyStep">
-      <h2>1. Mit Spotify verbinden</h2>
+      <h2>Mit Spotify verbinden</h2>
       <p class="step-description">Melde dich mit deinem Spotify-Account an, um Geräte auszuwählen und Playlists direkt zu nutzen.</p>
       <div class="spotify-auth">
         <div id="spotifyStatus" class="spotify-auth__status">Spotify: nicht verbunden</div>
@@ -561,8 +567,8 @@
       </div>
     </section>
 
-    <section class="setup-step" id="playlistStep">
-      <h2>2. Playlist auswählen</h2>
+    <section class="setup-step is-hidden" id="playlistStep">
+      <h2>Playlist auswählen</h2>
       <p class="step-description">Wähle eine deiner Playlists oder füge wie gewohnt eine Playlist-URL ein.</p>
       <div class="playlist-select-row">
         <select id="playlistSelect" disabled>
@@ -575,8 +581,8 @@
       <input type="text" id="playlistInput" placeholder="Spotify Playlist URL">
     </section>
 
-    <section class="setup-step" id="deviceStep">
-      <h2>3. Ausgabegerät wählen</h2>
+    <section class="setup-step is-hidden" id="deviceStep">
+      <h2>Ausgabegerät wählen</h2>
       <p class="step-description">Wähle ein verfügbares Gerät für die Spotify-Wiedergabe.</p>
       <div id="spotifyDeviceContainer" class="spotify-device">
         <label for="spotifyDeviceSelect" class="spotify-device__label">Ausgabegerät auswählen</label>
@@ -588,8 +594,8 @@
       </div>
     </section>
 
-    <section class="setup-step" id="playersStep">
-      <h2>4. Spieler festlegen</h2>
+    <section class="setup-step is-hidden" id="playersStep">
+      <h2>Spieler festlegen</h2>
       <p class="step-description">Trage die Namen der Mitspielenden ein und füge bei Bedarf weitere hinzu.</p>
       <div id="playerNames"></div>
       <div class="player-add">
@@ -597,7 +603,7 @@
       </div>
     </section>
 
-    <div class="setup-actions">
+    <div class="setup-actions is-hidden">
       <button id="startBtn">Spiel starten</button>
     </div>
   </div>
@@ -687,13 +693,16 @@
     const playlistInputEl = document.getElementById('playlistInput');
     const playerNamesContainer = document.getElementById('playerNames');
     const addPlayerBtn = document.getElementById('addPlayerBtn');
+    const spotifyStepEl = document.getElementById('spotifyStep');
+    const playlistStepEl = document.getElementById('playlistStep');
     const deviceStepEl = document.getElementById('deviceStep');
+    const playersStepEl = document.getElementById('playersStep');
+    const setupActionsEl = document.querySelector('.setup-actions');
     const startBtn = document.getElementById('startBtn');
     const spotifyConnectDefaultLabel = spotifyConnectBtn ? spotifyConnectBtn.textContent : 'Mit Spotify verbinden';
 
     playBtn.disabled = true;
     stopBtn.disabled = true;
-    renderPlaylistDropdown();
 
     const SPOTIFY_ACCESS_STORAGE_KEY = 'SPOTIFY_ACCESS_TOKEN';
     const SPOTIFY_REFRESH_STORAGE_KEY = 'SPOTIFY_REFRESH_TOKEN';
@@ -721,6 +730,8 @@
     let userPlaylistsError = null;
     let playerInputCount = 0;
     let suppressPlaylistInputSync = false;
+
+    updateSetupStepVisibility();
 
     function loadSpotifyAuthFromStorage() {
       spotifyAccessToken = localStorage.getItem(SPOTIFY_ACCESS_STORAGE_KEY);
@@ -751,6 +762,31 @@
       localStorage.removeItem(SPOTIFY_ACCESS_STORAGE_KEY);
       localStorage.removeItem(SPOTIFY_REFRESH_STORAGE_KEY);
       localStorage.removeItem(SPOTIFY_EXPIRY_STORAGE_KEY);
+      setSelectedSpotifyDevice(null);
+    }
+
+    function setStepVisibility(element, isVisible) {
+      if (!element) return;
+      element.classList.toggle('is-hidden', !isVisible);
+      element.setAttribute('aria-hidden', (!isVisible).toString());
+    }
+
+    function updateSetupStepVisibility() {
+      const backendReady = spotifyBackendAvailable === true;
+      const connected = backendReady && isSpotifyConnected();
+      const playlistSelection = playlistSelectEl?.value?.trim() || '';
+      const manualInput = playlistInputEl?.value?.trim() || '';
+      const playlistReady = connected && Boolean(playlistSelection || manualInput);
+      const deviceReady = playlistReady && (selectedSpotifyDeviceId || availableSpotifyDevices.length === 0);
+
+      if (spotifyStepEl) {
+        spotifyStepEl.classList.toggle('setup-step--completed', connected);
+      }
+
+      setStepVisibility(playlistStepEl, connected);
+      setStepVisibility(deviceStepEl, connected && playlistReady);
+      setStepVisibility(playersStepEl, connected && deviceReady);
+      setStepVisibility(setupActionsEl, connected && deviceReady);
     }
 
     function getSpotifyApi() {
@@ -882,6 +918,8 @@
 
       const availableValues = Array.from(playlistSelectEl.options).map(opt => opt.value);
       playlistSelectEl.value = connected && availableValues.includes(previousValue) ? previousValue : '';
+
+      updateSetupStepVisibility();
 
       if (playlistStatusEl) {
         if (!connected) {
@@ -1087,13 +1125,10 @@
         spotifyDeviceSelect.value = selectedSpotifyDeviceId || '';
       }
       updateSpotifyDeviceHint();
+      updateSetupStepVisibility();
     }
 
     function renderDeviceSelection() {
-      if (deviceStepEl) {
-        const connected = isSpotifyConnected();
-        deviceStepEl.style.display = connected ? 'block' : 'none';
-      }
       if (!spotifyDeviceContainer) return;
       const connected = isSpotifyConnected();
       spotifyDeviceContainer.style.display = connected ? 'flex' : 'none';
@@ -1107,6 +1142,7 @@
         if (spotifyDeviceHintEl) {
           spotifyDeviceHintEl.textContent = '';
         }
+        updateSetupStepVisibility();
         return;
       }
 
@@ -1120,6 +1156,7 @@
         option.textContent = 'Keine Geräte gefunden';
         spotifyDeviceSelect.appendChild(option);
         updateSpotifyDeviceHint();
+        updateSetupStepVisibility();
         return;
       }
 
@@ -1262,6 +1299,7 @@
         showTrackInfo(currentTrack);
       }
       updatePlaybackButtonState();
+      updateSetupStepVisibility();
     }
 
     function createRandomState(length = 16) {
@@ -1498,6 +1536,7 @@
 
       if (resp.status === 404) {
         updateSpotifyDeviceHint();
+        updateSetupStepVisibility();
       }
 
       return true;
@@ -1563,6 +1602,7 @@
     if (playlistSelectEl && playlistInputEl) {
       playlistSelectEl.addEventListener('change', () => {
         const selectedId = playlistSelectEl.value;
+        updateSetupStepVisibility();
         if (!selectedId) return;
         suppressPlaylistInputSync = true;
         playlistInputEl.value = `https://open.spotify.com/playlist/${selectedId}`;
@@ -1570,10 +1610,10 @@
       });
 
       playlistInputEl.addEventListener('input', () => {
-        if (suppressPlaylistInputSync) return;
-        if (playlistSelectEl.value) {
+        if (!suppressPlaylistInputSync && playlistSelectEl.value) {
           playlistSelectEl.value = '';
         }
+        updateSetupStepVisibility();
       });
     }
 
