@@ -14,3 +14,4 @@ docker/*
 !docker/nginx/default.conf
 secrets/
 .env*
+scripts/

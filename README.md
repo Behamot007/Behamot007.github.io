@@ -13,13 +13,15 @@ Diese Dokumentation beschreibt, wie das Projekt mithilfe von Docker-Containern b
 
 ## Vorbereitung von Secrets & Umgebungsvariablen
 
-1. Kopiere `.env.example` zu `.env` (wird von Docker Compose automatisch geladen) und fülle alle Werte aus:
+1. Erstelle die lokale `.env` **nur einmalig** aus der Vorlage – entweder manuell oder via Skript:
    ```bash
-   cp .env.example .env
-   # Werte wie BACKEND_API_TOKEN, OPENAI_API_KEY etc. ergänzen
+   # legt die Datei nur an, falls sie noch nicht existiert
+   ./scripts/ensure-env.sh
    ```
-2. Sensible Dateien sollten **nicht** eingecheckt werden. Das Repository ignoriert `.env*` Dateien bereits über `.gitignore` und `.dockerignore`.
-3. Auf dem Server sollten Secrets via `scp` oder einem Secret-Management-Tool (z. B. sops, Ansible Vault, HashiCorp Vault) abgelegt werden. Passe die Dateiberechtigungen an (`chmod 600 .env`).
+   Alternativ kann `cp -n .env.example .env` verwendet werden (`-n` verhindert ein Überschreiben bestehender Dateien).
+2. Ergänze anschließend alle benötigten Werte (z. B. `BACKEND_API_TOKEN`, `OPENAI_API_KEY`). Bei Updates der Vorlage können Unterschiede mit `diff -u .env .env.example` geprüft und selektiv übernommen werden.
+3. Sensible Dateien sollten **nicht** eingecheckt werden. Das Repository ignoriert `.env*` Dateien bereits über `.gitignore` und `.dockerignore`.
+4. Auf dem Server sollten Secrets via `scp` oder einem Secret-Management-Tool (z. B. sops, Ansible Vault, HashiCorp Vault) abgelegt werden. Passe die Dateiberechtigungen an (`chmod 600 .env`).
 
 ## Docker-Images bauen und starten
 
