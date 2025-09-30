@@ -190,13 +190,117 @@
       }
     }
 
+    .setup-step {
+      width: 100%;
+      max-width: 520px;
+      background: rgba(18, 18, 18, 0.7);
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 22px 24px;
+      margin: 0 0 22px;
+      box-sizing: border-box;
+      box-shadow: 0 18px 36px rgba(0, 0, 0, 0.4);
+    }
+
+    .setup-step h2 {
+      margin: 0 0 12px;
+      font-size: 1.15rem;
+      letter-spacing: 0.02em;
+    }
+
+    .setup-step p {
+      margin: 0 0 12px;
+      color: #c6c6c6;
+      line-height: 1.5;
+      font-size: 0.95rem;
+    }
+
+    .setup-step .step-description {
+      margin-bottom: 16px;
+      color: #d6d6d6;
+    }
+
+    .setup-step input {
+      width: 100%;
+      max-width: none;
+    }
+
+    #deviceStep {
+      display: none;
+    }
+
+    .playlist-select-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .playlist-select-row select {
+      flex: 1 1 220px;
+      border-radius: 8px;
+      border: none;
+      padding: 10px 12px;
+      background: #2a2a2a;
+      color: #f0f0f0;
+    }
+
+    .playlist-select-row button {
+      flex: 0 0 auto;
+      width: auto;
+      max-width: none;
+      padding: 10px 18px;
+    }
+
+    .playlist-status {
+      margin: 8px 0 0;
+      font-size: 0.85rem;
+      color: #9f9f9f;
+      min-height: 1.2em;
+    }
+
+    .playlist-divider {
+      text-align: center;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      color: #9c9c9c;
+      margin: 16px 0 8px;
+    }
+
+    .player-input {
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    .player-add {
+      text-align: left;
+    }
+
+    .player-add button {
+      width: auto;
+      max-width: none;
+      padding: 10px 18px;
+    }
+
+    .setup-actions {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      margin-top: 12px;
+    }
+
+    .setup-actions button {
+      max-width: 260px;
+      width: 100%;
+    }
+
     .spotify-auth {
-      width: 90%;
-      max-width: 400px;
+      width: 100%;
       background: #1f1f1f;
       border-radius: 12px;
-      padding: 15px;
-      margin: 10px 0 20px;
+      padding: 18px;
+      margin: 0;
       box-sizing: border-box;
     }
 
@@ -225,12 +329,11 @@
     }
 
     .spotify-device {
-      width: 90%;
-      max-width: 400px;
+      width: 100%;
       background: #1a1a1a;
       border-radius: 12px;
-      padding: 15px;
-      margin: 0 0 20px;
+      padding: 18px;
+      margin: 0;
       box-sizing: border-box;
       display: none;
       gap: 12px;
@@ -443,28 +546,60 @@
   <h1>Digital Mode</h1>
 
   <div id="setup">
-    <input type="text" id="playlistInput" placeholder="Spotify Playlist URL">
-    <input type="number" id="playerCount" placeholder="Anzahl Spieler" min="1" max="8">
-    <div id="playerNames"></div>
-    <div class="spotify-auth">
-      <div id="spotifyStatus" class="spotify-auth__status">Spotify: nicht verbunden</div>
-      <div class="spotify-auth__actions">
-        <button type="button" id="spotifyConnectBtn">Mit Spotify verbinden</button>
-        <button type="button" id="spotifyDisconnectBtn" style="display:none;">Verbindung trennen</button>
+    <section class="setup-step" id="spotifyStep">
+      <h2>1. Mit Spotify verbinden</h2>
+      <p class="step-description">Melde dich mit deinem Spotify-Account an, um Geräte auszuwählen und Playlists direkt zu nutzen.</p>
+      <div class="spotify-auth">
+        <div id="spotifyStatus" class="spotify-auth__status">Spotify: nicht verbunden</div>
+        <div class="spotify-auth__actions">
+          <button type="button" id="spotifyConnectBtn">Mit Spotify verbinden</button>
+          <button type="button" id="spotifyDisconnectBtn" style="display:none;">Verbindung trennen</button>
+        </div>
+        <p id="spotifyHint" class="spotify-auth__hint">
+          Melde dich mit deinem Spotify Account an, um Songs direkt aus dem Spiel heraus abspielen oder pausieren zu können.
+        </p>
       </div>
-      <p id="spotifyHint" class="spotify-auth__hint">
-        Melde dich mit deinem Spotify Account an, um Songs direkt aus dem Spiel heraus abspielen oder pausieren zu können.
-      </p>
-    </div>
-    <div id="spotifyDeviceContainer" class="spotify-device">
-      <label for="spotifyDeviceSelect" class="spotify-device__label">Ausgabegerät auswählen</label>
-      <div class="spotify-device__controls">
-        <select id="spotifyDeviceSelect"></select>
-        <button type="button" id="spotifyDeviceRefreshBtn">Geräte aktualisieren</button>
+    </section>
+
+    <section class="setup-step" id="playlistStep">
+      <h2>2. Playlist auswählen</h2>
+      <p class="step-description">Wähle eine deiner Playlists oder füge wie gewohnt eine Playlist-URL ein.</p>
+      <div class="playlist-select-row">
+        <select id="playlistSelect" disabled>
+          <option value="">Mit Spotify verbinden, um Playlists zu laden</option>
+        </select>
+        <button type="button" id="refreshPlaylistsBtn" disabled>Playlists aktualisieren</button>
       </div>
-      <p id="spotifyDeviceHint" class="spotify-device__hint"></p>
+      <p id="playlistStatus" class="playlist-status"></p>
+      <div class="playlist-divider">oder</div>
+      <input type="text" id="playlistInput" placeholder="Spotify Playlist URL">
+    </section>
+
+    <section class="setup-step" id="deviceStep">
+      <h2>3. Ausgabegerät wählen</h2>
+      <p class="step-description">Wähle ein verfügbares Gerät für die Spotify-Wiedergabe.</p>
+      <div id="spotifyDeviceContainer" class="spotify-device">
+        <label for="spotifyDeviceSelect" class="spotify-device__label">Ausgabegerät auswählen</label>
+        <div class="spotify-device__controls">
+          <select id="spotifyDeviceSelect"></select>
+          <button type="button" id="spotifyDeviceRefreshBtn">Geräte aktualisieren</button>
+        </div>
+        <p id="spotifyDeviceHint" class="spotify-device__hint"></p>
+      </div>
+    </section>
+
+    <section class="setup-step" id="playersStep">
+      <h2>4. Spieler festlegen</h2>
+      <p class="step-description">Trage die Namen der Mitspielenden ein und füge bei Bedarf weitere hinzu.</p>
+      <div id="playerNames"></div>
+      <div class="player-add">
+        <button type="button" id="addPlayerBtn">Spieler hinzufügen</button>
+      </div>
+    </section>
+
+    <div class="setup-actions">
+      <button id="startBtn">Spiel starten</button>
     </div>
-    <button id="startBtn">Start</button>
   </div>
 
   <div id="gameArea" style="display:none; width:100%;">
@@ -546,17 +681,31 @@
     const spotifyDeviceSelect = document.getElementById('spotifyDeviceSelect');
     const spotifyDeviceRefreshBtn = document.getElementById('spotifyDeviceRefreshBtn');
     const spotifyDeviceHintEl = document.getElementById('spotifyDeviceHint');
+    const playlistSelectEl = document.getElementById('playlistSelect');
+    const playlistStatusEl = document.getElementById('playlistStatus');
+    const refreshPlaylistsBtn = document.getElementById('refreshPlaylistsBtn');
+    const playlistInputEl = document.getElementById('playlistInput');
+    const playerNamesContainer = document.getElementById('playerNames');
+    const addPlayerBtn = document.getElementById('addPlayerBtn');
+    const deviceStepEl = document.getElementById('deviceStep');
+    const startBtn = document.getElementById('startBtn');
     const spotifyConnectDefaultLabel = spotifyConnectBtn ? spotifyConnectBtn.textContent : 'Mit Spotify verbinden';
 
     playBtn.disabled = true;
     stopBtn.disabled = true;
+    renderPlaylistDropdown();
 
     const SPOTIFY_ACCESS_STORAGE_KEY = 'SPOTIFY_ACCESS_TOKEN';
     const SPOTIFY_REFRESH_STORAGE_KEY = 'SPOTIFY_REFRESH_TOKEN';
     const SPOTIFY_EXPIRY_STORAGE_KEY = 'SPOTIFY_TOKEN_EXPIRY';
     const SPOTIFY_AUTH_STATE_KEY = 'SPOTIFY_AUTH_STATE';
     const SPOTIFY_DEVICE_STORAGE_KEY = 'SPOTIFY_SELECTED_DEVICE';
-    const SPOTIFY_SCOPES = ['user-read-playback-state', 'user-modify-playback-state'];
+    const SPOTIFY_SCOPES = [
+      'user-read-playback-state',
+      'user-modify-playback-state',
+      'playlist-read-private',
+      'playlist-read-collaborative'
+    ];
     const SPOTIFY_REDIRECT_URI = window.location.origin + window.location.pathname;
 
     let spotifyAccessToken = null;
@@ -566,6 +715,12 @@
     let selectedSpotifyDeviceId = null;
     let spotifyServerConfig = null;
     let spotifyBackendAvailable = null;
+    let userPlaylists = [];
+    let userPlaylistsLoaded = false;
+    let userPlaylistsLoading = false;
+    let userPlaylistsError = null;
+    let playerInputCount = 0;
+    let suppressPlaylistInputSync = false;
 
     function loadSpotifyAuthFromStorage() {
       spotifyAccessToken = localStorage.getItem(SPOTIFY_ACCESS_STORAGE_KEY);
@@ -683,6 +838,242 @@
       }
     }
 
+    function renderPlaylistDropdown() {
+      if (!playlistSelectEl) return;
+
+      const connected = isSpotifyConnected();
+      const previousValue = playlistSelectEl.value;
+      playlistSelectEl.innerHTML = '';
+
+      if (!connected) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Mit Spotify verbinden, um Playlists zu laden';
+        playlistSelectEl.appendChild(option);
+        playlistSelectEl.disabled = true;
+      } else if (userPlaylistsLoading) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Playlists werden geladen…';
+        playlistSelectEl.appendChild(option);
+        playlistSelectEl.disabled = true;
+      } else if (userPlaylists.length) {
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Playlist auswählen';
+        playlistSelectEl.appendChild(placeholder);
+        userPlaylists.forEach(playlist => {
+          const option = document.createElement('option');
+          option.value = playlist.id;
+          const trackSuffix = playlist.trackCount ? ` (${playlist.trackCount})` : '';
+          option.textContent = `${playlist.name}${trackSuffix}`;
+          playlistSelectEl.appendChild(option);
+        });
+        playlistSelectEl.disabled = false;
+      } else {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = userPlaylistsError
+          ? 'Playlists konnten nicht geladen werden'
+          : 'Keine Playlists gefunden';
+        playlistSelectEl.appendChild(option);
+        playlistSelectEl.disabled = true;
+      }
+
+      const availableValues = Array.from(playlistSelectEl.options).map(opt => opt.value);
+      playlistSelectEl.value = connected && availableValues.includes(previousValue) ? previousValue : '';
+
+      if (playlistStatusEl) {
+        if (!connected) {
+          playlistStatusEl.textContent = 'Verbinde dich mit Spotify, um deine gespeicherten Playlists zu laden.';
+        } else if (userPlaylistsLoading) {
+          playlistStatusEl.textContent = 'Playlists werden geladen…';
+        } else if (userPlaylistsError) {
+          playlistStatusEl.textContent = userPlaylistsError;
+        } else if (!userPlaylists.length) {
+          playlistStatusEl.textContent = 'Keine Playlists gefunden. Du kannst weiterhin eine Playlist-URL einfügen.';
+        } else {
+          playlistStatusEl.textContent = '';
+        }
+      }
+
+      if (refreshPlaylistsBtn) {
+        refreshPlaylistsBtn.disabled = !connected || userPlaylistsLoading;
+      }
+    }
+
+    async function fetchUserPlaylistsFromSpotify(retry = true) {
+      const token = await ensureSpotifyAccessToken();
+      if (!token) {
+        throw new Error('Spotify-Zugriff nicht verfügbar. Bitte melde dich erneut an.');
+      }
+
+      const playlists = [];
+      let url = 'https://api.spotify.com/v1/me/playlists?limit=50';
+
+      while (url) {
+        const resp = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (resp.status === 401 && retry) {
+          const refreshed = await refreshSpotifyAccessToken();
+          if (refreshed) {
+            return fetchUserPlaylistsFromSpotify(false);
+          }
+          const authError = new Error('Spotify-Sitzung ist abgelaufen. Bitte melde dich erneut an.');
+          authError.status = 401;
+          throw authError;
+        }
+
+        const data = await resp.json();
+        if (!resp.ok) {
+          const message = data?.error?.message || 'Playlists konnten nicht geladen werden.';
+          const error = new Error(message);
+          error.status = resp.status;
+          error.details = data;
+          throw error;
+        }
+
+        (data.items || []).forEach(item => {
+          if (!item?.id) return;
+          playlists.push({
+            id: item.id,
+            name: item.name || 'Unbenannte Playlist',
+            trackCount: item.tracks?.total ?? 0
+          });
+        });
+
+        url = data.next;
+      }
+
+      return playlists
+        .filter(playlist => playlist.trackCount > 0)
+        .sort((a, b) => a.name.localeCompare(b.name, 'de', { sensitivity: 'base' }));
+    }
+
+    function resetUserPlaylistsState() {
+      userPlaylists = [];
+      userPlaylistsLoaded = false;
+      userPlaylistsLoading = false;
+      userPlaylistsError = null;
+      renderPlaylistDropdown();
+    }
+
+    async function ensureUserPlaylists(force = false) {
+      if (!playlistSelectEl) return;
+      if (!isSpotifyConnected()) {
+        resetUserPlaylistsState();
+        return;
+      }
+
+      if (userPlaylistsLoading) return;
+      if (userPlaylistsLoaded && !force) {
+        renderPlaylistDropdown();
+        return;
+      }
+
+      userPlaylistsLoading = true;
+      userPlaylistsError = null;
+      renderPlaylistDropdown();
+
+      try {
+        userPlaylists = await fetchUserPlaylistsFromSpotify();
+        userPlaylistsLoaded = true;
+      } catch (error) {
+        console.error('Spotify Playlists Fehler:', error?.details || error);
+        userPlaylistsLoaded = false;
+        if (error?.status === 403) {
+          userPlaylistsError = 'Spotify-Berechtigungen reichen nicht aus. Bitte melde dich erneut an.';
+        } else {
+          userPlaylistsError = error?.message || 'Playlists konnten nicht geladen werden.';
+        }
+        userPlaylists = [];
+      } finally {
+        userPlaylistsLoading = false;
+        renderPlaylistDropdown();
+      }
+    }
+
+    async function fetchPlaylistTracksWithUserToken(playlistId, retry = true) {
+      const token = await ensureSpotifyAccessToken();
+      if (!token) {
+        throw new Error('Spotify-Zugriff nicht verfügbar.');
+      }
+
+      const tracks = [];
+      let url = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`;
+
+      while (url) {
+        const resp = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (resp.status === 401 && retry) {
+          const refreshed = await refreshSpotifyAccessToken();
+          if (refreshed) {
+            return fetchPlaylistTracksWithUserToken(playlistId, false);
+          }
+          const authError = new Error('Spotify-Sitzung ist abgelaufen. Bitte melde dich erneut an.');
+          authError.status = 401;
+          throw authError;
+        }
+
+        const data = await resp.json();
+        if (!resp.ok) {
+          const message = data?.error?.message || 'Playlist konnte nicht geladen werden.';
+          const error = new Error(message);
+          error.status = resp.status;
+          error.details = data;
+          throw error;
+        }
+
+        (data.items || []).forEach(item => {
+          if (!item?.track) return;
+          const album = item.track.album ?? {};
+          const releaseDate = album.release_date ?? '';
+          tracks.push({
+            name: item.track.name,
+            artist: (item.track.artists || []).map(artist => artist.name).join(', '),
+            url: item.track.external_urls?.spotify ?? '',
+            cover: album.images?.[0]?.url ?? '',
+            year: releaseDate,
+            preview: item.track.preview_url ?? null
+          });
+        });
+
+        url = data.next;
+      }
+
+      return tracks;
+    }
+
+    function addPlayerInputField(initialValue = '', focus = true) {
+      if (!playerNamesContainer) return;
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'playerName player-input';
+      playerInputCount += 1;
+      input.placeholder = `Spieler ${playerInputCount} Name`;
+      input.value = initialValue;
+      playerNamesContainer.appendChild(input);
+      if (focus) {
+        requestAnimationFrame(() => input.focus());
+      }
+    }
+
+    function initializePlayerInputs() {
+      if (!playerNamesContainer) return;
+      playerNamesContainer.innerHTML = '';
+      playerInputCount = 0;
+      addPlayerInputField('', false);
+      addPlayerInputField('', false);
+    }
+
     function setSelectedSpotifyDevice(deviceId, persist = true) {
       selectedSpotifyDeviceId = deviceId || null;
       if (persist) {
@@ -699,6 +1090,10 @@
     }
 
     function renderDeviceSelection() {
+      if (deviceStepEl) {
+        const connected = isSpotifyConnected();
+        deviceStepEl.style.display = connected ? 'block' : 'none';
+      }
       if (!spotifyDeviceContainer) return;
       const connected = isSpotifyConnected();
       spotifyDeviceContainer.style.display = connected ? 'flex' : 'none';
@@ -799,6 +1194,16 @@
     function updateSpotifyAuthUI() {
       const backendReady = spotifyBackendAvailable === true;
       const connected = backendReady && isSpotifyConnected();
+
+      if (!backendReady) {
+        resetUserPlaylistsState();
+      } else if (!connected) {
+        resetUserPlaylistsState();
+      } else if (!userPlaylistsLoaded || !userPlaylists.length) {
+        ensureUserPlaylists(false);
+      } else {
+        renderPlaylistDropdown();
+      }
 
       if (spotifyStatusEl) {
         if (spotifyBackendAvailable === null) {
@@ -1151,6 +1556,31 @@
       });
     }
 
+    if (refreshPlaylistsBtn) {
+      refreshPlaylistsBtn.addEventListener('click', () => ensureUserPlaylists(true));
+    }
+
+    if (playlistSelectEl && playlistInputEl) {
+      playlistSelectEl.addEventListener('change', () => {
+        const selectedId = playlistSelectEl.value;
+        if (!selectedId) return;
+        suppressPlaylistInputSync = true;
+        playlistInputEl.value = `https://open.spotify.com/playlist/${selectedId}`;
+        suppressPlaylistInputSync = false;
+      });
+
+      playlistInputEl.addEventListener('input', () => {
+        if (suppressPlaylistInputSync) return;
+        if (playlistSelectEl.value) {
+          playlistSelectEl.value = '';
+        }
+      });
+    }
+
+    if (addPlayerBtn) {
+      addPlayerBtn.addEventListener('click', () => addPlayerInputField(''));
+    }
+
     if (spotifyDeviceRefreshBtn) {
       spotifyDeviceRefreshBtn.addEventListener('click', () => {
         refreshSpotifyDevices(true);
@@ -1165,13 +1595,23 @@
       });
     }
 
+    initializePlayerInputs();
     initSpotifyAuth();
 
-    async function fetchPlaylistTracks(playlistUrl) {
-      const playlistId = extractPlaylistId(playlistUrl);
+    async function fetchPlaylistTracks(playlistSource) {
+      const playlistId = extractPlaylistId(playlistSource);
       if (!playlistId) {
-        throw new Error('Ungültige Playlist-URL');
+        throw new Error('Ungültige Playlist-ID oder URL');
       }
+
+      if (isSpotifyConnected()) {
+        try {
+          return await fetchPlaylistTracksWithUserToken(playlistId);
+        } catch (error) {
+          console.warn('Playlist konnte nicht über das Benutzer-Token geladen werden. Fallback auf Server.', error);
+        }
+      }
+
       const api = getSpotifyApi();
       if (!api) return [];
       return api.fetchPlaylistTracks(playlistId);
@@ -1364,44 +1804,83 @@
       hideAnswerButtons();
     }
 
-    document.getElementById("playerCount").addEventListener("change", () => {
-      const count = parseInt(document.getElementById("playerCount").value) || 0;
-      const container = document.getElementById("playerNames");
-      container.innerHTML = '';
-      for (let i = 0; i < count; i++) {
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.placeholder = `Spieler ${i + 1} Name`;
-        input.className = 'playerName';
-        container.appendChild(input);
-      }
-    });
+    if (startBtn) {
+      startBtn.addEventListener('click', async () => {
+        const playlistSelection = playlistSelectEl?.value?.trim() || '';
+        const manualInput = playlistInputEl?.value?.trim() || '';
+        const playlistSource = playlistSelection || manualInput;
 
-    document.getElementById("startBtn").addEventListener("click", async () => {
-      const nameInputs = document.querySelectorAll('.playerName');
-      players = Array.from(nameInputs).map((input, idx) => ({
-        name: input.value || `Spieler ${idx + 1}`,
-        cards: [],
-        years: [],
-        coins: 2
-      }));
-      playlistTracks = await fetchPlaylistTracks(document.getElementById("playlistInput").value);
-      players.forEach(p => {
-        const track = randomTrack();
-        if (track) {
-          p.cards.push({
-            year: parseInt(track.year.slice(0,4)),
-            title: track.name,
-            artist: track.artist
-          });
+        if (!playlistSource) {
+          alert('Bitte wähle eine Playlist aus dem Dropdown oder gib eine Playlist-URL ein.');
+          return;
+        }
+
+        const nameInputs = Array.from(document.querySelectorAll('.playerName'));
+        if (!nameInputs.length) {
+          alert('Bitte füge mindestens einen Spieler hinzu.');
+          return;
+        }
+
+        players = nameInputs.map((input, idx) => {
+          const name = input.value.trim();
+          return {
+            name: name || `Spieler ${idx + 1}`,
+            cards: [],
+            years: [],
+            coins: 2
+          };
+        });
+
+        if (!players.length) {
+          alert('Bitte füge mindestens einen Spieler hinzu.');
+          return;
+        }
+
+        if (startBtn) {
+          startBtn.disabled = true;
+        }
+
+        try {
+          playlistTracks = await fetchPlaylistTracks(playlistSource);
+        } catch (error) {
+          console.error('Playlist konnte nicht geladen werden:', error);
+          alert(error?.message || 'Playlist konnte nicht geladen werden. Bitte versuche es erneut.');
+          if (startBtn) {
+            startBtn.disabled = false;
+          }
+          return;
+        }
+
+        if (!playlistTracks.length) {
+          alert('Die ausgewählte Playlist enthält keine Songs oder konnte nicht geladen werden.');
+          if (startBtn) {
+            startBtn.disabled = false;
+          }
+          return;
+        }
+
+        players.forEach(p => {
+          const track = randomTrack();
+          if (track) {
+            p.cards.push({
+              year: parseInt(track.year.slice(0, 4)),
+              title: track.name,
+              artist: track.artist
+            });
+          }
+        });
+
+        document.getElementById('setup').style.display = 'none';
+        document.getElementById('gameArea').style.display = 'block';
+        currentPlayerIndex = 0;
+        updatePlayerBoard();
+        nextTrack();
+
+        if (startBtn) {
+          startBtn.disabled = false;
         }
       });
-      document.getElementById('setup').style.display = 'none';
-      document.getElementById('gameArea').style.display = 'block';
-      currentPlayerIndex = 0;
-      updatePlayerBoard();
-      nextTrack();
-    });
+    }
 
     document.getElementById("flipBtn").addEventListener("click", () => {
       if (currentTrack) {
