@@ -39,6 +39,8 @@ const DATASET_PATH = path.resolve(
 );
 const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID ?? "";
 const SPOTIFY_CLIENT_SECRET = process.env.SPOTIFY_CLIENT_SECRET ?? "";
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? "";
+const OPENAI_DEFAULT_MODEL = process.env.OPENAI_DEFAULT_MODEL ?? "gpt-4o-mini";
 
 let cachedSpotifyToken = "";
 let cachedSpotifyTokenExpiry = 0;
@@ -50,6 +52,14 @@ app.use(express.static("public")); // Hier liegt index.html
 function ensureSpotifyCredentials() {
   if (!SPOTIFY_CLIENT_ID || !SPOTIFY_CLIENT_SECRET) {
     const error = new Error("Spotify credentials are not configured");
+    error.status = 503;
+    throw error;
+  }
+}
+
+function ensureOpenAiCredentials() {
+  if (!OPENAI_API_KEY) {
+    const error = new Error("OpenAI credentials are not configured");
     error.status = 503;
     throw error;
   }
@@ -299,6 +309,93 @@ app.post("/api/spotify/refresh", async (req, res) => {
     console.error("Spotify refresh error:", error);
     res.status(error.status || 500).json({
       error: error.message || "Spotify refresh failed",
+      details: error.details ?? null
+    });
+  }
+});
+
+app.get("/api/openai/status", (req, res) => {
+  res.json({
+    hasApiKey: Boolean(OPENAI_API_KEY),
+    defaultModel: OPENAI_DEFAULT_MODEL || null
+  });
+});
+
+app.post("/api/openai/chat", async (req, res) => {
+  try {
+    ensureOpenAiCredentials();
+
+    const { messages, systemPrompt, userPrompt, model, temperature, maxTokens } = req.body ?? {};
+
+    let preparedMessages = [];
+    if (Array.isArray(messages) && messages.length > 0) {
+      preparedMessages = messages
+        .map(msg => ({
+          role: typeof msg?.role === "string" ? msg.role : "user",
+          content: typeof msg?.content === "string" ? msg.content : ""
+        }))
+        .filter(msg => msg.content);
+    } else if (typeof systemPrompt === "string" || typeof userPrompt === "string") {
+      if (!systemPrompt || !userPrompt) {
+        return res
+          .status(400)
+          .json({ error: "systemPrompt and userPrompt are required when messages are omitted" });
+      }
+      preparedMessages = [
+        { role: "system", content: String(systemPrompt) },
+        { role: "user", content: String(userPrompt) }
+      ];
+    } else {
+      return res.status(400).json({ error: "messages or prompts are required" });
+    }
+
+    if (preparedMessages.length === 0) {
+      return res.status(400).json({ error: "valid messages are required" });
+    }
+
+    const payload = {
+      model:
+        typeof model === "string" && model.trim()
+          ? model.trim()
+          : OPENAI_DEFAULT_MODEL || "gpt-4o-mini",
+      messages: preparedMessages.map(msg => ({
+        role: msg.role === "assistant" ? "assistant" : msg.role === "system" ? "system" : "user",
+        content: msg.content
+      }))
+    };
+
+    if (Number.isFinite(temperature)) {
+      payload.temperature = temperature;
+    }
+    if (Number.isFinite(maxTokens)) {
+      const rounded = Math.max(1, Math.floor(maxTokens));
+      payload.max_tokens = rounded;
+    }
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENAI_API_KEY}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      const message =
+        data?.error?.message || data?.error_description || data?.error || "OpenAI request failed";
+      return res.status(response.status || 500).json({
+        error: message,
+        details: data
+      });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error("OpenAI chat error:", error);
+    res.status(error.status || 500).json({
+      error: error.message || "OpenAI request failed",
       details: error.details ?? null
     });
   }

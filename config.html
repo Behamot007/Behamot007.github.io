@@ -12,10 +12,8 @@
   <div id="credentials">
     <h2>Spotify Zugangsdaten</h2>
     <p id="spotifyStatus">Lade Status...</p>
-    <label>
-      OpenAPI Token:
-      <input type="text" id="openApiToken" placeholder="Token">
-    </label>
+    <h3>OpenAI</h3>
+    <p id="openAiStatus">Lade Status...</p>
     <label>
       Riot API-Key:
       <input type="password" id="riotApiKey" placeholder="RGAPI-xxxx-xxxx-xxxx">
@@ -23,13 +21,14 @@
     <button onclick="saveCredentials()">Speichern</button>
   </div>
   <script src="spotify.js"></script>
+  <script src="openaiClient.js"></script>
   <script src="pages.js"></script>
   <script src="navigation.js"></script>
   <script>
     buildNavigation('nav');
-    document.getElementById('openApiToken').value = localStorage.getItem('OPENAPI_TOKEN') || '';
     document.getElementById('riotApiKey').value = localStorage.getItem('RIOT_API_KEY') || '';
     const spotifyStatus = document.getElementById('spotifyStatus');
+    const openAiStatus = document.getElementById('openAiStatus');
 
     async function updateSpotifyStatus() {
       spotifyStatus.textContent = 'Lade Status...';
@@ -50,10 +49,30 @@
       }
     }
 
+    async function updateOpenAiStatus() {
+      openAiStatus.textContent = 'Lade Status...';
+      if (!window.openAiClient || typeof window.openAiClient.getStatus !== 'function') {
+        openAiStatus.textContent = '❌ OpenAI-Client im Frontend nicht verfügbar.';
+        return;
+      }
+      try {
+        const status = await window.openAiClient.getStatus();
+        if (!status?.hasApiKey) {
+          openAiStatus.textContent = '❌ Kein OpenAI-API-Key im Backend hinterlegt.';
+          return;
+        }
+        const modelInfo = status?.defaultModel ? ` (Standardmodell: ${status.defaultModel})` : '';
+        openAiStatus.textContent = `✅ OpenAI-Zugang wird serverseitig bereitgestellt${modelInfo}.`;
+      } catch (err) {
+        console.error('OpenAI Status Fehler:', err);
+        openAiStatus.textContent = '❌ Status konnte nicht geladen werden. Siehe Konsole.';
+      }
+    }
+
     updateSpotifyStatus();
+    updateOpenAiStatus();
 
     function saveCredentials() {
-      localStorage.setItem('OPENAPI_TOKEN', document.getElementById('openApiToken').value);
       localStorage.setItem('RIOT_API_KEY', document.getElementById('riotApiKey').value);
       alert('Credentials gespeichert!');
     }

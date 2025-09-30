@@ -6,33 +6,30 @@ async function callAI({
   maxTokens = 800,
   retries = 3,
 }) {
-  const OPENAPI_TOKEN = localStorage.getItem("OPENAPI_TOKEN");
+  if (!window.openAiClient || typeof window.openAiClient.chat !== "function") {
+    throw new Error("OpenAI-Client ist nicht verfügbar.");
+  }
 
   for (let i = 0; i < retries; i++) {
-    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + OPENAPI_TOKEN,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature,
-        max_tokens: maxTokens,
-      }),
-    });
-
-    const data = await resp.json();
-    const text = data?.choices?.[0]?.message?.content?.trim();
-
     try {
-      return JSON.parse(text);
-    } catch {
-      console.warn("Ungültiges JSON, erneuter Versuch...");
+      const data = await window.openAiClient.chat({
+        systemPrompt,
+        userPrompt,
+        model,
+        temperature,
+        maxTokens,
+      });
+
+      const text = data?.choices?.[0]?.message?.content?.trim();
+
+      try {
+        return JSON.parse(text);
+      } catch {
+        console.warn("Ungültiges JSON, erneuter Versuch...");
+      }
+    } catch (error) {
+      console.error("OpenAI Fehler:", error);
+      if (i === retries - 1) throw error;
     }
   }
 

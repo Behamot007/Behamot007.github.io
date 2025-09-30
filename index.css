@@ -13,6 +13,9 @@
   --accent-soft: rgba(78, 205, 196, 0.18);
   --config: #9067f9;
   --config-soft: rgba(144, 103, 249, 0.18);
+  --status-success: #63e6be;
+  --status-warning: #f7c948;
+  --status-error: #ff6b6b;
   --focus: rgba(78, 205, 196, 0.35);
   --shadow-lg: 0 28px 65px -45px rgba(6, 12, 25, 0.85);
   --shadow-md: 0 18px 40px -32px rgba(6, 12, 25, 0.9);
@@ -632,6 +635,34 @@ a:focus-visible {
 .config-card__fields {
   display: grid;
   gap: 0.85rem;
+}
+
+.config-card__fields--managed {
+  gap: 0.6rem;
+}
+
+.config-card__managed-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.config-card__managed-status {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.config-card__managed-status[data-status='success'] {
+  color: var(--status-success);
+}
+
+.config-card__managed-status[data-status='warning'] {
+  color: var(--status-warning);
+}
+
+.config-card__managed-status[data-status='error'] {
+  color: var(--status-error);
 }
 
 .config-card__field {
