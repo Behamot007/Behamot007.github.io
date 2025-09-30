@@ -562,6 +562,7 @@
     let spotifyTokenExpiry = 0;
     let availableSpotifyDevices = [];
     let selectedSpotifyDeviceId = null;
+    let spotifyServerConfig = null;
 
     function loadSpotifyAuthFromStorage() {
       spotifyAccessToken = localStorage.getItem(SPOTIFY_ACCESS_STORAGE_KEY);
@@ -594,11 +595,16 @@
       localStorage.removeItem(SPOTIFY_EXPIRY_STORAGE_KEY);
     }
 
-    function getSpotifyCredentials() {
-      return {
-        clientId: localStorage.getItem('CLIENT_ID'),
-        clientSecret: localStorage.getItem('CLIENT_SECRET')
-      };
+    async function loadSpotifyServerConfig() {
+      if (spotifyServerConfig) return spotifyServerConfig;
+      try {
+        spotifyServerConfig = await spotifyApi.getConfig();
+        return spotifyServerConfig;
+      } catch (err) {
+        console.error('Spotify Konfigurationsfehler:', err);
+        alert('Spotify-Konfiguration konnte nicht geladen werden. Bitte prüfe die Server-Logs.');
+        return null;
+      }
     }
 
     function isSpotifyConnected() {
@@ -788,17 +794,21 @@
       return Array.from(randomValues, (val) => charset[val % charset.length]).join('');
     }
 
-    function startSpotifyLogin() {
-      const { clientId, clientSecret } = getSpotifyCredentials();
-      if (!clientId || !clientSecret) {
-        alert('Bitte hinterlege Client ID und Client Secret in den Konfigurationen, bevor du Spotify verbindest.');
+    async function startSpotifyLogin() {
+      const config = await loadSpotifyServerConfig();
+      if (!config?.clientId) {
+        alert('Spotify-Client-ID ist nicht konfiguriert. Bitte hinterlege sie in der Server-Konfiguration.');
+        return;
+      }
+      if (!config?.hasClientSecret) {
+        alert('Spotify-Client-Secret ist nicht konfiguriert. Bitte ergänze die Server-Konfiguration.');
         return;
       }
       const state = createRandomState(16);
       sessionStorage.setItem(SPOTIFY_AUTH_STATE_KEY, state);
       const authUrl = new URL('https://accounts.spotify.com/authorize');
       authUrl.searchParams.set('response_type', 'code');
-      authUrl.searchParams.set('client_id', clientId);
+      authUrl.searchParams.set('client_id', config.clientId);
       authUrl.searchParams.set('scope', SPOTIFY_SCOPES.join(' '));
       authUrl.searchParams.set('redirect_uri', SPOTIFY_REDIRECT_URI);
       authUrl.searchParams.set('state', state);
@@ -807,66 +817,40 @@
     }
 
     async function exchangeSpotifyCode(code) {
-      const { clientId, clientSecret } = getSpotifyCredentials();
-      if (!clientId || !clientSecret) {
-        alert('Spotify-Anmeldung fehlgeschlagen: Client ID oder Secret fehlen.');
+      const config = await loadSpotifyServerConfig();
+      if (!config?.clientId || !config?.hasClientSecret) {
+        alert('Spotify-Anmeldung fehlgeschlagen: Server-Konfiguration unvollständig.');
         return false;
       }
-      const body = new URLSearchParams({
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: SPOTIFY_REDIRECT_URI
-      });
-      const resp = await fetch('https://accounts.spotify.com/api/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': 'Basic ' + btoa(`${clientId}:${clientSecret}`)
-        },
-        body: body.toString()
-      });
-      const data = await resp.json();
-      if (!resp.ok) {
-        console.error('Spotify Token Fehler:', data);
+      try {
+        const data = await spotifyApi.exchangeCode(code, SPOTIFY_REDIRECT_URI);
+        saveSpotifyTokens(data);
+        return true;
+      } catch (err) {
+        console.error('Spotify Token Fehler:', err?.details || err);
         alert('Spotify-Anmeldung fehlgeschlagen. Details siehe Konsole.');
         return false;
       }
-      saveSpotifyTokens(data);
-      return true;
     }
 
     async function refreshSpotifyAccessToken() {
       if (!spotifyRefreshToken) return false;
-      const { clientId, clientSecret } = getSpotifyCredentials();
-      if (!clientId || !clientSecret) return false;
+      const config = await loadSpotifyServerConfig();
+      if (!config?.hasClientSecret) return false;
 
-      const body = new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: spotifyRefreshToken
-      });
-
-      const resp = await fetch('https://accounts.spotify.com/api/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': 'Basic ' + btoa(`${clientId}:${clientSecret}`)
-        },
-        body: body.toString()
-      });
-
-      const data = await resp.json();
-      if (!resp.ok) {
-        console.error('Spotify Refresh Fehler:', data);
+      try {
+        const data = await spotifyApi.refreshToken(spotifyRefreshToken);
+        saveSpotifyTokens({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token || spotifyRefreshToken,
+          expires_in: data.expires_in
+        });
+        return true;
+      } catch (err) {
+        console.error('Spotify Refresh Fehler:', err?.details || err);
         clearSpotifyAuth();
         return false;
       }
-
-      saveSpotifyTokens({
-        access_token: data.access_token,
-        refresh_token: data.refresh_token || spotifyRefreshToken,
-        expires_in: data.expires_in
-      });
-      return true;
     }
 
     async function ensureSpotifyAccessToken() {
@@ -1097,9 +1081,10 @@
 
     async function fetchPlaylistTracks(playlistUrl) {
       const playlistId = extractPlaylistId(playlistUrl);
-      const spotifyToken = await getSpotifyAccessToken();
-      const playlistTracks = await getPlaylistTracks(playlistId, spotifyToken);
-      return playlistTracks;
+      if (!playlistId) {
+        throw new Error('Ungültige Playlist-URL');
+      }
+      return spotifyApi.fetchPlaylistTracks(playlistId);
     }
 
     function randomTrack() {

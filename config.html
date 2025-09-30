@@ -11,14 +11,7 @@
   <nav id="nav"></nav>
   <div id="credentials">
     <h2>Spotify Zugangsdaten</h2>
-    <label>
-      Client ID:
-      <input type="text" id="clientId" placeholder="Client ID">
-    </label>
-    <label>
-      Client Secret:
-      <input type="text" id="clientSecret" placeholder="Client Secret">
-    </label>
+    <p id="spotifyStatus">Lade Status...</p>
     <label>
       OpenAPI Token:
       <input type="text" id="openApiToken" placeholder="Token">
@@ -29,17 +22,37 @@
     </label>
     <button onclick="saveCredentials()">Speichern</button>
   </div>
+  <script src="spotify.js"></script>
   <script src="pages.js"></script>
   <script src="navigation.js"></script>
   <script>
     buildNavigation('nav');
-    document.getElementById('clientId').value = localStorage.getItem('CLIENT_ID') || '';
-    document.getElementById('clientSecret').value = localStorage.getItem('CLIENT_SECRET') || '';
     document.getElementById('openApiToken').value = localStorage.getItem('OPENAPI_TOKEN') || '';
     document.getElementById('riotApiKey').value = localStorage.getItem('RIOT_API_KEY') || '';
+    const spotifyStatus = document.getElementById('spotifyStatus');
+
+    async function updateSpotifyStatus() {
+      spotifyStatus.textContent = 'Lade Status...';
+      try {
+        const config = await spotifyApi.getConfig();
+        if (!config?.clientId) {
+          spotifyStatus.textContent = '❌ Keine Spotify-Client-ID hinterlegt (.env).';
+          return;
+        }
+        if (!config?.hasClientSecret) {
+          spotifyStatus.textContent = '⚠️ Client-ID vorhanden, aber kein Client-Secret in der .env.';
+          return;
+        }
+        spotifyStatus.textContent = '✅ Spotify-Zugangsdaten werden serverseitig aus der .env geladen.';
+      } catch (err) {
+        console.error('Spotify Status Fehler:', err);
+        spotifyStatus.textContent = '❌ Status konnte nicht geladen werden. Siehe Konsole.';
+      }
+    }
+
+    updateSpotifyStatus();
+
     function saveCredentials() {
-      localStorage.setItem('CLIENT_ID', document.getElementById('clientId').value);
-      localStorage.setItem('CLIENT_SECRET', document.getElementById('clientSecret').value);
       localStorage.setItem('OPENAPI_TOKEN', document.getElementById('openApiToken').value);
       localStorage.setItem('RIOT_API_KEY', document.getElementById('riotApiKey').value);
       alert('Credentials gespeichert!');

@@ -48,8 +48,12 @@
         }
 
         const playlistId = extractPlaylistId(playlistUrl);
-        const spotifyToken = await getSpotifyAccessToken();
-        const tracks = await getPlaylistTracks(playlistId, spotifyToken);
+        if (!playlistId) {
+          log("❌ Ungültige Playlist-URL.");
+          return;
+        }
+
+        const tracks = await spotifyApi.fetchPlaylistTracks(playlistId);
 
         let aiInfos = [];
         if (useAI) {
