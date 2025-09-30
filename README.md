@@ -98,7 +98,7 @@ labels:
 
 - **Lokale Tests**: Mit `docker compose up` ohne `-d` starten, um Logs direkt im Terminal zu verfolgen.
 - **Konfigurationsänderungen**: Nach Anpassungen an Dockerfiles oder `docker-compose.yml` den Stack mit `docker compose up -d --build` neu deployen.
-- **Backend-Variablen**: `PORT` und `DATASET_PATH` lassen sich via `.env` überschreiben.
+- **Backend-Variablen**: `PORT` und `DATASET_PATH` lassen sich via `.env` überschreiben. Zusätzlich werden `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET`, `OPENAI_API_KEY` und `OPENAI_DEFAULT_MODEL` automatisch aus der `.env` in den Backend-Container durchgereicht.
 - **Fehlersuche**: `docker compose exec backend sh` öffnet eine Shell im Backend-Container.
 
 Für Erweiterungen (z. B. zusätzliche Services, Worker, Cronjobs) empfiehlt sich, eigene Netzwerke oder Compose-Profile zu definieren. Dokumentiere neue Umgebungsvariablen stets in `.env.example`.
