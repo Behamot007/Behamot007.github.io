@@ -595,10 +595,21 @@
       localStorage.removeItem(SPOTIFY_EXPIRY_STORAGE_KEY);
     }
 
+    function getSpotifyApi() {
+      if (window.spotifyApi) {
+        return window.spotifyApi;
+      }
+      console.error('Spotify API Client nicht verfügbar.');
+      alert('Spotify-Integration konnte nicht initialisiert werden. Bitte lade die Seite neu.');
+      return null;
+    }
+
     async function loadSpotifyServerConfig() {
       if (spotifyServerConfig) return spotifyServerConfig;
+      const api = getSpotifyApi();
+      if (!api) return null;
       try {
-        spotifyServerConfig = await spotifyApi.getConfig();
+        spotifyServerConfig = await api.getConfig();
         return spotifyServerConfig;
       } catch (err) {
         console.error('Spotify Konfigurationsfehler:', err);
@@ -817,13 +828,15 @@
     }
 
     async function exchangeSpotifyCode(code) {
+      const api = getSpotifyApi();
+      if (!api) return false;
       const config = await loadSpotifyServerConfig();
       if (!config?.clientId || !config?.hasClientSecret) {
         alert('Spotify-Anmeldung fehlgeschlagen: Server-Konfiguration unvollständig.');
         return false;
       }
       try {
-        const data = await spotifyApi.exchangeCode(code, SPOTIFY_REDIRECT_URI);
+        const data = await api.exchangeCode(code, SPOTIFY_REDIRECT_URI);
         saveSpotifyTokens(data);
         return true;
       } catch (err) {
@@ -834,12 +847,14 @@
     }
 
     async function refreshSpotifyAccessToken() {
+      const api = getSpotifyApi();
+      if (!api) return false;
       if (!spotifyRefreshToken) return false;
       const config = await loadSpotifyServerConfig();
       if (!config?.hasClientSecret) return false;
 
       try {
-        const data = await spotifyApi.refreshToken(spotifyRefreshToken);
+        const data = await api.refreshToken(spotifyRefreshToken);
         saveSpotifyTokens({
           access_token: data.access_token,
           refresh_token: data.refresh_token || spotifyRefreshToken,
@@ -1084,7 +1099,9 @@
       if (!playlistId) {
         throw new Error('Ungültige Playlist-URL');
       }
-      return spotifyApi.fetchPlaylistTracks(playlistId);
+      const api = getSpotifyApi();
+      if (!api) return [];
+      return api.fetchPlaylistTracks(playlistId);
     }
 
     function randomTrack() {
