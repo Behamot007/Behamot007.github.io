@@ -546,6 +546,7 @@
     const spotifyDeviceSelect = document.getElementById('spotifyDeviceSelect');
     const spotifyDeviceRefreshBtn = document.getElementById('spotifyDeviceRefreshBtn');
     const spotifyDeviceHintEl = document.getElementById('spotifyDeviceHint');
+    const spotifyConnectDefaultLabel = spotifyConnectBtn ? spotifyConnectBtn.textContent : 'Mit Spotify verbinden';
 
     playBtn.disabled = true;
     stopBtn.disabled = true;
@@ -564,6 +565,7 @@
     let availableSpotifyDevices = [];
     let selectedSpotifyDeviceId = null;
     let spotifyServerConfig = null;
+    let spotifyBackendAvailable = null;
 
     function loadSpotifyAuthFromStorage() {
       spotifyAccessToken = localStorage.getItem(SPOTIFY_ACCESS_STORAGE_KEY);
@@ -605,16 +607,37 @@
       return null;
     }
 
+    function updateSpotifyBackendAvailability(config) {
+      const hasClientId = Boolean(config?.clientId);
+      const hasClientSecret = Boolean(config?.hasClientSecret);
+      spotifyBackendAvailable = hasClientId && hasClientSecret;
+
+      if (!spotifyBackendAvailable) {
+        console.warn('Spotify-Integration serverseitig nicht vollständig konfiguriert.', {
+          hasClientId,
+          hasClientSecret
+        });
+      }
+
+      updateSpotifyAuthUI();
+    }
+
     async function loadSpotifyServerConfig() {
-      if (spotifyServerConfig) return spotifyServerConfig;
+      if (spotifyServerConfig) {
+        updateSpotifyBackendAvailability(spotifyServerConfig);
+        return spotifyServerConfig;
+      }
       const api = getSpotifyApi();
       if (!api) return null;
       try {
         spotifyServerConfig = await api.getConfig();
+        updateSpotifyBackendAvailability(spotifyServerConfig);
         return spotifyServerConfig;
       } catch (err) {
         console.error('Spotify Konfigurationsfehler:', err);
         alert('Spotify-Konfiguration konnte nicht geladen werden. Bitte prüfe die Server-Logs.');
+        spotifyBackendAvailable = false;
+        updateSpotifyAuthUI();
         return null;
       }
     }
@@ -774,17 +797,57 @@
     }
 
     function updateSpotifyAuthUI() {
-      const connected = isSpotifyConnected();
+      const backendReady = spotifyBackendAvailable === true;
+      const connected = backendReady && isSpotifyConnected();
+
       if (spotifyStatusEl) {
-        spotifyStatusEl.textContent = connected ? 'Spotify: verbunden' : 'Spotify: nicht verbunden';
+        if (spotifyBackendAvailable === null) {
+          spotifyStatusEl.textContent = 'Spotify: Lade Konfiguration…';
+        } else if (!backendReady) {
+          const hasClientId = Boolean(spotifyServerConfig?.clientId);
+          spotifyStatusEl.textContent = hasClientId
+            ? 'Spotify: Client-Secret fehlt'
+            : 'Spotify: nicht verfügbar';
+        } else {
+          spotifyStatusEl.textContent = connected ? 'Spotify: verbunden' : 'Spotify: nicht verbunden';
+        }
       }
-      if (spotifyConnectBtn) spotifyConnectBtn.style.display = connected ? 'none' : 'inline-block';
-      if (spotifyDisconnectBtn) spotifyDisconnectBtn.style.display = connected ? 'inline-block' : 'none';
+
+      if (spotifyConnectBtn) {
+        const shouldShow = !connected;
+        spotifyConnectBtn.style.display = shouldShow ? 'inline-block' : 'none';
+        spotifyConnectBtn.disabled = !backendReady;
+        spotifyConnectBtn.textContent = backendReady ? spotifyConnectDefaultLabel : 'Spotify nicht verfügbar';
+        spotifyConnectBtn.title = backendReady
+          ? 'Mit Spotify verbinden'
+          : 'Spotify-Integration ist serverseitig nicht konfiguriert.';
+      }
+
+      if (spotifyDisconnectBtn) {
+        spotifyDisconnectBtn.style.display = connected ? 'inline-block' : 'none';
+        if (!backendReady) {
+          spotifyDisconnectBtn.style.display = 'none';
+        }
+      }
+
       if (spotifyHintEl) {
-        spotifyHintEl.textContent = connected
-          ? 'Öffne die Spotify App auf dem gewünschten Gerät und halte sie aktiv, damit die Wiedergabe hier gesteuert werden kann.'
-          : 'Melde dich mit deinem Spotify Account an, um Songs direkt aus dem Spiel heraus abspielen oder pausieren zu können.';
+        if (!backendReady) {
+          spotifyHintEl.textContent = 'Spotify-Integration ist derzeit nicht verfügbar. Bitte hinterlege Client-ID und Client-Secret im Server.';
+        } else {
+          spotifyHintEl.textContent = connected
+            ? 'Öffne die Spotify App auf dem gewünschten Gerät und halte sie aktiv, damit die Wiedergabe hier gesteuert werden kann.'
+            : 'Melde dich mit deinem Spotify Account an, um Songs direkt aus dem Spiel heraus abspielen oder pausieren zu können.';
+        }
       }
+
+      if (!backendReady) {
+        wasSpotifyConnected = false;
+        availableSpotifyDevices = [];
+        renderDeviceSelection();
+        updatePlaybackButtonState();
+        return;
+      }
+
       if (connected && !wasSpotifyConnected) {
         refreshSpotifyDevices(false);
       }
@@ -808,6 +871,10 @@
 
     async function startSpotifyLogin() {
       const config = await loadSpotifyServerConfig();
+      if (!config) {
+        alert('Spotify-Integration ist derzeit nicht verfügbar. Bitte prüfe die Server-Konfiguration.');
+        return;
+      }
       if (!config?.clientId) {
         alert('Spotify-Client-ID ist nicht konfiguriert. Bitte hinterlege sie in der Server-Konfiguration.');
         return;
@@ -1066,18 +1133,23 @@
       } catch (err) {
         console.error('Spotify Redirect Fehler:', err);
       }
+      await loadSpotifyServerConfig();
       if (spotifyAccessToken || spotifyRefreshToken) {
         await ensureSpotifyAccessToken();
       }
       updateSpotifyAuthUI();
     }
 
-    spotifyConnectBtn.addEventListener('click', startSpotifyLogin);
-    spotifyDisconnectBtn.addEventListener('click', async () => {
-      await stopPlayback(true);
-      clearSpotifyAuth();
-      updateSpotifyAuthUI();
-    });
+    if (spotifyConnectBtn) {
+      spotifyConnectBtn.addEventListener('click', startSpotifyLogin);
+    }
+    if (spotifyDisconnectBtn) {
+      spotifyDisconnectBtn.addEventListener('click', async () => {
+        await stopPlayback(true);
+        clearSpotifyAuth();
+        updateSpotifyAuthUI();
+      });
+    }
 
     if (spotifyDeviceRefreshBtn) {
       spotifyDeviceRefreshBtn.addEventListener('click', () => {

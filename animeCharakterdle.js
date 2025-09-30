@@ -49,6 +49,14 @@ async function chatWithAI() {
 
 async function send() {
   if (gameOver) return;
+  if (!target || !target.name) {
+    console.warn('Kein Zielcharakter geladen, starte das Spiel neu.');
+    appendMessage(
+      'assistant',
+      'Ich bin mir gerade nicht sicher, wen ich darstellen soll. Bitte starte das Spiel neu.'
+    );
+    return;
+  }
   const input = document.getElementById('input');
   const text = input.value.trim();
   if (!text) return;
