@@ -37,7 +37,8 @@
     .btn.primary:hover { filter:brightness(.95); }
     .status { font-size:.9rem; }
     .dirty { color:#b45309; }
-    .ok { color:#2e7d32; }
+    .ok, .status.success { color:#2e7d32; }
+    .status.error { color:#b91c1c; }
 
     table { width:100%; border-collapse: collapse; margin-top: .5rem; }
     th, td { border:1px solid #ddd; padding:.5rem; text-align:left; vertical-align:top; }
@@ -483,12 +484,28 @@ renderChips(){
     }
 
     async function saveAll(){
-      const resp = await fetch("/api/characters", {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify(characters)
-      });
-      return resp.ok;
+      try {
+        const resp = await fetch("/api/characters", {
+          method:"POST",
+          headers:{ "Content-Type":"application/json" },
+          body: JSON.stringify(characters)
+        });
+        if (resp.ok) {
+          return { ok: true };
+        }
+        let message = "";
+        try {
+          const data = await resp.json();
+          message = data?.error || data?.message || "";
+        } catch (error) {
+          const text = await resp.text().catch(() => "");
+          message = text || "";
+        }
+        return { ok: false, message };
+      } catch (error) {
+        console.error("Speichern fehlgeschlagen:", error);
+        return { ok: false, message: error?.message || "" };
+      }
     }
 
     // Events (null-sicher)
@@ -519,9 +536,18 @@ renderChips(){
     addEv("saveBtn","click", async () => {
       if (currentChar) readFormInto(currentChar);
       $("saveStatus").textContent = "Speichern…";
-      const ok = await saveAll();
-      if (ok) setDirty(false);
-      else { $("saveStatus").textContent = "Fehler beim Speichern"; $("saveStatus").className = "status"; }
+      const result = await saveAll();
+      if (result.ok) {
+        setDirty(false);
+        $("saveStatus").textContent = "Gespeichert";
+        $("saveStatus").className = "status success";
+      } else {
+        const msg = result.message ? `: ${result.message}` : "";
+        $("saveStatus").textContent = `Fehler beim Speichern${msg}`;
+        $("saveStatus").className = "status error";
+        const alertDetails = result.message ? ` ${result.message}` : "";
+        alert(`Speichern nicht möglich. Bitte prüfe, ob der Bearbeitungs-Server läuft.${alertDetails}`);
+      }
     });
 
     // Boot
