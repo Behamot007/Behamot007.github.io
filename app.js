@@ -178,49 +178,66 @@
     {
       id: 'config-spotify',
       title: 'Spotify & Hitster',
-      description: 'Client-ID und Secret werden für die Playlist-Generatoren sowie die Hitster-Oberflächen benötigt.',
+      description: 'Die Spotify-Zugangsdaten werden vollständig serverseitig verwaltet und stehen allen Tools automatisch zur Verfügung.',
       platform: {
         name: 'Spotify Developer Dashboard',
         url: 'https://developer.spotify.com/dashboard/'
       },
       usage: ['Playlist → QR Cards', 'Play Screen', 'Digital Mode'],
-      fields: [
-        {
-          id: 'client-id',
-          label: 'Client ID',
-          storageKey: 'CLIENT_ID',
-          placeholder: 'z. B. 1234abcd…',
-          autocomplete: 'off'
-        },
-        {
-          id: 'client-secret',
-          label: 'Client Secret',
-          storageKey: 'CLIENT_SECRET',
-          type: 'password',
-          placeholder: 'Client Secret',
-          autocomplete: 'off'
+      managed: {
+        message: 'Die Konfiguration erfolgt über die Backend-.env und ist im Frontend nicht sichtbar.',
+        async loadStatus() {
+          try {
+            const response = await fetch('/api/spotify/config', {
+              method: 'GET',
+              headers: { 'Accept': 'application/json' }
+            });
+            const data = await response.json();
+            if (!response.ok) {
+              throw new Error(data?.error || 'Status konnte nicht geladen werden');
+            }
+            if (!data?.clientId) {
+              return { text: '❌ Keine Spotify Client-ID im Backend hinterlegt.', variant: 'error' };
+            }
+            if (!data?.hasClientSecret) {
+              return { text: '⚠️ Client-ID vorhanden, aber kein Client-Secret konfiguriert.', variant: 'warning' };
+            }
+            return { text: '✅ Spotify-Zugangsdaten werden serverseitig bereitgestellt.', variant: 'success' };
+          } catch (error) {
+            console.error('Spotify Status Fehler:', error);
+            return { text: '❌ Spotify-Status konnte nicht geladen werden.', variant: 'error' };
+          }
         }
-      ]
+      }
     },
     {
       id: 'config-openai',
       title: 'OpenAI Token',
-      description: 'Token für OpenAI/ChatGPT – wird u. a. vom Anime Charakterdle verwendet.',
+      description: 'Der OpenAI-Schlüssel liegt ausschließlich im Backend. Browser-Clients greifen über geschützte API-Endpunkte zu.',
       platform: {
         name: 'OpenAI Platform',
         url: 'https://platform.openai.com/account/api-keys'
       },
-      usage: ['Anime Charakter Rätsel', 'Anime Dataset Tools'],
-      fields: [
-        {
-          id: 'openai-token',
-          label: 'API Token',
-          storageKey: 'OPENAPI_TOKEN',
-          type: 'password',
-          placeholder: 'sk-…',
-          autocomplete: 'off'
+      usage: ['Anime Charakter Rätsel', 'Anime Dataset Tools', 'KI-gestützte Kassenzettel'],
+      managed: {
+        message: 'Der Schlüssel ist nicht im Browser gespeichert und bleibt verborgen.',
+        async loadStatus() {
+          if (!window.openAiClient || typeof window.openAiClient.getStatus !== 'function') {
+            return { text: '❌ OpenAI-Client im Frontend nicht verfügbar.', variant: 'error' };
+          }
+          try {
+            const status = await window.openAiClient.getStatus();
+            if (!status?.hasApiKey) {
+              return { text: '❌ Kein OpenAI-API-Key im Backend hinterlegt.', variant: 'error' };
+            }
+            const modelInfo = status?.defaultModel ? ` (Standardmodell: ${status.defaultModel})` : '';
+            return { text: `✅ Backend stellt den OpenAI-Zugang bereit${modelInfo}.`, variant: 'success' };
+          } catch (error) {
+            console.error('OpenAI Status Fehler:', error);
+            return { text: '❌ OpenAI-Status konnte nicht geladen werden.', variant: 'error' };
+          }
         }
-      ]
+      }
     },
     {
       id: 'config-riot',
@@ -622,75 +639,114 @@
       const fieldsWrapper = document.createElement('div');
       fieldsWrapper.className = 'config-card__fields';
       const inputs = [];
+      let managedStatusEl = null;
 
-      section.fields.forEach(field => {
-        const fieldId = `${section.id}-${field.id}`;
-        const label = document.createElement('label');
-        label.className = 'config-card__field';
-        label.setAttribute('for', fieldId);
+      if (Array.isArray(section.fields) && section.fields.length > 0) {
+        section.fields.forEach(field => {
+          const fieldId = `${section.id}-${field.id}`;
+          const label = document.createElement('label');
+          label.className = 'config-card__field';
+          label.setAttribute('for', fieldId);
 
-        const caption = document.createElement('span');
-        caption.textContent = field.label;
-        label.appendChild(caption);
+          const caption = document.createElement('span');
+          caption.textContent = field.label;
+          label.appendChild(caption);
 
-        const input = field.multiline ? document.createElement('textarea') : document.createElement('input');
-        input.id = fieldId;
-        if (!field.multiline) {
-          input.type = field.type || 'text';
+          const input = field.multiline ? document.createElement('textarea') : document.createElement('input');
+          input.id = fieldId;
+          if (!field.multiline) {
+            input.type = field.type || 'text';
+          }
+          input.placeholder = field.placeholder || '';
+          input.dataset.storageKey = field.storageKey;
+          input.value = localStorage.getItem(field.storageKey) || '';
+          input.setAttribute('autocomplete', field.autocomplete || 'off');
+          if (field.maxLength) input.maxLength = field.maxLength;
+          if (field.spellcheck === false) input.spellcheck = false;
+
+          label.appendChild(input);
+          fieldsWrapper.appendChild(label);
+          inputs.push(input);
+        });
+      } else if (section.managed) {
+        fieldsWrapper.classList.add('config-card__fields--managed');
+        if (section.managed.message) {
+          const info = document.createElement('p');
+          info.className = 'config-card__managed-hint';
+          info.textContent = section.managed.message;
+          fieldsWrapper.appendChild(info);
         }
-        input.placeholder = field.placeholder || '';
-        input.dataset.storageKey = field.storageKey;
-        input.value = localStorage.getItem(field.storageKey) || '';
-        input.setAttribute('autocomplete', field.autocomplete || 'off');
-        if (field.maxLength) input.maxLength = field.maxLength;
-        if (field.spellcheck === false) input.spellcheck = false;
+        if (typeof section.managed.loadStatus === 'function') {
+          managedStatusEl = document.createElement('p');
+          managedStatusEl.className = 'config-card__managed-status';
+          managedStatusEl.textContent = 'Status wird geladen…';
+          fieldsWrapper.appendChild(managedStatusEl);
 
-        label.appendChild(input);
-        fieldsWrapper.appendChild(label);
-        inputs.push(input);
-      });
+          Promise.resolve()
+            .then(() => section.managed.loadStatus())
+            .then(result => {
+              if (!managedStatusEl) return;
+              if (result?.text) managedStatusEl.textContent = result.text;
+              managedStatusEl.dataset.status = result?.variant || 'info';
+            })
+            .catch(error => {
+              console.error('Status Fehler:', error);
+              if (managedStatusEl) {
+                managedStatusEl.textContent = '❌ Status konnte nicht geladen werden.';
+                managedStatusEl.dataset.status = 'error';
+              }
+            });
+        }
+      }
 
-      card.appendChild(fieldsWrapper);
+      if (fieldsWrapper.childElementCount > 0) {
+        card.appendChild(fieldsWrapper);
+      }
 
-      const actions = document.createElement('div');
-      actions.className = 'config-card__actions';
+      if (inputs.length > 0) {
+        const actions = document.createElement('div');
+        actions.className = 'config-card__actions';
 
-      const saveButton = document.createElement('button');
-      saveButton.type = 'button';
-      saveButton.className = 'button button--accent';
-      saveButton.textContent = section.saveLabel || 'Speichern';
-      actions.appendChild(saveButton);
+        const saveButton = document.createElement('button');
+        saveButton.type = 'button';
+        saveButton.className = 'button button--accent';
+        saveButton.textContent = section.saveLabel || 'Speichern';
+        actions.appendChild(saveButton);
 
-      const status = document.createElement('span');
-      status.className = 'config-card__status';
-      status.setAttribute('role', 'status');
-      status.setAttribute('aria-live', 'polite');
-      actions.appendChild(status);
+        const status = document.createElement('span');
+        status.className = 'config-card__status';
+        status.setAttribute('role', 'status');
+        status.setAttribute('aria-live', 'polite');
+        actions.appendChild(status);
 
-      card.appendChild(actions);
+        card.appendChild(actions);
 
-      saveButton.addEventListener('click', () => {
+        saveButton.addEventListener('click', () => {
+          inputs.forEach(input => {
+            const key = input.dataset.storageKey;
+            if (!key) return;
+            localStorage.setItem(key, input.value.trim());
+          });
+          status.textContent = 'Gespeichert.';
+          card.classList.add('config-card--saved');
+          window.setTimeout(() => card.classList.remove('config-card--saved'), 700);
+          window.setTimeout(() => {
+            if (status.textContent === 'Gespeichert.') status.textContent = '';
+          }, 3200);
+        });
+
         inputs.forEach(input => {
-          const key = input.dataset.storageKey;
-          if (!key) return;
-          localStorage.setItem(key, input.value.trim());
+          input.addEventListener('input', () => {
+            status.textContent = '';
+          });
         });
-        status.textContent = 'Gespeichert.';
-        card.classList.add('config-card--saved');
-        window.setTimeout(() => card.classList.remove('config-card--saved'), 700);
-        window.setTimeout(() => {
-          if (status.textContent === 'Gespeichert.') status.textContent = '';
-        }, 3200);
-      });
 
-      inputs.forEach(input => {
-        input.addEventListener('input', () => {
-          status.textContent = '';
-        });
-      });
+        configCards.set(section.id, { element: card, inputs, status });
+      } else {
+        configCards.set(section.id, { element: card, inputs: [], status: managedStatusEl });
+      }
 
       configGridEl.appendChild(card);
-      configCards.set(section.id, { element: card, inputs, status });
     });
   }
 

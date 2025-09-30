@@ -19,7 +19,7 @@ Diese Dokumentation beschreibt, wie das Projekt mithilfe von Docker-Containern b
    ./scripts/ensure-env.sh
    ```
    Alternativ kann `cp -n .env.example .env` verwendet werden (`-n` verhindert ein Überschreiben bestehender Dateien).
-2. Ergänze anschließend alle benötigten Werte (z. B. `BACKEND_API_TOKEN`, `OPENAI_API_KEY`). Bei Updates der Vorlage können Unterschiede mit `diff -u .env .env.example` geprüft und selektiv übernommen werden.
+2. Ergänze anschließend alle benötigten Werte (z. B. `BACKEND_API_TOKEN`, `OPENAI_API_KEY`). Bei Updates der Vorlage können Unterschiede mit `diff -u .env .env.example` geprüft und selektiv übernommen werden. Der CI-Deploy schließt `.env*`-Dateien vom `rsync --delete` aus, sodass bestehende Secrets auf dem Server erhalten bleiben.
 3. Sensible Dateien sollten **nicht** eingecheckt werden. Das Repository ignoriert `.env*` Dateien bereits über `.gitignore` und `.dockerignore`.
 4. Auf dem Server sollten Secrets via `scp` oder einem Secret-Management-Tool (z. B. sops, Ansible Vault, HashiCorp Vault) abgelegt werden. Passe die Dateiberechtigungen an (`chmod 600 .env`).
 

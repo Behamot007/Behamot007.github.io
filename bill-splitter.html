@@ -172,7 +172,7 @@
               <span class="badge badge--experimental">Experimentell</span>
               <h2 id="experimentalTitle">Kassenbon per KI vorbefüllen</h2>
               <p class="card__subtitle">
-                Dein hinterlegtes OpenAI-Token wird für die Analyse verwendet.
+                Die Analyse nutzt den serverseitig hinterlegten OpenAI-Zugang.
               </p>
             </div>
           </div>
@@ -191,14 +191,15 @@
             </button>
           </div>
           <p class="card__note">
-            Hinweis: Das ausgewählte Bild wird zur Analyse an die OpenAI API gesendet. Überprüfe die
-            Ergebnisse vor dem Speichern.
+            Hinweis: Das ausgewählte Bild wird zur Analyse sicher an das Backend gesendet, welches die OpenAI API
+            aufruft. Überprüfe die Ergebnisse vor dem Speichern.
           </p>
           <p id="experimentalStatus" class="form-feedback" role="status" aria-live="polite"></p>
         </section>
       </main>
     </div>
 
+    <script src="openaiClient.js"></script>
     <script src="ai.js"></script>
     <script src="bill-splitter.js"></script>
   </body>

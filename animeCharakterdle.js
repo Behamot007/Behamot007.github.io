@@ -33,20 +33,16 @@ function appendMessage(role, text) {
 }
 
 async function chatWithAI() {
-  const resp = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + localStorage.getItem('OPENAPI_TOKEN')
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages,
-      temperature: 0.7,
-      max_tokens: 150
-    })
+  if (!window.openAiClient || typeof window.openAiClient.chat !== 'function') {
+    throw new Error('OpenAI-Client ist nicht verfügbar.');
+  }
+
+  const data = await window.openAiClient.chat({
+    messages,
+    model: 'gpt-4o-mini',
+    temperature: 0.7,
+    maxTokens: 150
   });
-  const data = await resp.json();
   const reply = data.choices?.[0]?.message?.content?.trim();
   return reply || '...';
 }
@@ -64,9 +60,14 @@ async function send() {
     return;
   }
   messages.push({ role: 'user', content: text });
-  const reply = await chatWithAI();
-  messages.push({ role: 'assistant', content: reply });
-  appendMessage('assistant', reply);
+  try {
+    const reply = await chatWithAI();
+    messages.push({ role: 'assistant', content: reply });
+    appendMessage('assistant', reply);
+  } catch (error) {
+    console.error('OpenAI-Fehler:', error);
+    appendMessage('assistant', 'Entschuldige, ich konnte keine Antwort generieren. Bitte versuche es später erneut.');
+  }
 }
 
 document.getElementById('send').addEventListener('click', send);
