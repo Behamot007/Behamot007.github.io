@@ -19,6 +19,12 @@ out/
 .env.local
 .env.*.local
 
+# Certificates
+server/certbot/etc-letsencrypt/*
+!server/certbot/etc-letsencrypt/.gitkeep
+server/certbot/www/*
+!server/certbot/www/.gitkeep
+
 
 # Editors
 .vscode/
