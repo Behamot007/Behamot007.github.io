@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Behamot – Digitale Tools & Experiences</title>
+    <meta name="description" content="Behamot bündelt digitale Tools, KI-Experimente und Spotify-Automation für unvergessliche Musikabende." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="site-header" data-nav-state="closed">
+      <div class="container header__inner">
+        <a class="brand" href="#home" aria-label="Behamot Startseite">
+          <span class="brand__accent" aria-hidden="true">◆</span>
+          <span class="brand__text">Behamot</span>
+        </a>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primaryNav">
+          <span class="nav-toggle__label">Menü</span>
+          <span class="nav-toggle__icon" aria-hidden="true"></span>
+        </button>
+        <nav id="primaryNav" class="primary-nav" aria-label="Hauptnavigation">
+          <a href="#mission">Mission</a>
+          <a href="#features">Features</a>
+          <a href="#use-cases">Use Cases</a>
+          <a href="#contact">Kontakt</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="home">
+      <section class="hero" aria-labelledby="heroTitle">
+        <div class="container hero__inner">
+          <div class="hero__content">
+            <span class="eyebrow">Toolkit & Experiences</span>
+            <h1 id="heroTitle">Digitale Spielabende. Automatisiert. Persönlich.</h1>
+            <p>
+              Behamot verbindet Spotify-Automation, clevere Kostenaufteilung und KI-gestützte Unterhaltung in einem
+              zentralen Toolkit. Für Freundeskreise, Communities und Teams, die schnell loslegen möchten.
+            </p>
+            <div class="hero__actions">
+              <a class="button button--primary" href="#features">Mehr entdecken</a>
+              <a class="button button--ghost" href="#contact">Kontakt aufnehmen</a>
+            </div>
+            <dl class="hero__meta" aria-label="Kennzahlen">
+              <div>
+                <dt>3+</dt>
+                <dd>modulare Experiences</dd>
+              </div>
+              <div>
+                <dt>100%</dt>
+                <dd>steuerbar im Browser</dd>
+              </div>
+              <div>
+                <dt>Ready</dt>
+                <dd>für private Sessions & Events</dd>
+              </div>
+            </dl>
+          </div>
+          <div class="hero__visual" aria-hidden="true">
+            <div class="orb orb--primary"></div>
+            <div class="orb orb--secondary"></div>
+            <div class="screen-mockup">
+              <div class="screen-mockup__header">
+                <span></span><span></span><span></span>
+              </div>
+              <div class="screen-mockup__body">
+                <div class="screen-mockup__badge">Live Toolkit</div>
+                <h2>Digital Mode</h2>
+                <p>Session Setup, Rundenauswahl und Spotify-Steuerung in einem Flow.</p>
+                <ul>
+                  <li>Playlist-Automation</li>
+                  <li>KI-Hinweise</li>
+                  <li>Moderationstools</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="mission" class="section section--alt" aria-labelledby="missionTitle">
+        <div class="container section__inner">
+          <div class="section__header">
+            <span class="section__eyebrow">Warum Behamot?</span>
+            <h2 id="missionTitle">Ein Toolkit, viele Anwendungsfälle</h2>
+            <p>
+              Von der gemütlichen Wohnzimmer-Session bis zum hybriden Event – Behamot bietet smarte Module, die nahtlos
+              zusammenspielen. Vollständig web-basiert und sofort einsetzbar.
+            </p>
+          </div>
+          <div class="feature-grid">
+            <article class="feature-card">
+              <h3>Digital Mode</h3>
+              <p>Steuere Hitster-Runden im Browser, inklusive Scoreboard, Rundenkarten und KI-gestützten Hinweisen.</p>
+            </article>
+            <article class="feature-card">
+              <h3>Kostenkalkulation</h3>
+              <p>Erfasse Ausgaben, teile sie automatisch auf und exportiere klare Übersichten für alle Beteiligten.</p>
+            </article>
+            <article class="feature-card">
+              <h3>Anime Rätsel Chat</h3>
+              <p>Starte KI-gestützte Quizrunden mit individuell generierten Hinweisen zu Anime-Charakteren.</p>
+            </article>
+            <article class="feature-card">
+              <h3>Erweiterbar & API-ready</h3>
+              <p>Gemeinsamer Backend-Layer mit Authentifizierung, Streaming-Integrationen und JSON-APIs.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" class="section" aria-labelledby="featuresTitle">
+        <div class="container section__inner">
+          <div class="section__header">
+            <span class="section__eyebrow">Highlights</span>
+            <h2 id="featuresTitle">Alles, was du für deine nächste Session brauchst</h2>
+          </div>
+          <div class="timeline" role="list">
+            <article class="timeline__item" role="listitem">
+              <div class="timeline__marker" aria-hidden="true"></div>
+              <div class="timeline__content">
+                <h3>Onboarding in Minuten</h3>
+                <p>Quickstart-Assistenten helfen dir beim Einrichten von Spotify-Zugängen, Teilnehmern und Rundenregeln.</p>
+              </div>
+            </article>
+            <article class="timeline__item" role="listitem">
+              <div class="timeline__marker" aria-hidden="true"></div>
+              <div class="timeline__content">
+                <h3>Live Moderation</h3>
+                <p>Geführte Moderationsansichten, Timer und Punkteverwaltung machen dich zum Game Master.</p>
+              </div>
+            </article>
+            <article class="timeline__item" role="listitem">
+              <div class="timeline__marker" aria-hidden="true"></div>
+              <div class="timeline__content">
+                <h3>Insights & Auswertung</h3>
+                <p>Analysen zu Songs, Spielverlauf und Kosten liefern Auswertungen für den nächsten Abend.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="use-cases" class="section section--split" aria-labelledby="useCasesTitle">
+        <div class="container section__split">
+          <div>
+            <span class="section__eyebrow">Use Cases</span>
+            <h2 id="useCasesTitle">Bereit für Teams, Communities & Freundeskreise</h2>
+            <p>
+              Egal ob monatlicher Stammtisch, Vereins-Event oder Remote-Session – Behamot lässt sich flexibel anpassen und
+              über APIs erweitern.
+            </p>
+          </div>
+          <ul class="pill-list">
+            <li>Private Musikabende</li>
+            <li>Hybrid Streams</li>
+            <li>Workshops & Meetups</li>
+            <li>Community Games</li>
+            <li>Onboarding Events</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="contact" class="section section--cta" aria-labelledby="contactTitle">
+        <div class="container section__cta">
+          <h2 id="contactTitle">Lass uns sprechen</h2>
+          <p>Du möchtest Behamot testen oder eine individuelle Session planen? Schreib uns eine kurze Nachricht.</p>
+          <a class="button button--primary" href="mailto:hello@behamot.de">hello@behamot.de</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer__inner">
+        <span>© <span id="currentYear"></span> Behamot. Crafted with Leidenschaft für digitale Abende.</span>
+        <div class="footer__links">
+          <a href="https://github.com/Behamot007" target="_blank" rel="noreferrer">GitHub</a>
+          <a href="mailto:hello@behamot.de">Kontakt</a>
+        </div>
+      </div>
+    </footer>
+
+    <script src="./script.js" defer></script>
+  </body>
+</html>
