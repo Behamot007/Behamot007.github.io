@@ -1,0 +1,40 @@
+<svg width="640" height="640" viewBox="0 0 640 640" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2b235c" />
+      <stop offset="100%" stop-color="#14102a" />
+    </linearGradient>
+    <linearGradient id="outline" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f4d99d" />
+      <stop offset="100%" stop-color="#b68847" />
+    </linearGradient>
+    <radialGradient id="halo" cx="50%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="#6f4dd4" stop-opacity="0.65" />
+      <stop offset="70%" stop-color="#241c49" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#120d28" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <rect x="40" y="40" width="560" height="560" rx="80" fill="url(#panel)" stroke="url(#outline)" stroke-width="6" />
+  <g transform="translate(80 80)">
+    <path
+      d="M240 0c133 0 240 107 240 240v320H0V240C0 107 107 0 240 0Z"
+      fill="url(#halo)"
+      stroke="url(#outline)"
+      stroke-width="4"
+    />
+    <path
+      d="M48 240c0-113 79-204 192-220 113 16 192 107 192 220v240H48V240Z"
+      fill="rgba(13, 9, 26, 0.75)"
+      stroke="url(#outline)"
+      stroke-width="3"
+      opacity="0.9"
+    />
+    <path
+      d="M240 46c98 0 178 80 178 178v216H62V224C62 126 142 46 240 46Z"
+      fill="rgba(52, 41, 101, 0.45)"
+      stroke="rgba(244, 217, 157, 0.4)"
+      stroke-width="2"
+    />
+    <circle cx="240" cy="180" r="110" fill="none" stroke="rgba(244, 217, 157, 0.4)" stroke-width="2" />
+  </g>
+</svg>

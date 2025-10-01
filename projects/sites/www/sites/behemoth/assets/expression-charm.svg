@@ -1,0 +1,17 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bgCharm" cx="50%" cy="40%" r="68%">
+      <stop offset="0%" stop-color="#5b3f9a" />
+      <stop offset="100%" stop-color="#1b1638" />
+    </radialGradient>
+    <linearGradient id="strokeCharm" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f7dc9e" />
+      <stop offset="100%" stop-color="#c1924f" />
+    </linearGradient>
+  </defs>
+  <circle cx="60" cy="60" r="56" fill="url(#bgCharm)" stroke="url(#strokeCharm)" stroke-width="3" />
+  <path d="M36 50c6-8 14-12 24-12" stroke="#f4d89d" stroke-width="3" stroke-linecap="round" fill="none" />
+  <path d="M80 56c-4 0-8-4-8-8 0-4 4-8 8-8s8 4 8 8c0 4-4 8-8 8Z" fill="#f4d89d" />
+  <path d="M46 78c8 10 22 12 30 4" stroke="#f4d89d" stroke-width="3" stroke-linecap="round" fill="none" />
+  <path d="M62 82c4 4 10 4 14 0" stroke="#f4d89d" stroke-width="3" stroke-linecap="round" fill="none" />
+</svg>

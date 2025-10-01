@@ -3,186 +3,234 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Behamot – Digitale Tools & Experiences</title>
-    <meta name="description" content="Behamot bündelt digitale Tools, KI-Experimente und Spotify-Automation für unvergessliche Musikabende." />
+    <title>Behamot VTuber – Noble Debut</title>
+    <meta
+      name="description"
+      content="Behamot VTuber – digitale Aristokratie trifft auf Entertainment. Entdecke Streams, Highlights, Lore und Social Links des noblen Behemot."
+    />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="./styles.css" />
+    <script defer src="./script.js"></script>
+    <script async src="https://player.twitch.tv/js/embed/v1.js"></script>
+    <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
   </head>
   <body>
+    <div class="background-lights" aria-hidden="true">
+      <img src="./assets/hero-crest.svg" alt="" class="bg-crest bg-crest--left" />
+      <img src="./assets/hero-crest.svg" alt="" class="bg-crest bg-crest--right" />
+    </div>
     <header class="site-header" data-nav-state="closed">
       <div class="container header__inner">
-        <a class="brand" href="#home" aria-label="Behamot Startseite">
-          <span class="brand__accent" aria-hidden="true">◆</span>
+        <a class="brand" href="#hero" aria-label="Behamot VTuber Start">
+          <img src="./assets/crest-divider.svg" alt="" class="brand__mark" />
           <span class="brand__text">Behamot</span>
+          <span class="brand__role">VTuber</span>
         </a>
-        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primaryNav">
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="siteNav">
           <span class="nav-toggle__label">Menü</span>
           <span class="nav-toggle__icon" aria-hidden="true"></span>
         </button>
-        <nav id="primaryNav" class="primary-nav" aria-label="Hauptnavigation">
-          <a href="#mission">Mission</a>
-          <a href="#features">Features</a>
-          <a href="#use-cases">Use Cases</a>
-          <a href="#contact">Kontakt</a>
+        <nav id="siteNav" class="primary-nav" aria-label="Hauptnavigation">
+          <a href="#hero">Debut</a>
+          <a href="#about">Profil</a>
+          <a href="#stream">Livestream</a>
+          <a href="#socials">Socials</a>
+          <a href="#lore">Lore</a>
         </nav>
       </div>
     </header>
 
-    <main id="home">
-      <section class="hero" aria-labelledby="heroTitle">
+    <main>
+      <section id="hero" class="section hero" aria-labelledby="heroTitle">
         <div class="container hero__inner">
           <div class="hero__content">
-            <span class="eyebrow">Toolkit & Experiences</span>
-            <h1 id="heroTitle">Digitale Spielabende. Automatisiert. Persönlich.</h1>
+            <span class="eyebrow">Noble Debut</span>
+            <h1 id="heroTitle">Behamot – Aristokratischer VTuber aus dem digitalen Hofstaat</h1>
             <p>
-              Behamot verbindet Spotify-Automation, clevere Kostenaufteilung und KI-gestützte Unterhaltung in einem
-              zentralen Toolkit. Für Freundeskreise, Communities und Teams, die schnell loslegen möchten.
+              Willkommen in meinem virtuellen Salon. Ich streame Strategie, Storytelling und kunstvolle Collabs mit einer Prise
+              höfischer Ironie. Komm vorbei, wenn Glanz und Memes aufeinandertreffen.
             </p>
             <div class="hero__actions">
-              <a class="button button--primary" href="#features">Mehr entdecken</a>
-              <a class="button button--ghost" href="#contact">Kontakt aufnehmen</a>
+              <a class="button button--primary" href="https://www.twitch.tv/behamotvt" target="_blank" rel="noreferrer">Zum Twitch-Kanal</a>
+              <a class="button button--ghost" href="#stream">Live ansehen</a>
             </div>
-            <dl class="hero__meta" aria-label="Kennzahlen">
+            <dl class="hero__stats" aria-label="Highlights">
               <div>
-                <dt>3+</dt>
-                <dd>modulare Experiences</dd>
+                <dt>Streams</dt>
+                <dd>Story-RPGs · Strategie · Collabs</dd>
               </div>
               <div>
-                <dt>100%</dt>
-                <dd>steuerbar im Browser</dd>
+                <dt>Signature</dt>
+                <dd>Eleganz, Wortwitz, orchestrale Playlists</dd>
               </div>
               <div>
-                <dt>Ready</dt>
-                <dd>für private Sessions & Events</dd>
+                <dt>Community</dt>
+                <dd>Nobles & Nightingales auf Discord</dd>
               </div>
             </dl>
           </div>
-          <div class="hero__visual" aria-hidden="true">
-            <div class="orb orb--primary"></div>
-            <div class="orb orb--secondary"></div>
-            <div class="screen-mockup">
-              <div class="screen-mockup__header">
-                <span></span><span></span><span></span>
-              </div>
-              <div class="screen-mockup__body">
-                <div class="screen-mockup__badge">Live Toolkit</div>
-                <h2>Digital Mode</h2>
-                <p>Session Setup, Rundenauswahl und Spotify-Steuerung in einem Flow.</p>
-                <ul>
-                  <li>Playlist-Automation</li>
-                  <li>KI-Hinweise</li>
-                  <li>Moderationstools</li>
-                </ul>
+          <div class="hero__visual">
+            <div class="portrait-frame">
+              <img src="./assets/hero-frame.svg" alt="Illustration eines ornamentalen Fensters" class="portrait-frame__base" />
+              <div class="portrait-frame__inner">
+                <img src="./assets/portrait-silhouette.svg" alt="Silhouette von Behamot" class="portrait-frame__character" />
+                <div class="portrait-frame__expressions">
+                  <figure>
+                    <img src="./assets/expression-calm.svg" alt="Calm expression" />
+                    <figcaption>Calm</figcaption>
+                  </figure>
+                  <figure>
+                    <img src="./assets/expression-charm.svg" alt="Charming expression" />
+                    <figcaption>Charm</figcaption>
+                  </figure>
+                  <figure>
+                    <img src="./assets/expression-feral.svg" alt="Fierce expression" />
+                    <figcaption>Feral</figcaption>
+                  </figure>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section id="mission" class="section section--alt" aria-labelledby="missionTitle">
-        <div class="container section__inner">
+      <section id="about" class="section section--alt" aria-labelledby="aboutTitle">
+        <div class="container about__inner">
           <div class="section__header">
-            <span class="section__eyebrow">Warum Behamot?</span>
-            <h2 id="missionTitle">Ein Toolkit, viele Anwendungsfälle</h2>
+            <span class="section__eyebrow">VTuber Profil</span>
+            <h2 id="aboutTitle">Ein Aristokrat zwischen Hofball und Hyperspace</h2>
             <p>
-              Von der gemütlichen Wohnzimmer-Session bis zum hybriden Event – Behamot bietet smarte Module, die nahtlos
-              zusammenspielen. Vollständig web-basiert und sofort einsetzbar.
+              Inspiriert von klassischer Noblesse und moderner Sci-Fi. Ich kombiniere barocke Ästhetik mit futuristischen Effekten,
+              spiele komplexe Spiele live und führe meine Community durch narrative Abenteuer.
             </p>
           </div>
-          <div class="feature-grid">
-            <article class="feature-card">
-              <h3>Digital Mode</h3>
-              <p>Steuere Hitster-Runden im Browser, inklusive Scoreboard, Rundenkarten und KI-gestützten Hinweisen.</p>
+          <div class="highlight-grid">
+            <article class="highlight-card">
+              <img src="./assets/ornament-gilded.svg" alt="" aria-hidden="true" />
+              <h3>Signature Mood</h3>
+              <p>Orchestrale Beats, goldene Lichter und ruhige, präzise Moderation – mit spontanen spice Moments.</p>
             </article>
-            <article class="feature-card">
-              <h3>Kostenkalkulation</h3>
-              <p>Erfasse Ausgaben, teile sie automatisch auf und exportiere klare Übersichten für alle Beteiligten.</p>
+            <article class="highlight-card">
+              <img src="./assets/ornament-gilded.svg" alt="" aria-hidden="true" />
+              <h3>Community</h3>
+              <p>Nobles & Nightingales – eine royale Runde für Watch-Partys, Strategiespiele und gemütliche Late-Night-Talks.</p>
             </article>
-            <article class="feature-card">
-              <h3>Anime Rätsel Chat</h3>
-              <p>Starte KI-gestützte Quizrunden mit individuell generierten Hinweisen zu Anime-Charakteren.</p>
-            </article>
-            <article class="feature-card">
-              <h3>Erweiterbar & API-ready</h3>
-              <p>Gemeinsamer Backend-Layer mit Authentifizierung, Streaming-Integrationen und JSON-APIs.</p>
+            <article class="highlight-card">
+              <img src="./assets/ornament-gilded.svg" alt="" aria-hidden="true" />
+              <h3>Stream Setup</h3>
+              <p>VTuber Studio, orchestrale Soundtracks, interaktive Lichtsteuerung und Chat-Etikette mit viel Charme.</p>
             </article>
           </div>
         </div>
       </section>
 
-      <section id="features" class="section" aria-labelledby="featuresTitle">
-        <div class="container section__inner">
+      <section id="stream" class="section" aria-labelledby="streamTitle">
+        <div class="container stream__inner">
           <div class="section__header">
-            <span class="section__eyebrow">Highlights</span>
-            <h2 id="featuresTitle">Alles, was du für deine nächste Session brauchst</h2>
+            <span class="section__eyebrow">Live auf Twitch</span>
+            <h2 id="streamTitle">Direkt vom Thronsaal auf deinen Screen</h2>
+            <p>Schalte live ein oder sieh dir die jüngsten Highlights auf Twitch an. Chat-Etikette: höflich, aber mit ordentlich Meme-Würze.</p>
           </div>
-          <div class="timeline" role="list">
-            <article class="timeline__item" role="listitem">
-              <div class="timeline__marker" aria-hidden="true"></div>
-              <div class="timeline__content">
-                <h3>Onboarding in Minuten</h3>
-                <p>Quickstart-Assistenten helfen dir beim Einrichten von Spotify-Zugängen, Teilnehmern und Rundenregeln.</p>
+          <div class="stream__player">
+            <iframe
+              title="Twitch Stream"
+              src="https://player.twitch.tv/?channel=behamotvt&parent=www.behamot.de&parent=behamot.de&parent=behamot007.github.io&parent=localhost"
+              allowfullscreen
+            ></iframe>
+            <aside class="stream__meta">
+              <h3>Streaming Slots</h3>
+              <ul>
+                <li>Mittwoch – Strategiespiele & Chill</li>
+                <li>Freitag – Lore Stories & Collabs</li>
+                <li>Sonntag – Community Night mit Chat-Events</li>
+              </ul>
+              <a class="button button--ghost" href="https://www.twitch.tv/behamotvt/schedule" target="_blank" rel="noreferrer">Zum Schedule</a>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section id="socials" class="section section--alt" aria-labelledby="socialTitle">
+        <div class="container socials__inner">
+          <div class="section__header">
+            <span class="section__eyebrow">Social Signals</span>
+            <h2 id="socialTitle">Bleib in Verbindung</h2>
+            <p>Frische Updates auf X (Twitter), langfristige Videos auf YouTube und Live-Vibes auf Twitch.</p>
+          </div>
+          <div class="socials__grid">
+            <article class="social-card social-card--twitter">
+              <div class="social-card__header">
+                <img src="./assets/crest-divider.svg" alt="" aria-hidden="true" />
+                <div>
+                  <h3>Tweets</h3>
+                  <p>Pinned & aktuell von @BehamotVT</p>
+                </div>
               </div>
+              <a
+                class="twitter-timeline"
+                data-theme="dark"
+                data-height="420"
+                data-tweet-limit="2"
+                data-chrome="noheader nofooter noborders transparent"
+                href="https://twitter.com/BehamotVT"
+              >Tweets by BehamotVT</a>
             </article>
-            <article class="timeline__item" role="listitem">
-              <div class="timeline__marker" aria-hidden="true"></div>
-              <div class="timeline__content">
-                <h3>Live Moderation</h3>
-                <p>Geführte Moderationsansichten, Timer und Punkteverwaltung machen dich zum Game Master.</p>
+            <article class="social-card social-card--youtube">
+              <div class="social-card__header">
+                <img src="./assets/ornament-gilded.svg" alt="" aria-hidden="true" />
+                <div>
+                  <h3>YouTube</h3>
+                  <p>Recaps, Lore Logs & Musik-Uploads</p>
+                </div>
               </div>
-            </article>
-            <article class="timeline__item" role="listitem">
-              <div class="timeline__marker" aria-hidden="true"></div>
-              <div class="timeline__content">
-                <h3>Insights & Auswertung</h3>
-                <p>Analysen zu Songs, Spielverlauf und Kosten liefern Auswertungen für den nächsten Abend.</p>
-              </div>
+              <p>Abonniere den Kanal für hochwertige VODs, orchestrale Cover und Cinematics aus den Streams.</p>
+              <a class="button button--primary" href="https://www.youtube.com/@Behamot" target="_blank" rel="noreferrer">Zum YouTube-Kanal</a>
             </article>
           </div>
         </div>
       </section>
 
-      <section id="use-cases" class="section section--split" aria-labelledby="useCasesTitle">
-        <div class="container section__split">
-          <div>
-            <span class="section__eyebrow">Use Cases</span>
-            <h2 id="useCasesTitle">Bereit für Teams, Communities & Freundeskreise</h2>
+      <section id="lore" class="section" aria-labelledby="loreTitle">
+        <div class="container lore__inner">
+          <div class="section__header">
+            <span class="section__eyebrow">Lore</span>
+            <h2 id="loreTitle">Chroniken aus dem digitalen Adel</h2>
             <p>
-              Egal ob monatlicher Stammtisch, Vereins-Event oder Remote-Session – Behamot lässt sich flexibel anpassen und
-              über APIs erweitern.
+              Platzhalter für künftige Lore-Chapter. Hier erscheinen bald Geschichten über meine Herkunft, Verbündete und Rivalen im
+              virtuellen Hofstaat.
             </p>
           </div>
-          <ul class="pill-list">
-            <li>Private Musikabende</li>
-            <li>Hybrid Streams</li>
-            <li>Workshops & Meetups</li>
-            <li>Community Games</li>
-            <li>Onboarding Events</li>
-          </ul>
-        </div>
-      </section>
-
-      <section id="contact" class="section section--cta" aria-labelledby="contactTitle">
-        <div class="container section__cta">
-          <h2 id="contactTitle">Lass uns sprechen</h2>
-          <p>Du möchtest Behamot testen oder eine individuelle Session planen? Schreib uns eine kurze Nachricht.</p>
-          <a class="button button--primary" href="mailto:hello@behamot.de">hello@behamot.de</a>
+          <div class="lore__placeholder">
+            <img src="./assets/crest-divider.svg" alt="" />
+            <p>Demnächst: Kapitel 1 – "Das Erwachen des Cyber-Courtiers"</p>
+          </div>
         </div>
       </section>
     </main>
 
     <footer class="site-footer">
       <div class="container footer__inner">
-        <span>© <span id="currentYear"></span> Behamot. Crafted with Leidenschaft für digitale Abende.</span>
-        <div class="footer__links">
-          <a href="https://github.com/Behamot007" target="_blank" rel="noreferrer">GitHub</a>
-          <a href="mailto:hello@behamot.de">Kontakt</a>
+        <div class="footer__brand">
+          <img src="./assets/hero-crest.svg" alt="" />
+          <div>
+            <span class="brand__text">Behamot</span>
+            <span class="brand__role">VTuber</span>
+          </div>
         </div>
+        <nav aria-label="Footer Navigation">
+          <a href="#hero">Debut</a>
+          <a href="#about">Profil</a>
+          <a href="#stream">Livestream</a>
+          <a href="#socials">Socials</a>
+          <a href="#lore">Lore</a>
+        </nav>
+        <p class="footer__note">© <span id="year"></span> Behamot. Nobility never sleeps.</p>
       </div>
     </footer>
-
-    <script src="./script.js" defer></script>
   </body>
 </html>
