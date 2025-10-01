@@ -4,6 +4,17 @@ Diese Dokumentation beschreibt, wie das Projekt mithilfe von Docker-Containern b
 
 > **Hinweis:** Alle Riot-/Arena-Tools, der Spotify Play Screen, der Playlist-zu-QR-Generator sowie Debug- und Dataset-Verwaltungen wurden entfernt. Übrig bleiben der Digital Mode, die Kostenkalkulation und der Anime Rätsel Chat.
 
+## Repository-Struktur
+
+Das Repository ist in mehrere Domänen gegliedert:
+
+- **Frontend** (`projects/dev-portal/`): zentrales Web-Frontend für Nutzeroberflächen.
+- **Backend** (`projects/dev-backend/`): gemeinsamer API-Layer für Authentifizierung sowie datengetriebene Funktionen.
+- **Services** (`projects/services/`): spezialisierte Fachservices wie Arena, Hitster, Anime und Planning.
+- **Infra** (`infra/`): Infrastrukturdefinitionen, Deployment-Skripte und IaC-Artefakte.
+
+Eine vollständige Zielstruktur inklusive Naming-Konventionen und README-Template für Services ist in [`docs/architecture.md`](docs/architecture.md) dokumentiert.
+
 ## Verzeichnisstruktur
 
 - `anime-dataset/`: Node.js-Backend-Service für Spotify-/OpenAI-Bridging sowie den Anime-Datensatz (ohne Frontend-Verwaltung).
