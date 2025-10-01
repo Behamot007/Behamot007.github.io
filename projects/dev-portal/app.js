@@ -33,7 +33,7 @@
           type: 'page',
           id: 'digital-mode',
           label: 'Digital Mode',
-          url: 'gameModeDigital.html',
+          url: '../services/hitster/gameModeDigital.html',
           description: 'Vollständig digitales Hitster-Brettspiel mit Spotify-Steuerung und KI-Hilfen.'
         }
       ]
@@ -47,7 +47,7 @@
           type: 'page',
           id: 'bill-splitter',
           label: 'Kostenkalkulation',
-          url: 'bill-splitter.html',
+          url: '../services/planning/bill-splitter.html',
           description: 'Berechne faire Anteile für gemeinsame Rechnungen und Freunde.'
         }
       ]
@@ -61,7 +61,7 @@
           type: 'page',
           id: 'anime-riddle',
           label: 'Rätsel Chat',
-          url: 'animeCharakterdle.html',
+          url: '../services/anime/animeCharakterdle.html',
           description: 'Errate Anime-Charaktere über das Chat-Interface mit KI-Unterstützung.'
         }
       ]

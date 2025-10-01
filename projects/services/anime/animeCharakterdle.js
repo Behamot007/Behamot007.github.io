@@ -4,7 +4,7 @@ let messages = [];
 let gameOver = false;
 
 async function loadCharacters() {
-  const resp = await fetch('anime-dataset/dataset/characters.csv');
+  const resp = await fetch('./anime-dataset/dataset/characters.csv');
   const csvText = await resp.text();
   const parsed = Papa.parse(csvText, { header: true });
   const data = parsed.data.filter(c => c && c.character_id_mal);
