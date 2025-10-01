@@ -113,6 +113,18 @@ labels:
   - traefik.http.routers.toolkit.tls.certresolver=letsencrypt
 ```
 
+### Let's-Encrypt-Automatisierung
+
+- Die Ziel-Domains und Ports sind in [`server/docs/domains.md`](server/docs/domains.md) dokumentiert.
+- Für die Ausstellung und Erneuerung wird ein `certbot`-Service (Compose-Profil `certbot`) inklusive gemeinsamem Webroot bereitgestellt (`./server/certbot`).
+- Zertifikate (sowohl Initialanforderung als auch Verlängerung) lassen sich via Skript automatisieren:
+  ```bash
+  # Erster Abruf oder Verlängerung (z. B. via Cron/Timer)
+  CERTBOT_EMAIL=admin@behamot.de CERTBOT_DOMAINS=dev.behamot.de,www.behamot.de \
+    server/scripts/renew-certificates.sh
+  ```
+- Das Skript führt ein `certbot certonly --keep-until-expiring` im Container aus und stößt anschließend – sofern aktiv – einen `nginx -s reload` im Frontend-Container an.
+
 ## Weiterentwicklung & Troubleshooting
 
 - **Lokale Tests**: Mit `docker compose up` ohne `-d` starten, um Logs direkt im Terminal zu verfolgen.
