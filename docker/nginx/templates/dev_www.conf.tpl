@@ -1,6 +1,6 @@
 server {
     listen 80;
-    server_name dev.behamot.de;
+    server_name {{DEV_SERVER_NAME}};
 
     root /usr/share/nginx/html;
     index dev-portal/index.html;
@@ -29,7 +29,7 @@ server {
 
 server {
     listen 80;
-    server_name www.behamot.de;
+    server_name {{WWW_SERVER_NAME}};
 
     root /usr/share/nginx/html;
     index index.html;
