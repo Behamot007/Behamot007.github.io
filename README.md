@@ -17,9 +17,9 @@ Eine vollständige Zielstruktur inklusive Naming-Konventionen und README-Templat
 
 ## Verzeichnisstruktur
 
-- `anime-dataset/`: Node.js-Backend-Service für Spotify-/OpenAI-Bridging sowie den Anime-Datensatz (ohne Frontend-Verwaltung).
+- `projects/dev-backend/anime-dataset/`: Node.js-Backend-Service für Spotify-/OpenAI-Bridging sowie den Anime-Datensatz (ohne Frontend-Verwaltung).
 - `Dockerfile.frontend`: Build-Anleitung für das nginx-Frontend.
-- `anime-dataset/Dockerfile`: Build-Anleitung für den Backend-Service.
+- `projects/dev-backend/anime-dataset/Dockerfile`: Build-Anleitung für den Backend-Service.
 - `docker-compose.yml`: Definition der Services, Netzwerke und Volumes.
 - `docker/nginx/default.conf`: nginx-Konfiguration mit Proxy-Regeln für `/api`.
 - `.env.example`: Vorlage für benötigte Umgebungsvariablen.
@@ -50,13 +50,19 @@ docker compose logs -f backend
 
 Der Befehl `docker compose up -d --build` baut beide Images (`backend`, `frontend`), erstellt die Netzwerke (`internal`, `public`) und startet die Container im Hintergrund. Das Frontend ist anschließend unter `http://localhost:8080` erreichbar. Interne Aufrufe an `/api/*` werden automatisch an den Backend-Service weitergeleitet.
 
+### Frontend ↔ Backend Zusammenspiel
+
+- Das Dev-Portal (inkl. „Anime Dataset Verwaltung“) erwartet, dass der Backend-Einstiegspunkt unter `/api` erreichbar ist. Für containerisierte Deployments wird dies über das Compose-Environment `FRONTEND_BACKEND_API_BASE` (Default: `http://backend:3000`) sowie die nginx-Proxy-Regeln aus `docker/nginx/default.conf` realisiert.
+- In lokalen Szenarien ohne Docker kann die Variable `BACKEND_API_BASE` beispielsweise per `.env` auf `http://localhost:3000` gesetzt werden; der Dev-Server muss anschließend Anfragen an diesen Host weiterreichen.
+- Statische Assets werden ausschließlich vom Frontend ausgeliefert. Das Backend konzentriert sich auf JSON-APIs (Spotify, OpenAI, Dataset-CRUD) und stellt keine eigene `public/`-Oberfläche mehr bereit.
+
 ### Datenpersistenz
 
-- Das Backend schreibt den Datensatz nach `/app/dataset/characters.jsonl`. Über das Compose-Volume `./anime-dataset/dataset:/app/dataset` bleiben Änderungen auf dem Host erhalten.
+- Das Backend schreibt den Datensatz nach `/app/dataset/characters.jsonl`. Über das Compose-Volume `./projects/dev-backend/anime-dataset/dataset:/app/dataset` bleiben Änderungen auf dem Host erhalten.
 - Alternativ kann ein Docker-Volume verwendet werden:
   ```yaml
   volumes:
-    - anime-dataset-data:/app/dataset
+    - dev-backend-dataset:/app/dataset
   ```
 
 ### Persistente PostgreSQL-Datenbank

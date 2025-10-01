@@ -47,7 +47,8 @@ let cachedSpotifyTokenExpiry = 0;
 
 app.use(cors());
 app.use(bodyParser.json({ limit: "10mb" }));
-app.use(express.static("public")); // Hier liegt index.html
+// Die Verwaltungsoberfläche wird im dedizierten Frontend-Service ausgeliefert.
+// Das Backend stellt ausschließlich JSON-Endpunkte bereit.
 
 function ensureSpotifyCredentials() {
   if (!SPOTIFY_CLIENT_ID || !SPOTIFY_CLIENT_SECRET) {
