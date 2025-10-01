@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./config.css">
   <title>Konfiguration</title>
 </head>
 <body>
@@ -15,10 +15,10 @@
     <h3>OpenAI</h3>
     <p id="openAiStatus">Lade Status...</p>
   </div>
-  <script src="spotify.js"></script>
-  <script src="openaiClient.js"></script>
-  <script src="pages.js"></script>
-  <script src="navigation.js"></script>
+  <script src="./shared/spotify.js"></script>
+  <script src="./shared/openaiClient.js"></script>
+  <script src="./pages.js"></script>
+  <script src="./navigation.js"></script>
   <script>
     buildNavigation('nav');
     const spotifyStatus = document.getElementById('spotifyStatus');
