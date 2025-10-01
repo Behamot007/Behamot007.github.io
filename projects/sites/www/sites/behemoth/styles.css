@@ -465,6 +465,206 @@ p {
   gap: 1.2rem;
 }
 
+.assets__inner {
+  display: grid;
+  gap: clamp(3rem, 6vw, 4.5rem);
+}
+
+.character-showcase {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: clamp(2rem, 5vw, 3.5rem);
+  align-items: center;
+}
+
+.character-showcase__figure {
+  margin: 0;
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid rgba(217, 178, 107, 0.2);
+  box-shadow: 0 30px 60px rgba(6, 4, 12, 0.5);
+}
+
+.character-showcase__figure img {
+  width: 100%;
+  display: block;
+}
+
+.character-showcase__figure figcaption {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(180deg, transparent, rgba(10, 8, 18, 0.92));
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(244, 240, 255, 0.72);
+}
+
+.character-showcase__content {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(217, 178, 107, 0.2);
+  padding: clamp(1.8rem, 3vw, 2.4rem);
+  display: grid;
+  gap: 1.2rem;
+  box-shadow: 0 26px 52px rgba(7, 5, 15, 0.48);
+}
+
+.character-showcase__details {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.character-showcase__details li {
+  display: flex;
+  gap: 0.75rem;
+  color: var(--text-soft);
+  align-items: flex-start;
+}
+
+.character-showcase__details li::before {
+  content: "✶";
+  color: var(--accent-strong);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  margin-top: 0.2rem;
+}
+
+.asset-panels {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.asset-panel {
+  background: rgba(12, 10, 22, 0.9);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(217, 178, 107, 0.22);
+  padding: clamp(1.6rem, 2.5vw, 2.1rem);
+  display: grid;
+  gap: 1.2rem;
+  box-shadow: 0 26px 50px rgba(5, 4, 12, 0.48);
+}
+
+.asset-panel__header {
+  display: flex;
+  gap: 1.1rem;
+  align-items: center;
+}
+
+.asset-panel__header img {
+  width: 42px;
+  filter: drop-shadow(0 16px 26px rgba(217, 178, 107, 0.28));
+}
+
+.asset-panel__header h3 {
+  margin-bottom: 0.25rem;
+}
+
+.asset-panel__header p {
+  margin: 0;
+  color: var(--text-soft);
+}
+
+.emote-grid {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  justify-items: center;
+}
+
+.emote-grid__item {
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+  justify-items: center;
+  text-align: center;
+}
+
+.emote-grid__item img {
+  width: 70px;
+  height: 70px;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  padding: 0.6rem;
+  background: rgba(217, 178, 107, 0.08);
+  border: 1px solid rgba(217, 178, 107, 0.24);
+  box-shadow: 0 18px 36px rgba(6, 5, 14, 0.45);
+}
+
+.emote-grid__item figcaption {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(244, 240, 255, 0.65);
+}
+
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.badge-row__item {
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+  justify-items: center;
+  text-align: center;
+}
+
+.badge-row__item img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  background: rgba(217, 178, 107, 0.1);
+  border-radius: 50%;
+  padding: 0.45rem;
+  border: 1px solid rgba(217, 178, 107, 0.28);
+  box-shadow: 0 18px 36px rgba(6, 4, 12, 0.4);
+}
+
+.badge-row__item figcaption {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(244, 240, 255, 0.65);
+}
+
+.banner-gallery {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.banner-gallery figure {
+  margin: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.banner-gallery img {
+  width: 100%;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(217, 178, 107, 0.2);
+  box-shadow: 0 20px 40px rgba(5, 4, 12, 0.45);
+  object-fit: cover;
+  max-height: 220px;
+}
+
+.banner-gallery figcaption {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(244, 240, 255, 0.65);
+}
+
 .social-card__header {
   display: flex;
   gap: 1.2rem;
@@ -613,6 +813,10 @@ p {
 
   .nav-toggle {
     display: inline-flex;
+  }
+
+  .character-showcase {
+    grid-template-columns: 1fr;
   }
 }
 
