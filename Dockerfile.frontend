@@ -1,15 +1,32 @@
 # syntax=docker/dockerfile:1
 FROM nginx:1.27-alpine
 
-RUN mkdir -p /var/www/certbot
+ARG DEV_SERVER_NAME=dev.localhost
+ARG WWW_SERVER_NAME=www.localhost
 
-# Copy nginx configuration with backend proxy setup
-COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
+ENV DEV_SERVER_NAME=${DEV_SERVER_NAME} \
+    WWW_SERVER_NAME=${WWW_SERVER_NAME}
+
+RUN apk add --no-cache bash \
+    && mkdir -p /var/www/certbot /opt/app
+
+WORKDIR /opt/app
+
+COPY scripts/render-nginx-config.sh scripts/render-nginx-config.sh
+COPY docker/nginx/templates docker/nginx/templates
+COPY docker/nginx/entrypoint.sh docker/nginx/entrypoint.sh
+
+RUN chmod +x scripts/render-nginx-config.sh docker/nginx/entrypoint.sh
 
 # Copy static assets into nginx document root
 COPY --chown=nginx:nginx projects/dev-portal /usr/share/nginx/html/dev-portal
 COPY --chown=nginx:nginx projects/services /usr/share/nginx/html/services
 
+RUN scripts/render-nginx-config.sh "$DEV_SERVER_NAME" "$WWW_SERVER_NAME" \
+    && cp docker/nginx/default.conf /etc/nginx/conf.d/default.conf
+
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=3s CMD wget -q -O- http://localhost/ >/dev/null 2>&1 || exit 1
+
+ENTRYPOINT ["/opt/app/docker/nginx/entrypoint.sh"]
