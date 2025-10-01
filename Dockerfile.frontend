@@ -19,8 +19,7 @@ COPY docker/nginx/entrypoint.sh docker/nginx/entrypoint.sh
 RUN chmod +x scripts/render-nginx-config.sh docker/nginx/entrypoint.sh
 
 # Copy static assets into nginx document root
-COPY --chown=nginx:nginx projects/dev-portal /usr/share/nginx/html/dev-portal
-COPY --chown=nginx:nginx projects/services /usr/share/nginx/html/services
+COPY --chown=nginx:nginx projects/sites/dev /usr/share/nginx/html/dev
 
 RUN scripts/render-nginx-config.sh "$DEV_SERVER_NAME" "$WWW_SERVER_NAME" \
     && cp docker/nginx/default.conf /etc/nginx/conf.d/default.conf

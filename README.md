@@ -8,9 +8,9 @@ Diese Dokumentation beschreibt, wie das Projekt mithilfe von Docker-Containern b
 
 Das Repository ist in mehrere Domänen gegliedert:
 
-- **Frontend** (`projects/dev-portal/`): zentrales Web-Frontend für Nutzeroberflächen.
+- **Frontend** (`projects/sites/dev/`): zentrales Web-Frontend für Nutzeroberflächen.
 - **Backend** (`projects/dev-backend/`): gemeinsamer API-Layer für Authentifizierung sowie datengetriebene Funktionen.
-- **Services** (`projects/services/`): spezialisierte Fachservices wie Arena, Hitster, Anime und Planning.
+- **Services** (`projects/sites/dev/services/`): spezialisierte Fachservices wie Arena, Hitster, Anime und Planning.
 - **Infra** (`infra/`): Infrastrukturdefinitionen, Deployment-Skripte und IaC-Artefakte.
 
 Eine vollständige Zielstruktur inklusive Naming-Konventionen und README-Template für Services ist in [`docs/architecture.md`](docs/architecture.md) dokumentiert.
@@ -52,7 +52,7 @@ Der Befehl `docker compose up -d --build` baut beide Images (`backend`, `fronten
 
 ### Frontend ↔ Backend Zusammenspiel
 
-- Das Dev-Portal (inkl. „Anime Dataset Verwaltung“) erwartet, dass der Backend-Einstiegspunkt unter `/api` erreichbar ist. Für containerisierte Deployments wird dies über das Compose-Environment `FRONTEND_BACKEND_API_BASE` (Default: `http://backend:3000`) sowie die nginx-Proxy-Regeln aus `docker/nginx/default.conf` realisiert.
+- Der Dev-Bereich (`projects/sites/dev/`, inkl. „Anime Dataset Verwaltung“) erwartet, dass der Backend-Einstiegspunkt unter `/api` erreichbar ist. Für containerisierte Deployments wird dies über das Compose-Environment `FRONTEND_BACKEND_API_BASE` (Default: `http://backend:3000`) sowie die nginx-Proxy-Regeln aus `docker/nginx/default.conf` realisiert.
 - In lokalen Szenarien ohne Docker kann die Variable `BACKEND_API_BASE` beispielsweise per `.env` auf `http://localhost:3000` gesetzt werden; der Dev-Server muss anschließend Anfragen an diesen Host weiterreichen.
 - Statische Assets werden ausschließlich vom Frontend ausgeliefert. Das Backend konzentriert sich auf JSON-APIs (Spotify, OpenAI, Dataset-CRUD) und stellt keine eigene `public/`-Oberfläche mehr bereit.
 
