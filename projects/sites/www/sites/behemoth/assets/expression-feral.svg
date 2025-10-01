@@ -1,0 +1,17 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bgFeral" cx="50%" cy="35%" r="68%">
+      <stop offset="0%" stop-color="#6f2f5f" />
+      <stop offset="100%" stop-color="#130d26" />
+    </radialGradient>
+    <linearGradient id="strokeFeral" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f9dd9e" />
+      <stop offset="100%" stop-color="#a26b2d" />
+    </linearGradient>
+  </defs>
+  <circle cx="60" cy="60" r="56" fill="url(#bgFeral)" stroke="url(#strokeFeral)" stroke-width="3" />
+  <path d="M38 44 58 54" stroke="#f2d488" stroke-width="4" stroke-linecap="round" />
+  <path d="M82 44 62 54" stroke="#f2d488" stroke-width="4" stroke-linecap="round" />
+  <path d="M44 74c8 12 16 16 16 16s8-4 16-16" stroke="#f2d488" stroke-width="4" stroke-linecap="round" fill="none" />
+  <path d="M44 82c8 4 24 4 32 0" stroke="#f2d488" stroke-width="3" stroke-linecap="round" fill="none" />
+</svg>
