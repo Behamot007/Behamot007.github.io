@@ -10,20 +10,17 @@ Diese Architekturübersicht beschreibt die angestrebte Zielstruktur des Reposito
 │   ├── architecture.md           # Architekturleitfaden (dieses Dokument)
 │   └── service-inventory.md      # Übersicht vorhandener Services
 ├── projects/
-│   ├── dev-portal/               # Zentrales Frontend (Marketing, Dashboards)
 │   ├── dev-backend/              # Gemeinsames Backend für Auth, Nutzer- und Tooling-APIs
-│   └── services/
-│       ├── arena/                # Arena-Service (Matchmaking & Statistiken)
-│       ├── hitster/              # Musik-Quiz-Service
-│       ├── anime/                # Anime-Rätsel- und Dataset-Service
-│       └── planning/             # Projekt- und Ressourcenplanung
+│   └── sites/
+│       └── dev/                  # Zentrales Frontend (Marketing, Dashboards)
+│           └── services/         # Fachservices (Arena, Hitster, Anime, Planning)
 ├── infra/                        # Infrastruktur, IaC, Deployment-Skripte
 └── scripts/                      # Wiederverwendbare Hilfsskripte (CI, Wartung)
 ```
 
 ## Naming-Konventionen
 
-- **Verzeichnisse**: Kleinbuchstaben mit Bindestrich (`kebab-case`), z. B. `dev-portal`, `data-sync-worker`.
+- **Verzeichnisse**: Kleinbuchstaben mit Bindestrich (`kebab-case`), z. B. `sites/dev`, `data-sync-worker`.
 - **Dateien**:
   - HTML-Dateien: `feature-name.page.html`
   - CSS-Dateien: `feature-name.styles.css`
@@ -36,18 +33,18 @@ Diese Architekturübersicht beschreibt die angestrebte Zielstruktur des Reposito
 
 | Ordner                                   | Pflichtinhalte                                                                                  | Optionale Inhalte                                  |
 |------------------------------------------|-------------------------------------------------------------------------------------------------|-----------------------------------------------------|
-| `projects/dev-portal/`                   | `public/` (statische Assets), `src/` (Frontend-Quellcode), `package.json`, `README.md`          | `tests/`, `storybook/`, `docs/`                     |
+| `projects/sites/dev/`                    | `public/` (statische Assets), `src/` (Frontend-Quellcode), `package.json`, `README.md`          | `tests/`, `storybook/`, `docs/`                     |
 | `projects/dev-backend/`                  | `src/`, `tests/`, `package.json` oder `requirements.txt`, `README.md`                           | `migrations/`, `docs/`                              |
-| `projects/services/<service>/`           | `src/`, `public/`, `tests/`, `README.md` (siehe Template), `package.json`/`requirements.txt`    | `docs/`, `infrastructure/`, `local/`                |
-| `projects/services/<service>/src/`       | Fachlogik, Controller, Komponenten gemäß Technologiestack                                       | `__mocks__/`, `__fixtures__/`                       |
-| `projects/services/<service>/public/`    | Statische Assets (Icons, Fonts, Bilder)                                                         | `locales/` für Übersetzungen                        |
-| `projects/services/<service>/tests/`     | Unit-/Integrationstests, Testdaten                                                              | `e2e/` für End-to-End-Tests                         |
+| `projects/sites/dev/services/<service>/` | `src/`, `public/`, `tests/`, `README.md` (siehe Template), `package.json`/`requirements.txt`    | `docs/`, `infrastructure/`, `local/`                |
+| `projects/sites/dev/services/<service>/src/`       | Fachlogik, Controller, Komponenten gemäß Technologiestack                                       | `__mocks__/`, `__fixtures__/`                       |
+| `projects/sites/dev/services/<service>/public/`    | Statische Assets (Icons, Fonts, Bilder)                                                         | `locales/` für Übersetzungen                        |
+| `projects/sites/dev/services/<service>/tests/`     | Unit-/Integrationstests, Testdaten                                                              | `e2e/` für End-to-End-Tests                         |
 | `infra/`                                 | IaC-Definitionen (`terraform/`, `pulumi/`), Compose-Files, Deployment-Pipelines                  | `monitoring/`, `observability/`                     |
 | `scripts/`                               | Wiederverwendbare Skripte, die dienstübergreifend genutzt werden (Shell, Node, Python)          | `README.md` mit Anwendungsbeispielen                |
 
 ## Template für Service-READMEs
 
-Jeder Service innerhalb von `projects/services/` muss eine `README.md` enthalten, die sich an folgendem Template orientiert:
+Jeder Service innerhalb von `projects/sites/dev/services/` muss eine `README.md` enthalten, die sich an folgendem Template orientiert:
 
 ```markdown
 # <Service-Name>
