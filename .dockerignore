@@ -15,4 +15,3 @@ docker/*
 secrets/
 .env*
 scripts/
-!scripts/render-nginx-config.sh
