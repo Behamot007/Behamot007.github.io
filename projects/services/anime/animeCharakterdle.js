@@ -4,16 +4,32 @@ let messages = [];
 let gameOver = false;
 
 async function loadCharacters() {
-  const resp = await fetch('./anime-dataset/dataset/characters.csv');
-  const csvText = await resp.text();
-  const parsed = Papa.parse(csvText, { header: true });
-  const data = parsed.data.filter(c => c && c.character_id_mal);
-  const sorted = data.sort((a, b) => (parseInt(b.popularity_mal_favorites || '0', 10) - parseInt(a.popularity_mal_favorites || '0', 10)));
+  const resp = await fetch('/api/characters', {
+    headers: { Accept: 'application/json' }
+  });
+  if (!resp.ok) {
+    console.error('Konnte Charakterliste nicht laden:', resp.statusText);
+    characters = [];
+    return;
+  }
+  const data = await resp.json();
+  const filtered = Array.isArray(data) ? data.filter(c => c && c.character_id_mal) : [];
+  const sorted = filtered.sort(
+    (a, b) =>
+      parseInt(b.popularity_mal_favorites || '0', 10) -
+      parseInt(a.popularity_mal_favorites || '0', 10)
+  );
   characters = sorted.slice(0, 50);
 }
 
 function startGame() {
-  if (!characters.length) return;
+  if (!characters.length) {
+    appendMessage(
+      'assistant',
+      'Der Charakter-Datensatz konnte nicht geladen werden. Bitte prüfe die Backend-Verbindung.'
+    );
+    return;
+  }
   target = characters[Math.floor(Math.random() * characters.length)];
   messages = [{
     role: 'system',

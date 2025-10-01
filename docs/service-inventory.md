@@ -18,7 +18,7 @@ Dieser Überblick fasst die aktuell ausgelieferten Navigationsgruppen aus `app.j
 
 | Feature | Einstieg (HTML) | Styles | Skripte | Backend/Externals | Hinweise |
 |---------|-----------------|--------|---------|--------------------|----------|
-| Rätsel Chat | `projects/services/anime/animeCharakterdle.html` | Stylesheet `projects/services/anime/styles.css` + kleines Inline-Tuning | `papaparse` (CDN), `dev-portal/shared/openaiClient.js`, `projects/services/anime/animeCharakterdle.js` | Backend: `/api/openai/chat`; lädt Dataset `projects/services/anime/anime-dataset/dataset/characters.csv` lokal | Nutzt KI-Chat basierend auf einem lokalen Charakter-Sample. |
+| Rätsel Chat | `projects/services/anime/animeCharakterdle.html` | Stylesheet `projects/services/anime/styles.css` + kleines Inline-Tuning | `dev-portal/shared/openaiClient.js`, `projects/services/anime/animeCharakterdle.js` | Backend: `/api/openai/chat`, `/api/characters`; Datensätze kommen aus `projects/dev-backend/anime-dataset` | Nutzt KI-Chat basierend auf einem Backend-verwalteten Charakter-Sample. |
 
 ## Konfiguration
 

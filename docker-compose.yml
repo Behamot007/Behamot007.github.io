@@ -16,8 +16,8 @@ services:
 
   backend:
     build:
-      context: ./anime-dataset
-    image: behamot007/anime-backend:latest
+      context: ./projects/dev-backend/anime-dataset
+    image: behamot007/dev-backend:latest
     depends_on:
       - postgres
     environment:
@@ -30,7 +30,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - OPENAI_DEFAULT_MODEL=${OPENAI_DEFAULT_MODEL:-gpt-4o-mini}
     volumes:
-      - ./anime-dataset/dataset:/app/dataset
+      - ./projects/dev-backend/anime-dataset/dataset:/app/dataset
     networks:
       - internal
     expose:
