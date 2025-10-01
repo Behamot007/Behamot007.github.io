@@ -1,7 +1,5 @@
 (() => {
   'use strict';
-  const searchParams = new URLSearchParams(window.location.search);
-  const SHOW_DEV_TOOLS = searchParams.has('dev') || searchParams.has('debug');
 
   const NAV_ITEMS = [
     { type: 'home', id: 'home', label: 'Übersicht' },
@@ -15,7 +13,7 @@
         {
           type: 'config',
           id: 'config-spotify',
-          label: 'Spotify & Hitster',
+          label: 'Spotify-Integration',
           targetCardId: 'config-spotify'
         },
         {
@@ -23,61 +21,20 @@
           id: 'config-openai',
           label: 'OpenAI Token',
           targetCardId: 'config-openai'
-        },
-        {
-          type: 'config',
-          id: 'config-riot',
-          label: 'Riot Games API',
-          targetCardId: 'config-riot'
-        }
-      ]
-    },
-    {
-      type: 'group',
-      id: 'arena',
-      label: 'Arena Tools',
-      items: [
-        {
-          type: 'page',
-          id: 'arena-stats',
-          label: 'Arena Stats',
-          url: 'arena-stats.html',
-          description: 'Analysiere aktuelle Arena-Spiele direkt über die Riot Games API.'
-        },
-        {
-          type: 'page',
-          id: 'arena-analyzer',
-          label: 'Arena Match Analyzer',
-          url: 'arena-match-history.html',
-          description: 'Untersuche exportierte Datensätze aus Arena Stats und entdecke Muster.'
         }
       ]
     },
     {
       type: 'group',
       id: 'hitster',
-      label: 'Hitster & Spotify',
+      label: 'Hitster Digital',
       items: [
-        {
-          type: 'page',
-          id: 'generator',
-          label: 'Playlist → QR Cards',
-          url: 'generator.html',
-          description: 'Wandle Spotify-Playlists in Hitster-Karten mit QR-Codes um.'
-        },
-        {
-          type: 'page',
-          id: 'play-screen',
-          label: 'Play Screen',
-          url: 'gameModeScan.html',
-          description: 'Begleitender Bildschirm für analoge Hitster-Runden.'
-        },
         {
           type: 'page',
           id: 'digital-mode',
           label: 'Digital Mode',
           url: 'gameModeDigital.html',
-          description: 'Vollständig digitales Hitster-Brettspiel für Remote-Runden.'
+          description: 'Vollständig digitales Hitster-Brettspiel mit Spotify-Steuerung und KI-Hilfen.'
         }
       ]
     },
@@ -98,7 +55,7 @@
     {
       type: 'group',
       id: 'anime',
-      label: 'Anime Charakter',
+      label: 'Anime Rätsel',
       items: [
         {
           type: 'page',
@@ -106,84 +63,23 @@
           label: 'Rätsel Chat',
           url: 'animeCharakterdle.html',
           description: 'Errate Anime-Charaktere über das Chat-Interface mit KI-Unterstützung.'
-        },
-        {
-          type: 'page',
-          id: 'anime-dataset',
-          label: 'Dataset Verwaltung',
-          url: 'anime-dataset/public/index.html',
-          description: 'Pflege und erweitere den Charakter-Datensatz direkt im Browser.'
-        },
-        {
-          type: 'page',
-          id: 'anime-dataset-game',
-          label: 'Dataset Guess Game',
-          url: 'anime-dataset/public/game.html',
-          description: 'Nutze den Datensatz für eine schnelle Ratesession ohne Chat.'
         }
       ]
     }
   ];
 
-  if (SHOW_DEV_TOOLS) {
-    NAV_ITEMS.push({
-      type: 'group',
-      id: 'dev',
-      label: 'Dev',
-      items: [
-        {
-          type: 'page',
-          id: 'anidle',
-          label: 'Anidle',
-          url: 'anidle.html',
-          description: 'Idle-Game-Experiment für kurze Pausen.'
-        },
-        {
-          type: 'page',
-          id: 'anidle-debug',
-          label: 'Anidle Debug',
-          url: 'anidleDebug.html',
-          description: 'Debug-Ansicht mit tieferen Einsichten in Anidle-Läufe.'
-        },
-        {
-          type: 'page',
-          id: 'legacy-config',
-          label: 'Standalone Konfiguration',
-          url: 'config.html',
-          description: 'Separate Konfigurationsoberfläche aus einer frühen Toolkit-Version.'
-        },
-        {
-          type: 'page',
-          id: 'debug-log',
-          label: 'Debug Log',
-          url: 'debugLog.html',
-          description: 'Zeige gespeicherte Debug-Informationen direkt im Browser an.'
-        }
-      ]
-    });
-  }
-
-  const EXTERNAL_LINKS = [
-    {
-      id: 'contact',
-      label: 'Kontakt',
-      url: 'https://github.com/Behamot007/Behamot007.github.io/discussions',
-      target: '_blank',
-      rel: 'noopener noreferrer',
-      title: 'Feedback & Verbesserungen auf GitHub diskutieren'
-    }
-  ];
+  const EXTERNAL_LINKS = [];
 
   const CONFIG_SECTIONS = [
     {
       id: 'config-spotify',
-      title: 'Spotify & Hitster',
-      description: 'Die Spotify-Zugangsdaten werden vollständig serverseitig verwaltet und stehen allen Tools automatisch zur Verfügung.',
+      title: 'Spotify-Integration',
+      description: 'Die Spotify-Zugangsdaten werden serverseitig verwaltet und stehen dem Digital Mode automatisch zur Verfügung.',
       platform: {
         name: 'Spotify Developer Dashboard',
         url: 'https://developer.spotify.com/dashboard/'
       },
-      usage: ['Playlist → QR Cards', 'Play Screen', 'Digital Mode'],
+      usage: ['Digital Mode'],
       managed: {
         message: 'Die Konfiguration erfolgt über die Backend-.env und ist im Frontend nicht sichtbar.',
         async loadStatus() {
@@ -218,7 +114,7 @@
         name: 'OpenAI Platform',
         url: 'https://platform.openai.com/account/api-keys'
       },
-      usage: ['Anime Charakter Rätsel', 'Anime Dataset Tools', 'KI-gestützte Kassenzettel'],
+      usage: ['Anime Charakter Rätsel', 'Kostenkalkulation (Bon-Scan)', 'Digital Mode (KI-Hinweise)'],
       managed: {
         message: 'Der Schlüssel ist nicht im Browser gespeichert und bleibt verborgen.',
         async loadStatus() {
@@ -238,26 +134,6 @@
           }
         }
       }
-    },
-    {
-      id: 'config-riot',
-      title: 'Riot Games API',
-      description: 'API-Key für League of Legends – notwendig für Arena Stats. Wird automatisch in das Tool übernommen.',
-      platform: {
-        name: 'Riot Developer Portal',
-        url: 'https://developer.riotgames.com/'
-      },
-      usage: ['Arena Stats', 'Arena Match Analyzer'],
-      fields: [
-        {
-          id: 'riot-api',
-          label: 'Riot API-Key',
-          storageKey: 'RIOT_API_KEY',
-          type: 'password',
-          placeholder: 'RGAPI-xxxx-xxxx-xxxx',
-          autocomplete: 'off'
-        }
-      ]
     }
   ];
 
