@@ -37,10 +37,6 @@ server {
     gzip on;
     gzip_types text/plain text/css application/json application/javascript application/octet-stream image/svg+xml;
 
-    location /assets/ {
-        try_files $uri $uri/ =404;
-    }
-
     location / {
         try_files $uri $uri/ /index.html;
     }
