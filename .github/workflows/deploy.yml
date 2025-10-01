@@ -20,6 +20,9 @@ jobs:
         if: hashFiles('package.json') != ''
         run: npm run build
 
+      - name: Render Nginx config
+        run: scripts/render-nginx-config.sh dev.behamot.de www.behamot.de
+
       - name: Determine deploy path
         id: deploy-path
         run: |
