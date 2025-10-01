@@ -85,94 +85,6 @@ if [[ "${GENERATE_HOST_NGINX}" == "true" ]]; then
   mkdir -p "$(dirname "${NGINX_ENABLED_PATH}")"
   mkdir -p "$CERTBOT_WEBROOT"
 
-  DEV_CERT_DIR="${LE_LIVE_ROOT}/${DEV_CERT_NAME}"
-  WWW_CERT_DIR="${LE_LIVE_ROOT}/${WWW_CERT_NAME}"
-
-  DEV_HTTPS_BLOCK=""
-  if [[ -f "${DEV_CERT_DIR}/fullchain.pem" && -f "${DEV_CERT_DIR}/privkey.pem" ]]; then
-    DEV_HTTPS_BLOCK=$(cat <<EOF
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name ${DEV_DOMAIN};
-
-    ssl_certificate     ${DEV_CERT_DIR}/fullchain.pem;
-    ssl_certificate_key ${DEV_CERT_DIR}/privkey.pem;
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
-
-    location ^~ /.well-known/acme-challenge/ {
-        root ${CERTBOT_WEBROOT};
-        default_type "text/plain";
-        try_files \$uri =404;
-    }
-
-    location / {
-        proxy_pass http://behamot_frontend;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection \$connection_upgrade;
-    }
-
-    location /api/ {
-        proxy_pass http://behamot_backend;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection \$connection_upgrade;
-    }
-}
-EOF
-)
-  else
-    log "Warnung: Zertifikate für ${DEV_DOMAIN} nicht gefunden – HTTPS-Block wird übersprungen"
-    DEV_HTTPS_BLOCK="# HTTPS-Konfiguration für ${DEV_DOMAIN} ausgelassen (Zertifikate fehlen)"
-  fi
-
-  WWW_HTTPS_BLOCK=""
-  if [[ -f "${WWW_CERT_DIR}/fullchain.pem" && -f "${WWW_CERT_DIR}/privkey.pem" ]]; then
-    WWW_HTTPS_BLOCK=$(cat <<EOF
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name ${WWW_DOMAIN};
-
-    ssl_certificate     ${WWW_CERT_DIR}/fullchain.pem;
-    ssl_certificate_key ${WWW_CERT_DIR}/privkey.pem;
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
-
-    location ^~ /.well-known/acme-challenge/ {
-        root ${CERTBOT_WEBROOT};
-        default_type "text/plain";
-        try_files \$uri =404;
-    }
-
-    location / {
-        proxy_pass http://behamot_frontend;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection \$connection_upgrade;
-    }
-}
-EOF
-)
-  else
-    log "Warnung: Zertifikate für ${WWW_DOMAIN} nicht gefunden – HTTPS-Block wird übersprungen"
-    WWW_HTTPS_BLOCK="# HTTPS-Konfiguration für ${WWW_DOMAIN} ausgelassen (Zertifikate fehlen)"
-  fi
-
   cat > "$NGINX_CONFIG_PATH" <<EOF_NGINX
 # Automatisch erzeugt durch server/scripts/startup.sh am $(date -Iseconds)
 # leitet behamot.de Domains auf die Docker-Services weiter
@@ -206,9 +118,72 @@ server {
     }
 }
 
-${DEV_HTTPS_BLOCK}
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name ${DEV_DOMAIN};
 
-${WWW_HTTPS_BLOCK}
+    ssl_certificate     ${LE_LIVE_ROOT}/${DEV_CERT_NAME}/fullchain.pem;
+    ssl_certificate_key ${LE_LIVE_ROOT}/${DEV_CERT_NAME}/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root ${CERTBOT_WEBROOT};
+        default_type "text/plain";
+        try_files \$uri =404;
+    }
+
+    location / {
+        proxy_pass http://behamot_frontend;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection \$connection_upgrade;
+    }
+
+    location /api/ {
+        proxy_pass http://behamot_backend;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection \$connection_upgrade;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name ${WWW_DOMAIN};
+
+    ssl_certificate     ${LE_LIVE_ROOT}/${WWW_CERT_NAME}/fullchain.pem;
+    ssl_certificate_key ${LE_LIVE_ROOT}/${WWW_CERT_NAME}/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    location ^~ /.well-known/acme-challenge/ {
+        root ${CERTBOT_WEBROOT};
+        default_type "text/plain";
+        try_files \$uri =404;
+    }
+
+    location / {
+        proxy_pass http://behamot_frontend;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection \$connection_upgrade;
+    }
+}
 EOF_NGINX
 
   ln -sf "$NGINX_CONFIG_PATH" "$NGINX_ENABLED_PATH"
