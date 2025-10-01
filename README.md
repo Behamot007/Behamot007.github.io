@@ -15,6 +15,13 @@ Das Repository ist in mehrere Domänen gegliedert:
 
 Eine vollständige Zielstruktur inklusive Naming-Konventionen und README-Template für Services ist in [`docs/architecture.md`](docs/architecture.md) dokumentiert.
 
+## Domains & Routing
+
+- **`dev.behamot.de`** zeigt auf das zentrale Single-Page-Frontend unter `projects/sites/dev/`. Die Seite wird innerhalb des Nginx-Containers unter `/usr/share/nginx/html/dev` ausgeliefert und leitet `/api/*`-Aufrufe an das Backend weiter.
+- **`www.behamot.de`** stellt die statische Marketing-Seite aus `projects/sites/www/` bereit. Inhalte werden aus dem Unterordner `/usr/share/nginx/html/www` bedient.
+
+Beide Virtual Hosts werden aus der Vorlage [`docker/nginx/templates/dev_www.conf.tpl`](docker/nginx/templates/dev_www.conf.tpl) erzeugt. Das Skript [`scripts/render-nginx-config.sh`](scripts/render-nginx-config.sh) ersetzt die Platzhalter (`{{DEV_SERVER_NAME}}`, `{{WWW_SERVER_NAME}}`) und rendert die fertige `docker/nginx/default.conf`. Anpassungen an Domains oder Pfadlayout erfolgen somit ausschließlich über das Template und das Render-Skript.
+
 ## Verzeichnisstruktur
 
 - `projects/dev-backend/anime-dataset/`: Node.js-Backend-Service für Spotify-/OpenAI-Bridging sowie den Anime-Datensatz (ohne Frontend-Verwaltung).

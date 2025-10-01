@@ -12,8 +12,9 @@ Diese Architekturübersicht beschreibt die angestrebte Zielstruktur des Reposito
 ├── projects/
 │   ├── dev-backend/              # Gemeinsames Backend für Auth, Nutzer- und Tooling-APIs
 │   └── sites/
-│       └── dev/                  # Zentrales Frontend (Marketing, Dashboards)
-│           └── services/         # Fachservices (Arena, Hitster, Anime, Planning)
+│       ├── dev/                  # Zentrales Dev-Portal (SPA, Dashboards)
+│       │   └── services/         # Fachservices (Arena, Hitster, Anime, Planning)
+│       └── www/                  # Statisches Marketing-Frontend
 ├── infra/                        # Infrastruktur, IaC, Deployment-Skripte
 └── scripts/                      # Wiederverwendbare Hilfsskripte (CI, Wartung)
 ```
@@ -33,14 +34,18 @@ Diese Architekturübersicht beschreibt die angestrebte Zielstruktur des Reposito
 
 | Ordner                                   | Pflichtinhalte                                                                                  | Optionale Inhalte                                  |
 |------------------------------------------|-------------------------------------------------------------------------------------------------|-----------------------------------------------------|
-| `projects/sites/dev/`                    | `public/` (statische Assets), `src/` (Frontend-Quellcode), `package.json`, `README.md`          | `tests/`, `storybook/`, `docs/`                     |
+| `projects/sites/dev/`                    | SPA-Einstieg (`index.html`, `app.js`), `shared/`, `services/`, `README.md`          | `tests/`, `storybook/`, `docs/`                     |
+| `projects/sites/www/`                    | Statische Landing-Page (`index.html`, `styles.css`), `README.md`                    | Zusätzliche Assets (`/assets`), Lokalisierungen     |
 | `projects/dev-backend/`                  | `src/`, `tests/`, `package.json` oder `requirements.txt`, `README.md`                           | `migrations/`, `docs/`                              |
 | `projects/sites/dev/services/<service>/` | `src/`, `public/`, `tests/`, `README.md` (siehe Template), `package.json`/`requirements.txt`    | `docs/`, `infrastructure/`, `local/`                |
 | `projects/sites/dev/services/<service>/src/`       | Fachlogik, Controller, Komponenten gemäß Technologiestack                                       | `__mocks__/`, `__fixtures__/`                       |
 | `projects/sites/dev/services/<service>/public/`    | Statische Assets (Icons, Fonts, Bilder)                                                         | `locales/` für Übersetzungen                        |
 | `projects/sites/dev/services/<service>/tests/`     | Unit-/Integrationstests, Testdaten                                                              | `e2e/` für End-to-End-Tests                         |
 | `infra/`                                 | IaC-Definitionen (`terraform/`, `pulumi/`), Compose-Files, Deployment-Pipelines                  | `monitoring/`, `observability/`                     |
-| `scripts/`                               | Wiederverwendbare Skripte, die dienstübergreifend genutzt werden (Shell, Node, Python)          | `README.md` mit Anwendungsbeispielen                |
+| `scripts/`                               | Wiederverwendbare Skripte, die dienstübergreifend genutzt werden (Shell, Node, Python); insbesondere `render-nginx-config.sh` zur Domain-Konfiguration | `README.md` mit Anwendungsbeispielen                |
+| `docker/nginx/templates/`                | Template-Dateien für Virtual Hosts (`dev`/`www`), referenziert von `render-nginx-config.sh`      | Weitere Host-Templates, Kommentare zur Nutzung      |
+
+Die Domains `dev.*` und `www.*` werden zentral über das Template `docker/nginx/templates/dev_www.conf.tpl` gesteuert. Änderungen am Routing erfolgen ausschließlich über dieses Template sowie das Render-Skript aus `scripts/`.
 
 ## Template für Service-READMEs
 
