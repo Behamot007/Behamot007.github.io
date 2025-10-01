@@ -256,22 +256,141 @@ p {
   transform: translateY(-6px) rotate(-45deg);
 }
 
-.hero__inner {
+/* Royal spotlight */
+.royal-spotlight {
+  position: relative;
+  overflow: hidden;
+  padding-top: clamp(5rem, 9vw, 8rem);
+  padding-bottom: clamp(4rem, 8vw, 6.5rem);
+}
+
+.royal-spotlight::before,
+.royal-spotlight::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.55;
+}
+
+.royal-spotlight::before {
+  background: radial-gradient(circle at 20% 20%, rgba(217, 178, 107, 0.3), transparent 55%),
+    radial-gradient(circle at 85% 65%, rgba(88, 64, 168, 0.28), transparent 60%);
+}
+
+.royal-spotlight::after {
+  background: radial-gradient(circle at 50% 110%, rgba(27, 21, 46, 0.85), transparent 70%);
+}
+
+.royal-spotlight__inner {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(2rem, 6vw, 4.5rem);
   align-items: center;
-  gap: clamp(2rem, 5vw, 4.5rem);
 }
 
-.hero__content p {
-  font-size: 1.05rem;
+.royal-spotlight__content {
+  display: grid;
+  gap: 1.6rem;
+  align-content: start;
 }
 
-.hero__actions {
+.royal-spotlight__content p {
+  font-size: 1.08rem;
+}
+
+.royal-spotlight__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
-  margin: 2rem 0 2.5rem;
+}
+
+.royal-spotlight__highlights {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.royal-spotlight__highlights li {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(217, 178, 107, 0.28);
+  background: linear-gradient(145deg, rgba(24, 19, 38, 0.92), rgba(12, 8, 24, 0.88));
+  box-shadow: inset 0 1px 0 rgba(217, 178, 107, 0.15), 0 24px 45px rgba(7, 5, 16, 0.55);
+}
+
+.royal-spotlight__highlights span {
+  font-size: 0.78rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(244, 240, 255, 0.6);
+}
+
+.royal-spotlight__highlights strong {
+  font-family: "Playfair Display", serif;
+  font-size: 1.05rem;
+  color: var(--accent-strong);
+  line-height: 1.35;
+}
+
+.royal-spotlight__preview {
+  display: grid;
+  gap: 1.4rem;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  position: relative;
+}
+
+.preview-card {
+  position: relative;
+  margin: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid rgba(217, 178, 107, 0.35);
+  background: linear-gradient(150deg, rgba(18, 14, 32, 0.92), rgba(9, 6, 18, 0.88));
+  box-shadow: 0 38px 68px rgba(7, 5, 16, 0.5);
+}
+
+.preview-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.preview-card figcaption {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 0.8rem 1.1rem;
+  font-size: 0.85rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(244, 240, 255, 0.75);
+  background: linear-gradient(180deg, transparent, rgba(10, 7, 18, 0.92));
+}
+
+.preview-card--primary {
+  grid-column: span 4;
+  min-height: 320px;
+}
+
+.preview-card--secondary {
+  grid-column: 4 / span 3;
+  min-height: 220px;
+  transform: translateY(12%);
+}
+
+.preview-card--emotes {
+  grid-column: 2 / span 2;
+  width: min(200px, 80%);
+  justify-self: center;
+  transform: translateY(-18%);
+  background: radial-gradient(circle at 50% 30%, rgba(217, 178, 107, 0.25), rgba(14, 10, 26, 0.92));
 }
 
 .button {
@@ -308,82 +427,6 @@ p {
 .button--ghost:hover,
 .button--ghost:focus-visible {
   background: rgba(217, 178, 107, 0.22);
-}
-
-.hero__stats {
-  display: grid;
-  gap: 1.5rem;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  margin: 0;
-}
-
-.hero__stats dt {
-  font-family: "Playfair Display", serif;
-  font-size: 1.1rem;
-  color: var(--accent-strong);
-  margin-bottom: 0.4rem;
-}
-
-.hero__stats dd {
-  margin: 0;
-  color: var(--text-soft);
-  font-size: 0.95rem;
-}
-
-.hero__visual {
-  display: flex;
-  justify-content: center;
-}
-
-.portrait-frame {
-  position: relative;
-  width: min(520px, 90%);
-}
-
-.portrait-frame__base {
-  width: 100%;
-  filter: drop-shadow(0 28px 50px rgba(12, 9, 20, 0.75));
-}
-
-.portrait-frame__inner {
-  position: absolute;
-  inset: 11% 10%;
-  border-radius: 32px;
-  padding: 1.6rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1.5rem;
-}
-
-.portrait-frame__character {
-  width: 78%;
-  mix-blend-mode: screen;
-  filter: drop-shadow(0 24px 38px rgba(17, 11, 32, 0.7));
-}
-
-.portrait-frame__expressions {
-  display: flex;
-  gap: 1rem;
-  justify-content: center;
-  width: 100%;
-}
-
-.portrait-frame__expressions figure {
-  margin: 0;
-  text-align: center;
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--accent-strong);
-}
-
-.portrait-frame__expressions img {
-  width: 70px;
-  height: 70px;
-  object-fit: contain;
-  margin-bottom: 0.4rem;
 }
 
 .about__inner .highlight-grid {
@@ -463,6 +506,48 @@ p {
   display: flex;
   flex-direction: column;
   gap: 1.2rem;
+}
+
+.twitter-embed,
+.tiktok-embed {
+  display: grid;
+  gap: 1rem;
+}
+
+.twitter-embed iframe,
+.tiktok-embed iframe {
+  width: 100%;
+  border: none;
+  border-radius: var(--radius-md);
+  background: #000;
+  min-height: 420px;
+  box-shadow: inset 0 0 0 1px rgba(217, 178, 107, 0.2);
+}
+
+.tiktok-embed blockquote,
+.tiktok-embed iframe {
+  min-height: 520px;
+  margin: 0;
+  padding: 0;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(217, 178, 107, 0.2);
+  background: rgba(16, 12, 30, 0.78);
+}
+
+.twitter-embed__fallback {
+  font-size: 0.85rem;
+  color: rgba(244, 240, 255, 0.65);
+}
+
+.twitter-embed__fallback a {
+  color: var(--accent-strong);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+}
+
+.tiktok-embed__actions {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .assets__inner {
@@ -775,17 +860,33 @@ p {
 }
 
 @media (max-width: 960px) {
-  .hero__inner {
+  .royal-spotlight__inner {
     grid-template-columns: 1fr;
     text-align: center;
   }
 
-  .hero__actions {
+  .royal-spotlight__actions {
     justify-content: center;
   }
 
-  .portrait-frame__inner {
-    inset: 12% 14%;
+  .royal-spotlight__highlights li {
+    text-align: left;
+  }
+
+  .royal-spotlight__preview {
+    margin-top: 2.5rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .preview-card--primary {
+    grid-column: span 4;
+  }
+
+  .preview-card--secondary,
+  .preview-card--emotes {
+    grid-column: span 2;
+    transform: translateY(0);
+    justify-self: center;
   }
 
   .stream__player {
@@ -829,12 +930,17 @@ p {
     padding: 3.5rem 0;
   }
 
-  .hero__stats {
-    grid-template-columns: 1fr;
+  .twitter-embed,
+  .tiktok-embed blockquote {
+    min-height: 360px;
   }
 
-  .portrait-frame__expressions {
-    flex-wrap: wrap;
+  .royal-spotlight__highlights {
+    gap: 0.75rem;
+  }
+
+  .royal-spotlight__highlights strong {
+    font-size: 1rem;
   }
 
   .stream__player iframe {

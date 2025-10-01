@@ -18,6 +18,7 @@
     <script defer src="./script.js"></script>
     <script async src="https://player.twitch.tv/js/embed/v1.js"></script>
     <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+    <script async src="https://www.tiktok.com/embed.js"></script>
   </head>
   <body>
     <div class="background-lights" aria-hidden="true">
@@ -26,7 +27,7 @@
     </div>
     <header class="site-header" data-nav-state="closed">
       <div class="container header__inner">
-        <a class="brand" href="#hero" aria-label="Behamot VTuber Start">
+        <a class="brand" href="#spotlight" aria-label="Behamot VTuber Start">
           <img src="./assets/crest-divider.svg" alt="" class="brand__mark" />
           <span class="brand__text">Behamot</span>
           <span class="brand__role">VTuber</span>
@@ -36,7 +37,7 @@
           <span class="nav-toggle__icon" aria-hidden="true"></span>
         </button>
         <nav id="siteNav" class="primary-nav" aria-label="Hauptnavigation">
-          <a href="#hero">Debut</a>
+          <a href="#spotlight">Spotlight</a>
           <a href="#about">Profil</a>
           <a href="#stream">Livestream</a>
           <a href="#socials">Socials</a>
@@ -47,55 +48,53 @@
     </header>
 
     <main>
-      <section id="hero" class="section hero" aria-labelledby="heroTitle">
-        <div class="container hero__inner">
-          <div class="hero__content">
-            <span class="eyebrow">Noble Debut</span>
-            <h1 id="heroTitle">Behamot – Aristokratischer VTuber aus dem digitalen Hofstaat</h1>
+      <section id="spotlight" class="section royal-spotlight" aria-labelledby="spotlightTitle">
+        <div class="container royal-spotlight__inner">
+          <div class="royal-spotlight__content">
+            <span class="section__eyebrow">Royal Spotlight</span>
+            <h1 id="spotlightTitle">Crown Collection Drop – Assets für Streams & Socials</h1>
             <p>
-              Willkommen in meinem virtuellen Salon. Ich streame Strategie, Storytelling und kunstvolle Collabs mit einer Prise
-              höfischer Ironie. Komm vorbei, wenn Glanz und Memes aufeinandertreffen.
+              Die neueste Kollektion bündelt Stream-Overlays, Emotes und Banner in einem abgestimmten Barock-Sci-Fi Look.
+              Hol dir das Paket, zeige deine Noblesse auf Twitch, TikTok und YouTube – inklusive saisonaler Artworks.
             </p>
-            <div class="hero__actions">
-              <a class="button button--primary" href="https://www.twitch.tv/behamotvt" target="_blank" rel="noreferrer">Zum Twitch-Kanal</a>
-              <a class="button button--ghost" href="#stream">Live ansehen</a>
+            <div class="royal-spotlight__actions">
+              <a
+                class="button button--primary"
+                href="https://drive.google.com/drive/folders/13bQuGM1Sf5HuVvfP1qJvt1qJ8JaXBcFY?usp=share_link"
+                target="_blank"
+                rel="noreferrer"
+                >Assets herunterladen</a
+              >
+              <a class="button button--ghost" href="#assets">Mehr Visuals sehen</a>
             </div>
-            <dl class="hero__stats" aria-label="Highlights">
-              <div>
-                <dt>Streams</dt>
-                <dd>Story-RPGs · Strategie · Collabs</dd>
-              </div>
-              <div>
-                <dt>Signature</dt>
-                <dd>Eleganz, Wortwitz, orchestrale Playlists</dd>
-              </div>
-              <div>
-                <dt>Community</dt>
-                <dd>Nobles & Nightingales auf Discord</dd>
-              </div>
-            </dl>
+            <ul class="royal-spotlight__highlights" role="list" aria-label="Inhalt der Crown Collection">
+              <li>
+                <span>Overlay Suite</span>
+                <strong>Panels, Offline Screen & Alerts passend zum violett-goldenen Branding.</strong>
+              </li>
+              <li>
+                <span>Charakter Fokus</span>
+                <strong>Char Sheet + Emote-Set für Discord, Twitch und TikTok Shorts.</strong>
+              </li>
+              <li>
+                <span>Community Use</span>
+                <strong>Freigegeben für Fan-Content – bitte Credit an @BehamotVT.</strong>
+              </li>
+            </ul>
           </div>
-          <div class="hero__visual">
-            <div class="portrait-frame">
-              <img src="./assets/hero-frame.svg" alt="Illustration eines ornamentalen Fensters" class="portrait-frame__base" />
-              <div class="portrait-frame__inner">
-                <img src="./assets/portrait-silhouette.svg" alt="Silhouette von Behamot" class="portrait-frame__character" />
-                <div class="portrait-frame__expressions">
-                  <figure>
-                    <img src="./assets/expression-calm.svg" alt="Calm expression" />
-                    <figcaption>Calm</figcaption>
-                  </figure>
-                  <figure>
-                    <img src="./assets/expression-charm.svg" alt="Charming expression" />
-                    <figcaption>Charm</figcaption>
-                  </figure>
-                  <figure>
-                    <img src="./assets/expression-feral.svg" alt="Fierce expression" />
-                    <figcaption>Feral</figcaption>
-                  </figure>
-                </div>
-              </div>
-            </div>
+          <div class="royal-spotlight__preview" aria-label="Visual Vorschau der Crown Collection">
+            <figure class="preview-card preview-card--primary">
+              <img src="../../assets/CharakterSheet.jpg" alt="Charakter Sheet Vorschau" loading="lazy" />
+              <figcaption>Charakter Sheet Highlight</figcaption>
+            </figure>
+            <figure class="preview-card preview-card--secondary">
+              <img src="../../assets/banner/Bannerfruehling.jpeg" alt="Saisonales Banner" loading="lazy" />
+              <figcaption>Season Banner</figcaption>
+            </figure>
+            <figure class="preview-card preview-card--emotes">
+              <img src="../../assets/Emotes/WOOOW.png" alt="Emote Vorschau" loading="lazy" />
+              <figcaption>Emote Sneak Peek</figcaption>
+            </figure>
           </div>
         </div>
       </section>
@@ -172,15 +171,52 @@
                   <p>Pinned & aktuell von @BehamotVT</p>
                 </div>
               </div>
-              <a
-                class="twitter-timeline"
-                data-theme="dark"
-                data-height="420"
-                data-tweet-limit="2"
-                data-chrome="noheader nofooter noborders transparent"
-                href="https://twitter.com/BehamotVT"
-              >Tweets by BehamotVT</a>
+            <div class="twitter-embed" data-twitter-feed>
+                <a
+                  class="twitter-timeline"
+                  data-theme="dark"
+                  data-lang="de"
+                  data-tweet-limit="1"
+                  data-chrome="noheader nofooter noborders transparent"
+                  href="https://twitter.com/BehamotVT"
+                  >Tweets von @BehamotVT</a
+                >
+                <p class="twitter-embed__fallback">
+                  Kannst du den Feed nicht sehen? <a href="https://twitter.com/BehamotVT" target="_blank" rel="noreferrer"
+                    >Hier geht es direkt zum aktuellen Tweet.</a
+                  >
+                </p>
+              </div>
             </article>
+            <article class="social-card social-card--tiktok">
+              <div class="social-card__header">
+                <img src="./assets/ornament-gilded.svg" alt="" aria-hidden="true" />
+                <div>
+                  <h3>TikTok</h3>
+                  <p>Letzter Kurzclip von @BehamotVT</p>
+                </div>
+              </div>
+              <div class="tiktok-embed" data-tiktok-latest>
+                <blockquote
+                  class="tiktok-embed"
+                  cite="https://www.tiktok.com/@behamotvt"
+                  data-unique-id="behamotvt"
+                  data-embed-from="oembed"
+                  style="max-width: 420px"
+                >
+                  <section>
+                    <a target="_blank" rel="noreferrer" href="https://www.tiktok.com/@behamotvt">Letzter TikTok</a>
+                  </section>
+                </blockquote>
+                <div class="tiktok-embed__actions">
+                  <a class="button button--ghost" href="https://www.tiktok.com/@behamotvt" target="_blank" rel="noreferrer"
+                    >Profil auf TikTok öffnen</a
+                  >
+                </div>
+                <p class="tiktok-embed__fallback">
+                  Kein Clip geladen? Folge direkt auf TikTok: <a href="https://www.tiktok.com/@behamotvt" target="_blank" rel="noreferrer">@behamotvt</a>.
+                </p>
+              </div>
             <article class="social-card social-card--youtube">
               <div class="social-card__header">
                 <img src="./assets/ornament-gilded.svg" alt="" aria-hidden="true" />
@@ -350,7 +386,7 @@
           </div>
         </div>
         <nav aria-label="Footer Navigation">
-          <a href="#hero">Debut</a>
+          <a href="#spotlight">Spotlight</a>
           <a href="#about">Profil</a>
           <a href="#stream">Livestream</a>
           <a href="#socials">Socials</a>
