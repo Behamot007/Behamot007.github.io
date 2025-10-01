@@ -14,11 +14,6 @@
     <p id="spotifyStatus">Lade Status...</p>
     <h3>OpenAI</h3>
     <p id="openAiStatus">Lade Status...</p>
-    <label>
-      Riot API-Key:
-      <input type="password" id="riotApiKey" placeholder="RGAPI-xxxx-xxxx-xxxx">
-    </label>
-    <button onclick="saveCredentials()">Speichern</button>
   </div>
   <script src="spotify.js"></script>
   <script src="openaiClient.js"></script>
@@ -26,7 +21,6 @@
   <script src="navigation.js"></script>
   <script>
     buildNavigation('nav');
-    document.getElementById('riotApiKey').value = localStorage.getItem('RIOT_API_KEY') || '';
     const spotifyStatus = document.getElementById('spotifyStatus');
     const openAiStatus = document.getElementById('openAiStatus');
 
@@ -71,11 +65,6 @@
 
     updateSpotifyStatus();
     updateOpenAiStatus();
-
-    function saveCredentials() {
-      localStorage.setItem('RIOT_API_KEY', document.getElementById('riotApiKey').value);
-      alert('Credentials gespeichert!');
-    }
   </script>
 </body>
 </html>

@@ -1,10 +1,12 @@
 # Container Deployment Guide
 
-Diese Dokumentation beschreibt, wie das Projekt mithilfe von Docker-Containern bereitgestellt wird. Der Stack besteht aus einem Node.js-Backend ("anime-dataset" Service) und einem statischen Frontend, das via nginx ausgeliefert wird. Die Container werden mit `docker compose` orchestriert.
+Diese Dokumentation beschreibt, wie das Projekt mithilfe von Docker-Containern bereitgestellt wird. Der Stack besteht aus einem Node.js-Backend (Toolkit-API-Service auf Basis des ehemaligen "anime-dataset" Projekts) und einem statischen Frontend, das via nginx ausgeliefert wird. Die Container werden mit `docker compose` orchestriert.
+
+> **Hinweis:** Alle Riot-/Arena-Tools, der Spotify Play Screen, der Playlist-zu-QR-Generator sowie Debug- und Dataset-Verwaltungen wurden entfernt. Übrig bleiben der Digital Mode, die Kostenkalkulation und der Anime Rätsel Chat.
 
 ## Verzeichnisstruktur
 
-- `anime-dataset/`: Node.js-Backend-Service inklusive API und Datensatz-Verwaltung.
+- `anime-dataset/`: Node.js-Backend-Service für Spotify-/OpenAI-Bridging sowie den Anime-Datensatz (ohne Frontend-Verwaltung).
 - `Dockerfile.frontend`: Build-Anleitung für das nginx-Frontend.
 - `anime-dataset/Dockerfile`: Build-Anleitung für den Backend-Service.
 - `docker-compose.yml`: Definition der Services, Netzwerke und Volumes.
