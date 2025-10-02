@@ -431,6 +431,45 @@ if (galleryItems.length > 0 && galleryLightbox) {
   });
 }
 
+const galleryCarousels = document.querySelectorAll('[data-gallery-carousel]');
+if (galleryCarousels.length > 0) {
+  galleryCarousels.forEach((carousel) => {
+    const track = carousel.querySelector('[data-gallery-track]');
+    if (!track) return;
+    const prevButton = carousel.querySelector('[data-gallery-carousel-prev]');
+    const nextButton = carousel.querySelector('[data-gallery-carousel-next]');
+
+    const scrollByAmount = () => track.clientWidth * 0.8;
+
+    const updateDisabled = () => {
+      const maxScrollLeft = Math.max(0, track.scrollWidth - track.clientWidth);
+      const atStart = track.scrollLeft <= 1;
+      const atEnd = track.scrollLeft >= maxScrollLeft - 1;
+      if (prevButton) prevButton.disabled = atStart;
+      if (nextButton) nextButton.disabled = atEnd;
+    };
+
+    let scrollFrame;
+    const handleScroll = () => {
+      if (scrollFrame) cancelAnimationFrame(scrollFrame);
+      scrollFrame = requestAnimationFrame(updateDisabled);
+    };
+
+    prevButton?.addEventListener('click', () => {
+      track.scrollBy({ left: -scrollByAmount(), behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+    });
+
+    nextButton?.addEventListener('click', () => {
+      track.scrollBy({ left: scrollByAmount(), behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+    });
+
+    track.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll, { passive: true });
+
+    updateDisabled();
+  });
+}
+
 // Twitch status placeholder (optional manual toggle)
 const twitchStatus = document.querySelector('.twitch-status');
 if (twitchStatus) {
