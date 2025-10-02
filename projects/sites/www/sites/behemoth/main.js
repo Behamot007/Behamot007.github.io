@@ -306,6 +306,10 @@ loadYouTube();
 
 // Gallery lightbox handling
 if (galleryItems.length > 0 && galleryLightbox) {
+  if (galleryLightbox.parentElement && galleryLightbox.parentElement !== document.body) {
+    document.body.appendChild(galleryLightbox);
+  }
+  galleryLightbox.hidden = true;
   const lightboxImage = galleryLightbox.querySelector('[data-gallery-image]');
   const lightboxCaption = galleryLightbox.querySelector('[data-gallery-caption]');
   const closeControls = galleryLightbox.querySelectorAll('[data-gallery-close]');
@@ -452,7 +456,7 @@ if (galleryCarousels.length > 0) {
       }
     };
 
-    const updateDisabled = () => {
+    const updateNavState = () => {
       const maxScrollLeft = Math.max(0, track.scrollWidth - track.clientWidth);
       const canScroll = maxScrollLeft > 1;
 
@@ -460,49 +464,58 @@ if (galleryCarousels.length > 0) {
       setNavAvailability(prevButton, canScroll);
       setNavAvailability(nextButton, canScroll);
 
-      if (prevButton) prevButton.disabled = !canScroll;
-      if (nextButton) nextButton.disabled = !canScroll;
-
       if (!canScroll) {
         if (track.scrollLeft !== 0) {
           track.scrollLeft = 0;
         }
+        if (prevButton) prevButton.disabled = true;
+        if (nextButton) nextButton.disabled = true;
         return;
       }
 
-      const atStart = track.scrollLeft <= 1;
-      const atEnd = track.scrollLeft >= maxScrollLeft - 1;
-      if (prevButton) prevButton.disabled = atStart;
-      if (nextButton) nextButton.disabled = atEnd;
+      if (prevButton) prevButton.disabled = false;
+      if (nextButton) nextButton.disabled = false;
     };
 
     let scrollFrame;
     const handleScroll = () => {
       if (scrollFrame) cancelAnimationFrame(scrollFrame);
-      scrollFrame = requestAnimationFrame(updateDisabled);
+      scrollFrame = requestAnimationFrame(updateNavState);
     };
 
     prevButton?.addEventListener('click', () => {
-      track.scrollBy({ left: -scrollByAmount(), behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+      const maxScrollLeft = Math.max(0, track.scrollWidth - track.clientWidth);
+      if (maxScrollLeft <= 1) return;
+      if (track.scrollLeft <= 1) {
+        track.scrollTo({ left: maxScrollLeft, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+      } else {
+        track.scrollBy({ left: -scrollByAmount(), behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+      }
     });
 
     nextButton?.addEventListener('click', () => {
-      track.scrollBy({ left: scrollByAmount(), behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+      const maxScrollLeft = Math.max(0, track.scrollWidth - track.clientWidth);
+      if (maxScrollLeft <= 1) return;
+      if (track.scrollLeft >= maxScrollLeft - 1) {
+        track.scrollTo({ left: 0, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+      } else {
+        track.scrollBy({ left: scrollByAmount(), behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+      }
     });
 
     track.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('resize', handleScroll, { passive: true });
 
     if ('ResizeObserver' in window) {
-      const observer = new ResizeObserver(updateDisabled);
+      const observer = new ResizeObserver(updateNavState);
       observer.observe(track);
     }
 
     if (document.readyState !== 'complete') {
-      window.addEventListener('load', updateDisabled, { once: true });
+      window.addEventListener('load', updateNavState, { once: true });
     }
 
-    updateDisabled();
+    updateNavState();
   });
 }
 
