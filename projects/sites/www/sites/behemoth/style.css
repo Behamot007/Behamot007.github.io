@@ -785,41 +785,86 @@ h4 {
   box-shadow: 0 20px 36px -20px rgba(15, 27, 55, 0.85);
 }
 
-.btn-discord {
+.btn-discord,
+.social-widget--discord {
   background: linear-gradient(135deg, #5865f2, #4d57d9);
 }
 
-.btn-youtube {
+.btn-youtube,
+.social-widget--youtube {
   background: linear-gradient(135deg, #ff3d3d, #c60000);
 }
 
-.btn-tiktok {
+.btn-tiktok,
+.social-widget--tiktok {
   background: linear-gradient(135deg, #111111, #ff0050 55%, #00a8c5);
 }
 
-.btn-twitter {
+.btn-twitter,
+.social-widget--twitter {
   background: linear-gradient(135deg, #1d9bf0, #1474b8);
 }
 
-.btn-website {
+.btn-website,
+.social-widget--website {
   background: linear-gradient(135deg, rgba(15, 27, 55, 0.95), rgba(27, 43, 85, 0.9));
 }
 
+
 .social-grid {
   display: grid;
-  gap: clamp(1.5rem, 3vw, 2.5rem);
+  gap: clamp(1rem, 2.5vw, 1.75rem);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: stretch;
 }
 
-@media (min-width: 640px) {
-  .social-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.social-widget {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 1.35rem 1.25rem;
+  border-radius: 1.2rem;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  box-shadow: 0 16px 36px -30px rgba(15, 27, 55, 0.85);
+  position: relative;
+  isolation: isolate;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-@media (min-width: 1024px) {
-  .social-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
+.social-widget::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+.social-widget:hover,
+.social-widget:focus-visible {
+  transform: translateY(-4px);
+  box-shadow: 0 22px 42px -26px rgba(15, 27, 55, 0.88);
+}
+
+.social-widget:focus-visible {
+  outline: 2px solid rgba(246, 239, 230, 0.75);
+  outline-offset: 3px;
+}
+
+.social-widget__title {
+  font-family: "Cormorant Garamond", "Times New Roman", serif;
+  font-size: 1.35rem;
+  letter-spacing: 0.01em;
+}
+
+.social-widget__description {
+  font-size: 0.95rem;
+  font-weight: 500;
+  opacity: 0.88;
 }
 
 .card {
