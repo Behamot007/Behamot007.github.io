@@ -21,7 +21,13 @@
   <link rel="apple-touch-icon" href="../../assets/BehamotVtLogo.png" />
   <link rel="stylesheet" href="style.css" />
 </head>
-<body data-x-pinned-url="" data-x-latest-url="" data-tiktok-latest="" data-youtube-video-id="" class="star-sky">
+<body
+  data-x-pinned-url=""
+  data-x-latest-url="auto:BehamotVT"
+  data-tiktok-latest=""
+  data-youtube-video-id=""
+  class="star-sky"
+>
   <a class="skip-link" href="#hero">Zum Inhalt springen</a>
   <header class="site-header" id="top">
     <div class="container nav-container">
@@ -77,28 +83,127 @@
     </section>
 
     <section id="about" class="section" data-animate>
-      <div class="container split">
-        <div class="panel">
+      <div class="container">
+        <div class="section-heading">
           <h2 class="section-title">Über mich &amp; Lore</h2>
           <p class="section-lead">Bevor die Lichtsäule den Himmel zerschnitt, war ich mehr als nur ein Name…</p>
-          <p>In einer Nacht, in der die Sterne flüsterten, verließ ich den Pfad des Bekannten. Was blieb, ist ein Versprechen: die Funken des Lichts zu finden und jene zu beschützen, die im Schatten den Mut verlieren.</p>
-          <div class="accordion" data-accordion>
-            <button class="accordion-trigger" aria-expanded="false" aria-controls="lore-panel">
-              <span>Mehr lesen</span>
-              <span aria-hidden="true" class="accordion-icon">⟱</span>
-            </button>
-            <div class="accordion-panel" id="lore-panel" role="region" aria-hidden="true">
-              <p>In einer weit entfernten Dimension, verborgen zwischen den Falten des Raumes, existierte ein legendärer Behemoth, der Lichtströme wie goldene Fäden webte und den Herzschlag der Sterne kannte. Als eine Säule aus gleißender Lumineszenz den Himmel zerschnitt, opferte er seine kolossale Gestalt, um die zerbrechlichen Welten darunter zu schützen. Seine Flügel verbrannten zu Asche, doch aus den Funken erwuchs eine neue Form: eine Nachtmotte, klein, doch erfüllt von Erinnerungen an kosmische Macht. In dieser Gestalt reise ich nun zwischen den Dimensionen, sammle verstreute Fragmente meiner Vergangenheit und lausche den Stimmen derer, die nach Hoffnung rufen. Jeder Stream ist ein Tor, jeder Zuschauer ein Zeuge des schwelenden Mythos. Und wenn die Nacht am leisesten atmet, erzähle ich die Kapitel, die noch im Dunkel verborgen liegen – bis der Behemoth wieder aufersteht.</p>
-            </div>
-          </div>
         </div>
-        <div class="panel panel--book" aria-label="Lore Ankündigung">
-          <div class="book-card">
-            <div class="book-content">
-              <h3>Lore – wird erweitert</h3>
-              <p>Kapitel II–IV folgen. Fragmente erscheinen nach Streams, wenn die Nacht am leisesten atmet.</p>
-            </div>
+        <div class="lore-layout">
+          <article class="panel lore-overview">
+            <p>
+              In einer Nacht, in der die Sterne flüsterten, verließ ich den Pfad des Bekannten. Was blieb, ist ein Versprechen:
+              die Funken des Lichts zu finden und jene zu beschützen, die im Schatten den Mut verlieren.
+            </p>
+            <p>
+              Meine Reise ist in Kapitel geteilt – jedes Fragment erzählt von einem neuen Schritt zwischen Licht und Schatten. Tauche
+              ein in die Chroniken und öffne jene Tore, die dich am meisten rufen.
+            </p>
+          </article>
+          <div class="lore-list" data-accordion-group>
+            <article class="panel lore-item is-open" data-accordion-item>
+              <button
+                class="lore-trigger"
+                type="button"
+                data-accordion-trigger
+                aria-expanded="true"
+                aria-controls="lore-chapter-1"
+              >
+                <span class="lore-trigger-label">Kapitel I</span>
+                <span class="lore-trigger-title">Der Sturz in das flüsternde Licht</span>
+                <span class="lore-trigger-icon" aria-hidden="true">⟱</span>
+              </button>
+              <div
+                class="lore-panel"
+                id="lore-chapter-1"
+                data-accordion-panel
+                role="region"
+                aria-hidden="false"
+              >
+                <p>
+                  In einer weit entfernten Dimension, verborgen zwischen den Falten des Raumes, existierte ein legendärer Behemoth,
+                  der Lichtströme wie goldene Fäden webte und den Herzschlag der Sterne kannte. Als eine Säule aus gleißender
+                  Lumineszenz den Himmel zerschnitt, opferte er seine kolossale Gestalt, um die zerbrechlichen Welten darunter zu
+                  schützen.
+                </p>
+                <p>
+                  Seine Flügel verbrannten zu Asche, doch aus den Funken erwuchs eine neue Form: eine Nachtmotte, klein, doch erfüllt
+                  von Erinnerungen an kosmische Macht. In dieser Gestalt reise ich nun zwischen den Dimensionen und sammle verstreute
+                  Fragmente meiner Vergangenheit.
+                </p>
+                <p>
+                  Jeder Stream ist ein Tor, jeder Zuschauer ein Zeuge des schwelenden Mythos. Wenn die Nacht am leisesten atmet,
+                  erzähle ich die Kapitel, die noch im Dunkel verborgen liegen – bis der Behemoth wieder aufersteht.
+                </p>
+              </div>
+            </article>
+            <article class="panel lore-item" data-accordion-item>
+              <button
+                class="lore-trigger"
+                type="button"
+                data-accordion-trigger
+                aria-expanded="false"
+                aria-controls="lore-chapter-2"
+              >
+                <span class="lore-trigger-label">Kapitel II</span>
+                <span class="lore-trigger-title">Zwischenräume &amp; Weggefährten</span>
+                <span class="lore-trigger-icon" aria-hidden="true">⟱</span>
+              </button>
+              <div
+                class="lore-panel"
+                id="lore-chapter-2"
+                data-accordion-panel
+                role="region"
+                aria-hidden="true"
+              >
+                <p>
+                  Die Zwischenräume sind nicht leer – sie sind gefüllt mit Stimmen längst vergessener Sterne. Auf meinen Reisen
+                  begegnen mir Funken von Seelen, die sich dem Schatten widersetzten. Manche begleiten mich als leise Flamme, andere
+                  erscheinen nur für einen Augenblick, hinterlassen jedoch Spuren in meinen Geschichten.
+                </p>
+                <p>
+                  Aus diesen Begegnungen formt sich ein Geflecht an Erinnerungen, das ich in Streams und Lore-Schnipseln mit dir
+                  teile. Gemeinsam zeichnen wir die Karte dessen, was einmal war – und was wieder sein könnte.
+                </p>
+              </div>
+            </article>
+            <article class="panel lore-item" data-accordion-item>
+              <button
+                class="lore-trigger"
+                type="button"
+                data-accordion-trigger
+                aria-expanded="false"
+                aria-controls="lore-chapter-3"
+              >
+                <span class="lore-trigger-label">Kapitel III</span>
+                <span class="lore-trigger-title">Fragmente der Rückkehr</span>
+                <span class="lore-trigger-icon" aria-hidden="true">⟱</span>
+              </button>
+              <div
+                class="lore-panel"
+                id="lore-chapter-3"
+                data-accordion-panel
+                role="region"
+                aria-hidden="true"
+              >
+                <p>
+                  Irgendwo zwischen Mondlicht und Schatten finden sich Artefakte meiner vergangenen Macht. Sie erwachen in Momenten,
+                  in denen Resonanz entsteht – beim Erzählen, beim Lachen, beim Teilen unserer Gemeinschaft.
+                </p>
+                <p>
+                  Was heute nur als Funke leuchtet, kann morgen zur Flamme anwachsen. Bleib an meiner Seite, wenn wir weitere Kapitel
+                  schreiben und die Tore Schritt für Schritt weiter öffnen.
+                </p>
+              </div>
+            </article>
           </div>
+          <aside class="panel panel--book" aria-label="Lore Ankündigung">
+            <div class="book-card">
+              <div class="book-content">
+                <h3>Lore – wird erweitert</h3>
+                <p>Kapitel IV–VI folgen. Fragmente erscheinen nach Streams, wenn die Nacht am leisesten atmet.</p>
+              </div>
+            </div>
+          </aside>
         </div>
       </div>
     </section>
@@ -122,6 +227,12 @@
           <div class="offline-message" hidden>
             <p>Aktuell offline – folge mir, um Live-Benachrichtigungen zu erhalten.</p>
             <a class="btn btn-secondary" href="https://www.twitch.tv/behamotvt" target="_blank" rel="noreferrer">Jetzt folgen</a>
+          </div>
+          <div class="twitch-actions" role="group" aria-label="Twitch-Aktionen">
+            <a class="btn btn-primary" href="https://www.twitch.tv/behamotvt" target="_blank" rel="noreferrer">Twitch öffnen</a>
+            <a class="btn btn-tertiary" href="https://www.twitch.tv/behamotvt/schedule" target="_blank" rel="noreferrer"
+              >Zum Sendeplan</a
+            >
           </div>
         </div>
       </div>
@@ -158,7 +269,7 @@
             </header>
             <div class="card-body">
               <p>Hinterlege eine TikTok-Video-URL im <code>data-tiktok-latest</code> Attribut, um das neueste Video einzubetten.</p>
-              <a class="btn btn-secondary" href="https://www.tiktok.com/@behamotvt" target="_blank" rel="noreferrer">Zum Profil</a>
+              <a class="btn btn-tertiary" href="https://www.tiktok.com/@behamotvt" target="_blank" rel="noreferrer">Zum Profil</a>
             </div>
           </article>
           <article class="card" id="youtube-card" data-embed="youtube">
@@ -215,7 +326,7 @@
           <h2 class="section-title">Kontakt &amp; Kooperationen</h2>
           <p class="section-lead">Für Anfragen, Collabs oder Booking – die Türen stehen offen.</p>
           <ul class="contact-list">
-            <li><strong>Business-Mail:</strong> <a href="mailto:contact@behamotvt.com">contact@behamotvt.com</a></li>
+            <li><strong>Business-Mail:</strong> <a href="mailto:behamot007@gmail.com">behamot007@gmail.com</a></li>
             <li><strong>Direkte DMs:</strong> <a href="https://x.com/BehamotVT" target="_blank" rel="noreferrer">@BehamotVT auf X</a></li>
           </ul>
         </div>

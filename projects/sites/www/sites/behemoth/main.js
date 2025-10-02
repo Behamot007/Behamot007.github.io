@@ -8,7 +8,7 @@ const siteNav = document.querySelector('.site-nav');
 const navLinks = document.querySelectorAll('[data-nav]');
 const sections = document.querySelectorAll('main section');
 const backToTop = document.querySelector('.back-to-top');
-const accordion = document.querySelector('[data-accordion]');
+const accordionGroups = document.querySelectorAll('[data-accordion-group]');
 const yearTarget = document.getElementById('year');
 const hero = document.getElementById('hero');
 const heroFigure = document.querySelector('[data-parallax]');
@@ -95,18 +95,75 @@ if (backToTop) {
 }
 
 // Accordion logic
-if (accordion) {
-  const trigger = accordion.querySelector('.accordion-trigger');
-  const panel = accordion.querySelector('.accordion-panel');
+if (accordionGroups.length > 0) {
+  const accordionItems = [];
 
-  if (trigger && panel) {
-    trigger.addEventListener('click', () => {
+  accordionGroups.forEach((group) => {
+    const items = Array.from(group.querySelectorAll('[data-accordion-item]'));
+    const allowMultiple = group.hasAttribute('data-accordion-multiple');
+
+    items.forEach((item) => {
+      const trigger = item.querySelector('[data-accordion-trigger]');
+      const panel = item.querySelector('[data-accordion-panel]');
+      if (!trigger || !panel) return;
+
+      const setState = (expanded) => {
+        trigger.setAttribute('aria-expanded', String(expanded));
+        panel.setAttribute('aria-hidden', String(!expanded));
+        panel.style.maxHeight = expanded ? `${panel.scrollHeight}px` : '';
+        item.classList.toggle('is-open', expanded);
+      };
+
       const expanded = trigger.getAttribute('aria-expanded') === 'true';
-      trigger.setAttribute('aria-expanded', String(!expanded));
-      panel.setAttribute('aria-hidden', String(expanded));
-      panel.style.maxHeight = expanded ? '' : `${panel.scrollHeight}px`;
+      setState(expanded);
+
+      trigger.addEventListener('click', () => {
+        const isExpanded = trigger.getAttribute('aria-expanded') === 'true';
+        const willExpand = !isExpanded;
+
+        if (willExpand && !allowMultiple) {
+          items.forEach((otherItem) => {
+            if (otherItem === item) return;
+            const otherTrigger = otherItem.querySelector('[data-accordion-trigger]');
+            const otherPanel = otherItem.querySelector('[data-accordion-panel]');
+            if (!otherTrigger || !otherPanel) return;
+            otherTrigger.setAttribute('aria-expanded', 'false');
+            otherPanel.setAttribute('aria-hidden', 'true');
+            otherPanel.style.maxHeight = '';
+            otherItem.classList.remove('is-open');
+          });
+        }
+
+        trigger.setAttribute('aria-expanded', String(willExpand));
+        panel.setAttribute('aria-hidden', String(!willExpand));
+        panel.style.maxHeight = willExpand ? `${panel.scrollHeight}px` : '';
+        item.classList.toggle('is-open', willExpand);
+      });
+
+      accordionItems.push({ trigger, panel, item });
     });
-  }
+  });
+
+  const recalcOpenPanels = () => {
+    accordionItems.forEach(({ panel, item, trigger }) => {
+      const expanded = trigger.getAttribute('aria-expanded') === 'true';
+      if (expanded && item.classList.contains('is-open')) {
+        panel.style.maxHeight = `${panel.scrollHeight}px`;
+      }
+    });
+  };
+
+  let resizeFrame;
+  window.addEventListener(
+    'resize',
+    () => {
+      if (resizeFrame) cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(recalcOpenPanels);
+    },
+    { passive: true },
+  );
+
+  recalcOpenPanels();
 }
 
 // Helper to inject HTML safely into card
@@ -140,8 +197,58 @@ const loadTweet = async (containerId, url) => {
   }
 };
 
-loadTweet('x-pinned', bodyDataset.xPinnedUrl);
-loadTweet('x-latest', bodyDataset.xLatestUrl);
+const fetchLatestTweetUrl = async (handle) => {
+  const normalized = handle.replace(/^@/, '');
+  const response = await fetch(
+    `https://cdn.syndication.twimg.com/widgets/timelines/profile?screen_name=${normalized}&dnt=true`,
+  );
+  if (!response.ok) {
+    throw new Error('Timeline konnte nicht geladen werden');
+  }
+  const data = await response.json();
+  const match = data?.body?.match(/data-tweet-id="(\d+)"/);
+  if (!match) {
+    throw new Error('Kein Tweet gefunden');
+  }
+  return `https://twitter.com/${normalized}/status/${match[1]}`;
+};
+
+const loadLatestTweetAutomatically = async (source) => {
+  const container = document.getElementById('x-latest');
+  const body = container?.querySelector('.card-body');
+  if (!container || !body) return;
+
+  const rawHandle = source?.split(':')[1]?.trim() || 'BehamotVT';
+  const handle = rawHandle.replace(/^@/, '');
+  body.innerHTML = '<p>Suche nach dem neuesten Beitrag…</p>';
+
+  try {
+    const tweetUrl = await fetchLatestTweetUrl(handle);
+    await loadTweet('x-latest', tweetUrl);
+  } catch (error) {
+    body.innerHTML = `
+      <p>Der aktuelle Beitrag konnte nicht automatisch geladen werden. Besuche das Profil direkt auf X.</p>
+      <a class="btn btn-tertiary" href="https://x.com/${handle}" target="_blank" rel="noreferrer">Profil öffnen</a>
+    `;
+  }
+};
+
+const initTwitterEmbeds = async () => {
+  if (bodyDataset.xPinnedUrl) {
+    await loadTweet('x-pinned', bodyDataset.xPinnedUrl);
+  }
+
+  if (!bodyDataset.xLatestUrl) return;
+
+  if (bodyDataset.xLatestUrl.startsWith('auto')) {
+    await loadLatestTweetAutomatically(bodyDataset.xLatestUrl);
+    return;
+  }
+
+  await loadTweet('x-latest', bodyDataset.xLatestUrl);
+};
+
+initTwitterEmbeds();
 
 // TikTok embed
 const loadTikTok = () => {
