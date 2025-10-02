@@ -887,21 +887,11 @@ h4 {
   overflow-x: auto;
   padding: 0.35rem 0.25rem;
   scroll-snap-type: x mandatory;
-  scrollbar-width: thin;
+  scrollbar-width: none;
 }
 
 .gallery-carousel__track::-webkit-scrollbar {
-  height: 8px;
-}
-
-.gallery-carousel__track::-webkit-scrollbar-thumb {
-  background: rgba(198, 162, 95, 0.35);
-  border-radius: 999px;
-}
-
-.gallery-carousel__track::-webkit-scrollbar-track {
-  background: rgba(15, 27, 55, 0.15);
-  border-radius: 999px;
+  display: none;
 }
 
 .gallery-carousel__nav {
