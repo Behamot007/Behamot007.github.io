@@ -1,400 +1,260 @@
 <!DOCTYPE html>
 <html lang="de">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Behamot VTuber – Noble Debut</title>
-    <meta
-      name="description"
-      content="Behamot VTuber – digitale Aristokratie trifft auf Entertainment. Entdecke Streams, Highlights, Lore und Social Links des noblen Behemot."
-    />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="./styles.css" />
-    <script defer src="./script.js"></script>
-    <script async src="https://player.twitch.tv/js/embed/v1.js"></script>
-    <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
-    <script async src="https://www.tiktok.com/embed.js"></script>
-  </head>
-  <body>
-    <div class="background-lights" aria-hidden="true">
-      <img src="./assets/hero-crest.svg" alt="" class="bg-crest bg-crest--left" />
-      <img src="./assets/hero-crest.svg" alt="" class="bg-crest bg-crest--right" />
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Behamot – Moth / Behemoth VTuber</title>
+  <meta name="description" content="Behamot – Moth / Behemoth VTuber. Wächter zwischen Licht und Schatten. Erlebe Lore, Streams und Social Highlights auf einem mystischen Onepager." />
+  <meta property="og:title" content="Behamot – Moth / Behemoth VTuber" />
+  <meta property="og:description" content="Begleite Behamot live, entdecke Lore-Fragmente und verbinde dich auf Twitch, YouTube, TikTok und X." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="../assets/BehamotVtLogo.png" />
+  <meta property="og:url" content="https://behamot007.github.io/" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Behamot – Moth / Behemoth VTuber" />
+  <meta name="twitter:description" content="Lore, Streams und Social-Highlights des Nacht-Wächters Behamot." />
+  <meta name="twitter:image" content="../assets/BehamotVtLogo.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="icon" href="../assets/BehamotVtLogo.png" />
+  <link rel="apple-touch-icon" href="../assets/BehamotVtLogo.png" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-x-pinned-url="" data-x-latest-url="" data-tiktok-latest="" data-youtube-video-id="" class="star-sky">
+  <a class="skip-link" href="#hero">Zum Inhalt springen</a>
+  <header class="site-header" id="top">
+    <div class="container nav-container">
+      <div class="brand" aria-label="Behamot Logo">
+        <img src="../assets/BehamotVtLogo.png" alt="Logo von Behamot" class="brand-mark" />
+        <span class="brand-name">Behamot</span>
+      </div>
+      <button class="nav-toggle" aria-expanded="false" aria-controls="site-nav">
+        <span class="sr-only">Navigation öffnen</span>
+        <span class="nav-toggle-line"></span>
+        <span class="nav-toggle-line"></span>
+        <span class="nav-toggle-line"></span>
+      </button>
+      <nav id="site-nav" class="site-nav" aria-label="Hauptnavigation">
+        <ul>
+          <li><a href="#hero" data-nav>Start</a></li>
+          <li><a href="#about" data-nav>Über mich</a></li>
+          <li><a href="#twitch" data-nav>Twitch</a></li>
+          <li><a href="#social" data-nav>Social Hub</a></li>
+          <li><a href="#gallery" data-nav>Galerie</a></li>
+          <li><a href="#contact" data-nav>Kontakt</a></li>
+        </ul>
+      </nav>
     </div>
-    <header class="site-header" data-nav-state="closed">
-      <div class="container header__inner">
-        <a class="brand" href="#spotlight" aria-label="Behamot VTuber Start">
-          <img src="./assets/crest-divider.svg" alt="" class="brand__mark" />
-          <span class="brand__text">Behamot</span>
-          <span class="brand__role">VTuber</span>
-        </a>
-        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="siteNav">
-          <span class="nav-toggle__label">Menü</span>
-          <span class="nav-toggle__icon" aria-hidden="true"></span>
-        </button>
-        <nav id="siteNav" class="primary-nav" aria-label="Hauptnavigation">
-          <a href="#spotlight">Spotlight</a>
-          <a href="#about">Profil</a>
-          <a href="#stream">Livestream</a>
-          <a href="#socials">Socials</a>
-          <a href="#assets">Assets</a>
-          <a href="#lore">Lore</a>
-        </nav>
+  </header>
+
+  <main>
+    <section id="hero" class="section hero" data-animate>
+      <div class="hero-background" aria-hidden="true">
+        <div class="hero-arch"></div>
+        <img src="../assets/badges/Month12_1000px.png" alt="Vergoldetes Abzeichen – Monat XII" class="hero-ornament hero-ornament--left" data-base-transform="" loading="lazy" />
+        <img src="../assets/badges/Month18_1000px.png" alt="Vergoldetes Abzeichen – Monat XVIII" class="hero-ornament hero-ornament--right" data-base-transform="scaleX(-1)" loading="lazy" />
       </div>
-    </header>
+      <div class="container hero-content">
+        <div class="hero-text">
+          <p class="eyebrow">Moth / Behemoth VTuber</p>
+          <h1 class="hero-title">Behamot</h1>
+          <p class="hero-subtitle">Moth / Behemoth VTuber – Wächter zwischen Licht und Schatten.</p>
+          <p class="hero-intro">Einst wanderte ich durch die Zwischenräume der Welten – halb Legende, halb Licht. Doch der Sturz ins Ungewisse ließ mich zur Motte werden, auf der Suche nach den verstreuten Funken des Lichts, um meine alte Macht wiederzufinden. Begleite mich live, wenn Geschichten ihre Flügel entfalten.</p>
+          <div class="cta-group" role="group" aria-label="Haupt-CTAs">
+            <a class="btn btn-primary" href="https://www.twitch.tv/behamotvt" target="_blank" rel="noreferrer">Jetzt live schauen</a>
+            <a class="btn btn-secondary" href="https://www.youtube.com/@Behamot" target="_blank" rel="noreferrer">YouTube-Kanal</a>
+            <a class="btn btn-secondary" href="https://www.tiktok.com/@behamotvt" target="_blank" rel="noreferrer">Letzter TikTok</a>
+            <a class="btn btn-tertiary" href="https://x.com/BehamotVT" target="_blank" rel="noreferrer">Neuste Posts auf X</a>
+          </div>
+        </div>
+        <div class="hero-figure" data-parallax>
+          <div class="figure-frame gold-gradient">
+            <img src="../assets/Fullbody%20-%20Kopie.png" alt="Vollkörper-Illustration von Behamot" class="figure-image" />
+          </div>
+        </div>
+      </div>
+    </section>
 
-    <main>
-      <section id="spotlight" class="section royal-spotlight" aria-labelledby="spotlightTitle">
-        <div class="container royal-spotlight__inner">
-          <div class="royal-spotlight__content">
-            <span class="section__eyebrow">Royal Spotlight</span>
-            <h1 id="spotlightTitle">Crown Collection Drop – Assets für Streams & Socials</h1>
-            <p>
-              Die neueste Kollektion bündelt Stream-Overlays, Emotes und Banner in einem abgestimmten Barock-Sci-Fi Look.
-              Hol dir das Paket, zeige deine Noblesse auf Twitch, TikTok und YouTube – inklusive saisonaler Artworks.
-            </p>
-            <div class="royal-spotlight__actions">
-              <a
-                class="button button--primary"
-                href="https://drive.google.com/drive/folders/13bQuGM1Sf5HuVvfP1qJvt1qJ8JaXBcFY?usp=share_link"
-                target="_blank"
-                rel="noreferrer"
-                >Assets herunterladen</a
-              >
-              <a class="button button--ghost" href="#assets">Mehr Visuals sehen</a>
+    <section id="about" class="section" data-animate>
+      <div class="container split">
+        <div class="panel">
+          <h2 class="section-title">Über mich &amp; Lore</h2>
+          <p class="section-lead">Bevor die Lichtsäule den Himmel zerschnitt, war ich mehr als nur ein Name…</p>
+          <p>In einer Nacht, in der die Sterne flüsterten, verließ ich den Pfad des Bekannten. Was blieb, ist ein Versprechen: die Funken des Lichts zu finden und jene zu beschützen, die im Schatten den Mut verlieren.</p>
+          <div class="accordion" data-accordion>
+            <button class="accordion-trigger" aria-expanded="false" aria-controls="lore-panel">
+              <span>Mehr lesen</span>
+              <span aria-hidden="true" class="accordion-icon">⟱</span>
+            </button>
+            <div class="accordion-panel" id="lore-panel" role="region" aria-hidden="true">
+              <p>In einer weit entfernten Dimension, verborgen zwischen den Falten des Raumes, existierte ein legendärer Behemoth, der Lichtströme wie goldene Fäden webte und den Herzschlag der Sterne kannte. Als eine Säule aus gleißender Lumineszenz den Himmel zerschnitt, opferte er seine kolossale Gestalt, um die zerbrechlichen Welten darunter zu schützen. Seine Flügel verbrannten zu Asche, doch aus den Funken erwuchs eine neue Form: eine Nachtmotte, klein, doch erfüllt von Erinnerungen an kosmische Macht. In dieser Gestalt reise ich nun zwischen den Dimensionen, sammle verstreute Fragmente meiner Vergangenheit und lausche den Stimmen derer, die nach Hoffnung rufen. Jeder Stream ist ein Tor, jeder Zuschauer ein Zeuge des schwelenden Mythos. Und wenn die Nacht am leisesten atmet, erzähle ich die Kapitel, die noch im Dunkel verborgen liegen – bis der Behemoth wieder aufersteht.</p>
             </div>
-            <ul class="royal-spotlight__highlights" role="list" aria-label="Inhalt der Crown Collection">
-              <li>
-                <span>Overlay Suite</span>
-                <strong>Panels, Offline Screen & Alerts passend zum violett-goldenen Branding.</strong>
-              </li>
-              <li>
-                <span>Charakter Fokus</span>
-                <strong>Char Sheet + Emote-Set für Discord, Twitch und TikTok Shorts.</strong>
-              </li>
-              <li>
-                <span>Community Use</span>
-                <strong>Freigegeben für Fan-Content – bitte Credit an @BehamotVT.</strong>
-              </li>
-            </ul>
-          </div>
-          <div class="royal-spotlight__preview" aria-label="Visual Vorschau der Crown Collection">
-            <figure class="preview-card preview-card--primary">
-              <img src="../../assets/CharakterSheet.jpg" alt="Charakter Sheet Vorschau" loading="lazy" />
-              <figcaption>Charakter Sheet Highlight</figcaption>
-            </figure>
-            <figure class="preview-card preview-card--secondary">
-              <img src="../../assets/banner/Bannerfruehling.jpeg" alt="Saisonales Banner" loading="lazy" />
-              <figcaption>Season Banner</figcaption>
-            </figure>
-            <figure class="preview-card preview-card--emotes">
-              <img src="../../assets/Emotes/WOOOW.png" alt="Emote Vorschau" loading="lazy" />
-              <figcaption>Emote Sneak Peek</figcaption>
-            </figure>
           </div>
         </div>
-      </section>
-
-      <section id="about" class="section section--alt" aria-labelledby="aboutTitle">
-        <div class="container about__inner">
-          <div class="section__header">
-            <span class="section__eyebrow">VTuber Profil</span>
-            <h2 id="aboutTitle">Ein Aristokrat zwischen Hofball und Hyperspace</h2>
-            <p>
-              Inspiriert von klassischer Noblesse und moderner Sci-Fi. Ich kombiniere barocke Ästhetik mit futuristischen Effekten,
-              spiele komplexe Spiele live und führe meine Community durch narrative Abenteuer.
-            </p>
-          </div>
-          <div class="highlight-grid">
-            <article class="highlight-card">
-              <img src="./assets/ornament-gilded.svg" alt="" aria-hidden="true" />
-              <h3>Signature Mood</h3>
-              <p>Orchestrale Beats, goldene Lichter und ruhige, präzise Moderation – mit spontanen spice Moments.</p>
-            </article>
-            <article class="highlight-card">
-              <img src="./assets/ornament-gilded.svg" alt="" aria-hidden="true" />
-              <h3>Community</h3>
-              <p>Nobles & Nightingales – eine royale Runde für Watch-Partys, Strategiespiele und gemütliche Late-Night-Talks.</p>
-            </article>
-            <article class="highlight-card">
-              <img src="./assets/ornament-gilded.svg" alt="" aria-hidden="true" />
-              <h3>Stream Setup</h3>
-              <p>VTuber Studio, orchestrale Soundtracks, interaktive Lichtsteuerung und Chat-Etikette mit viel Charme.</p>
-            </article>
+        <div class="panel panel--book" aria-label="Lore Ankündigung">
+          <div class="book-card">
+            <div class="book-content">
+              <h3>Lore – wird erweitert</h3>
+              <p>Kapitel II–IV folgen. Fragmente erscheinen nach Streams, wenn die Nacht am leisesten atmet.</p>
+            </div>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section id="stream" class="section" aria-labelledby="streamTitle">
-        <div class="container stream__inner">
-          <div class="section__header">
-            <span class="section__eyebrow">Live auf Twitch</span>
-            <h2 id="streamTitle">Direkt vom Thronsaal auf deinen Screen</h2>
-            <p>Schalte live ein oder sieh dir die jüngsten Highlights auf Twitch an. Chat-Etikette: höflich, aber mit ordentlich Meme-Würze.</p>
-          </div>
-          <div class="stream__player">
+    <section id="twitch" class="section" data-animate>
+      <div class="container">
+        <div class="section-heading">
+          <h2 class="section-title">Live auf Twitch</h2>
+          <p class="section-lead">Sei dabei, wenn die Nacht sich öffnet und Legenden geboren werden.</p>
+        </div>
+        <div class="twitch-player">
+          <div class="aspect-video frame">
             <iframe
-              title="Twitch Stream"
-              src="https://player.twitch.tv/?channel=behamotvt&parent=www.behamot.de&parent=behamot.de&parent=behamot007.github.io&parent=localhost"
+              src="https://player.twitch.tv/?channel=behamotvt&amp;parent="
               allowfullscreen
+              frameborder="0"
+              title="Twitch Player – Behamot"
             ></iframe>
-            <aside class="stream__meta">
-              <h3>Streaming Slots</h3>
-              <ul>
-                <li>Mittwoch – Strategiespiele & Chill</li>
-                <li>Freitag – Lore Stories & Collabs</li>
-                <li>Sonntag – Community Night mit Chat-Events</li>
-              </ul>
-              <a class="button button--ghost" href="https://www.twitch.tv/behamotvt/schedule" target="_blank" rel="noreferrer">Zum Schedule</a>
-            </aside>
+          </div>
+          <p class="twitch-note">Ist der Stream offline, erscheint hier der Hinweis von Twitch. Ergänze bei Bedarf die aktuelle Domain als <code>parent</code>-Parameter, damit der Player ordnungsgemäß lädt.</p>
+          <div class="offline-message" hidden>
+            <p>Aktuell offline – folge mir, um Live-Benachrichtigungen zu erhalten.</p>
+            <a class="btn btn-secondary" href="https://www.twitch.tv/behamotvt" target="_blank" rel="noreferrer">Jetzt folgen</a>
           </div>
         </div>
-      </section>
-
-      <section id="socials" class="section section--alt" aria-labelledby="socialTitle">
-        <div class="container socials__inner">
-          <div class="section__header">
-            <span class="section__eyebrow">Social Signals</span>
-            <h2 id="socialTitle">Bleib in Verbindung</h2>
-            <p>Frische Updates auf X (Twitter), langfristige Videos auf YouTube und Live-Vibes auf Twitch.</p>
-          </div>
-          <div class="socials__grid">
-            <article class="social-card social-card--twitter">
-              <div class="social-card__header">
-                <img src="./assets/crest-divider.svg" alt="" aria-hidden="true" />
-                <div>
-                  <h3>Tweets</h3>
-                  <p>Pinned & aktuell von @BehamotVT</p>
-                </div>
-              </div>
-            <div class="twitter-embed" data-twitter-feed>
-                <a
-                  class="twitter-timeline"
-                  data-theme="dark"
-                  data-lang="de"
-                  data-tweet-limit="1"
-                  data-chrome="noheader nofooter noborders transparent"
-                  href="https://twitter.com/BehamotVT"
-                  >Tweets von @BehamotVT</a
-                >
-                <p class="twitter-embed__fallback">
-                  Kannst du den Feed nicht sehen? <a href="https://twitter.com/BehamotVT" target="_blank" rel="noreferrer"
-                    >Hier geht es direkt zum aktuellen Tweet.</a
-                  >
-                </p>
-              </div>
-            </article>
-            <article class="social-card social-card--tiktok">
-              <div class="social-card__header">
-                <img src="./assets/ornament-gilded.svg" alt="" aria-hidden="true" />
-                <div>
-                  <h3>TikTok</h3>
-                  <p>Letzter Kurzclip von @BehamotVT</p>
-                </div>
-              </div>
-              <div class="tiktok-embed" data-tiktok-latest>
-                <blockquote
-                  class="tiktok-embed"
-                  cite="https://www.tiktok.com/@behamotvt"
-                  data-unique-id="behamotvt"
-                  data-embed-from="oembed"
-                  style="max-width: 420px"
-                >
-                  <section>
-                    <a target="_blank" rel="noreferrer" href="https://www.tiktok.com/@behamotvt">Letzter TikTok</a>
-                  </section>
-                </blockquote>
-                <div class="tiktok-embed__actions">
-                  <a class="button button--ghost" href="https://www.tiktok.com/@behamotvt" target="_blank" rel="noreferrer"
-                    >Profil auf TikTok öffnen</a
-                  >
-                </div>
-                <p class="tiktok-embed__fallback">
-                  Kein Clip geladen? Folge direkt auf TikTok: <a href="https://www.tiktok.com/@behamotvt" target="_blank" rel="noreferrer">@behamotvt</a>.
-                </p>
-              </div>
-            <article class="social-card social-card--youtube">
-              <div class="social-card__header">
-                <img src="./assets/ornament-gilded.svg" alt="" aria-hidden="true" />
-                <div>
-                  <h3>YouTube</h3>
-                  <p>Recaps, Lore Logs & Musik-Uploads</p>
-                </div>
-              </div>
-              <p>Abonniere den Kanal für hochwertige VODs, orchestrale Cover und Cinematics aus den Streams.</p>
-              <a class="button button--primary" href="https://www.youtube.com/@Behamot" target="_blank" rel="noreferrer">Zum YouTube-Kanal</a>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section id="assets" class="section assets section--alt" aria-labelledby="assetsTitle">
-        <div class="container assets__inner">
-          <div class="section__header">
-            <span class="section__eyebrow">Visual Identity</span>
-            <h2 id="assetsTitle">Brand Assets für Stream & Community</h2>
-            <p>
-              Eine Auswahl an Charakter-Artworks, Emotes, Badges und Bannern, die den höfischen Stil von Behamot prägen. Ideal
-              für Szenen, Panels und Community-Beiträge.
-            </p>
-          </div>
-          <div class="character-showcase">
-            <figure class="character-showcase__figure">
-              <img src="../../assets/CharakterSheet.jpg" alt="Charakter Sheet von Behamot mit kompletter Outfit-Ansicht" loading="lazy" />
-              <figcaption>Artwork von RahmatN · Design-Guide für Adels-Looks</figcaption>
-            </figure>
-            <div class="character-showcase__content">
-              <h3>Charakter Sheet Highlights</h3>
-              <p>
-                Farbpalette in Gold & Violett, ornamentale Stickereien und technoide Accessoires schaffen den Spagat zwischen
-                höfischer Tradition und futuristischer Bühne.
-              </p>
-              <ul class="character-showcase__details">
-                <li>Mehrere Layer für Outfit-Varianten – perfekt für Assets in Overlays und Thumbnails.</li>
-                <li>Klare Silhouette für 2D/3D Rigs und einheitliche Beleuchtung für Compositing.</li>
-                <li>Beinhaltet Accessoires wie Fächer, Orden und Lichtornamente zur freien Kombination.</li>
-              </ul>
-            </div>
-          </div>
-          <div class="asset-panels">
-            <article class="asset-panel">
-              <div class="asset-panel__header">
-                <img src="./assets/ornament-gilded.svg" alt="" aria-hidden="true" />
-                <div>
-                  <h3>Emote Kollektion</h3>
-                  <p>Emotionale Reaktionen mit höfischem Charme für Chat & Discord.</p>
-                </div>
-              </div>
-              <div class="emote-grid" role="list">
-                <figure class="emote-grid__item" role="listitem">
-                  <img src="../../assets/Emotes/Hi.png" alt="Emote: höfischer Gruß" loading="lazy" />
-                  <figcaption>Hi</figcaption>
-                </figure>
-                <figure class="emote-grid__item" role="listitem">
-                  <img src="../../assets/Emotes/Moth_Heart.png" alt="Emote: Herz mit Flügeln" loading="lazy" />
-                  <figcaption>Heart</figcaption>
-                </figure>
-                <figure class="emote-grid__item" role="listitem">
-                  <img src="../../assets/Emotes/Hmmm.png" alt="Emote: nachdenklicher Blick" loading="lazy" />
-                  <figcaption>Hmmm</figcaption>
-                </figure>
-                <figure class="emote-grid__item" role="listitem">
-                  <img src="../../assets/Emotes/WOOOW.png" alt="Emote: begeistertes Staunen" loading="lazy" />
-                  <figcaption>Wow</figcaption>
-                </figure>
-                <figure class="emote-grid__item" role="listitem">
-                  <img src="../../assets/Emotes/Crying.png" alt="Emote: Tränen der Rührung" loading="lazy" />
-                  <figcaption>Feels</figcaption>
-                </figure>
-                <figure class="emote-grid__item" role="listitem">
-                  <img src="../../assets/Emotes/Glowstick.png" alt="Emote: Glowstick für Hype-Momente" loading="lazy" />
-                  <figcaption>Glow</figcaption>
-                </figure>
-              </div>
-            </article>
-            <article class="asset-panel">
-              <div class="asset-panel__header">
-                <img src="./assets/crest-divider.svg" alt="" aria-hidden="true" />
-                <div>
-                  <h3>Mitglieds-Badges</h3>
-                  <p>Progressive Insignien für Mitglieder – je länger dabei, desto mehr Glanz.</p>
-                </div>
-              </div>
-              <div class="badge-row" role="list">
-                <figure class="badge-row__item" role="listitem">
-                  <img src="../../assets/badges/Month1_900.png" alt="Mitglieds-Badge für Monat 1" loading="lazy" />
-                  <figcaption>Monat 1</figcaption>
-                </figure>
-                <figure class="badge-row__item" role="listitem">
-                  <img src="../../assets/badges/Month3_1000px.png" alt="Mitglieds-Badge für Monat 3" loading="lazy" />
-                  <figcaption>Monat 3</figcaption>
-                </figure>
-                <figure class="badge-row__item" role="listitem">
-                  <img src="../../assets/badges/Month6_1000px.png" alt="Mitglieds-Badge für Monat 6" loading="lazy" />
-                  <figcaption>Monat 6</figcaption>
-                </figure>
-                <figure class="badge-row__item" role="listitem">
-                  <img src="../../assets/badges/Month9_1000px.png" alt="Mitglieds-Badge für Monat 9" loading="lazy" />
-                  <figcaption>Monat 9</figcaption>
-                </figure>
-                <figure class="badge-row__item" role="listitem">
-                  <img src="../../assets/badges/Month12_1000px.png" alt="Mitglieds-Badge für Monat 12" loading="lazy" />
-                  <figcaption>Monat 12</figcaption>
-                </figure>
-                <figure class="badge-row__item" role="listitem">
-                  <img src="../../assets/badges/Month18_1000px.png" alt="Mitglieds-Badge für Monat 18" loading="lazy" />
-                  <figcaption>Monat 18</figcaption>
-                </figure>
-              </div>
-            </article>
-            <article class="asset-panel">
-              <div class="asset-panel__header">
-                <img src="./assets/ornament-gilded.svg" alt="" aria-hidden="true" />
-                <div>
-                  <h3>Brand Banner & Logo</h3>
-                  <p>Saisonale Panels und das Logo für Webseiten, Panels und Offline-Werbung.</p>
-                </div>
-              </div>
-              <div class="banner-gallery">
-                <figure>
-                  <img src="../../assets/banner/BannerSommer.jpeg" alt="Sommerbanner mit Goldakzenten" loading="lazy" />
-                  <figcaption>Sommer Edition</figcaption>
-                </figure>
-                <figure>
-                  <img src="../../assets/banner/Bannerfruehling.jpeg" alt="Frühlingsbanner mit floralen Elementen" loading="lazy" />
-                  <figcaption>Frühlings Edition</figcaption>
-                </figure>
-                <figure>
-                  <img src="../../assets/BehamotVtLogo.png" alt="Logo von Behamot" loading="lazy" />
-                  <figcaption>Markenzeichen</figcaption>
-                </figure>
-              </div>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section id="lore" class="section" aria-labelledby="loreTitle">
-        <div class="container lore__inner">
-          <div class="section__header">
-            <span class="section__eyebrow">Lore</span>
-            <h2 id="loreTitle">Chroniken aus dem digitalen Adel</h2>
-            <p>
-              Platzhalter für künftige Lore-Chapter. Hier erscheinen bald Geschichten über meine Herkunft, Verbündete und Rivalen im
-              virtuellen Hofstaat.
-            </p>
-          </div>
-          <div class="lore__placeholder">
-            <img src="./assets/crest-divider.svg" alt="" />
-            <p>Demnächst: Kapitel 1 – "Das Erwachen des Cyber-Courtiers"</p>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <footer class="site-footer">
-      <div class="container footer__inner">
-        <div class="footer__brand">
-          <img src="./assets/hero-crest.svg" alt="" />
-          <div>
-            <span class="brand__text">Behamot</span>
-            <span class="brand__role">VTuber</span>
-          </div>
-        </div>
-        <nav aria-label="Footer Navigation">
-          <a href="#spotlight">Spotlight</a>
-          <a href="#about">Profil</a>
-          <a href="#stream">Livestream</a>
-          <a href="#socials">Socials</a>
-          <a href="#assets">Assets</a>
-          <a href="#lore">Lore</a>
-        </nav>
-        <p class="footer__note">© <span id="year"></span> Behamot. Nobility never sleeps.</p>
       </div>
-    </footer>
-  </body>
+    </section>
+
+    <section id="social" class="section" data-animate>
+      <div class="container">
+        <div class="section-heading">
+          <h2 class="section-title">Social Hub</h2>
+          <p class="section-lead">Finde meine neuesten Geschichten, Clips und Gedanken.</p>
+        </div>
+        <div class="social-grid">
+          <article class="card" id="x-pinned" data-embed="x-pinned">
+            <header class="card-header">
+              <h3 class="card-title">X (Twitter) – Angepinnt</h3>
+            </header>
+            <div class="card-body">
+              <p>Setze eine konkrete Tweet-URL im <code>data-x-pinned-url</code> Attribut auf &lt;body&gt;, um das Widget zu laden.</p>
+              <a class="btn btn-tertiary" href="https://x.com/BehamotVT" target="_blank" rel="noreferrer">Auf X ansehen</a>
+            </div>
+          </article>
+          <article class="card" id="x-latest" data-embed="x-latest">
+            <header class="card-header">
+              <h3 class="card-title">X (Twitter) – Aktuell</h3>
+            </header>
+            <div class="card-body">
+              <p>Zeigt den neuesten Beitrag, sobald eine URL gesetzt wird. Ohne URL bleibt dieser elegante Platzhalter bestehen.</p>
+              <a class="btn btn-tertiary" href="https://x.com/BehamotVT" target="_blank" rel="noreferrer">Profil besuchen</a>
+            </div>
+          </article>
+          <article class="card" id="tiktok-card" data-embed="tiktok">
+            <header class="card-header">
+              <h3 class="card-title">TikTok</h3>
+            </header>
+            <div class="card-body">
+              <p>Hinterlege eine TikTok-Video-URL im <code>data-tiktok-latest</code> Attribut, um das neueste Video einzubetten.</p>
+              <a class="btn btn-secondary" href="https://www.tiktok.com/@behamotvt" target="_blank" rel="noreferrer">Zum Profil</a>
+            </div>
+          </article>
+          <article class="card" id="youtube-card" data-embed="youtube">
+            <header class="card-header">
+              <h3 class="card-title">YouTube</h3>
+            </header>
+            <div class="card-body">
+              <p>Nutze <code>data-youtube-video-id</code> am &lt;body&gt;, um einen Trailer einzubetten. Ohne ID führt der CTA direkt zum Kanal.</p>
+              <a class="btn btn-primary" href="https://www.youtube.com/@Behamot" target="_blank" rel="noreferrer">Besuche meinen Kanal</a>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="gallery" class="section" data-animate>
+      <div class="container">
+        <div class="section-heading">
+          <h2 class="section-title">Galerie &amp; Expressions</h2>
+          <p class="section-lead">Ein Blick in die Facetten der Nacht – Emotionen, die flackern wie Sternenlicht.</p>
+        </div>
+        <div class="gallery-grid">
+          <figure class="gallery-item">
+            <img src="../assets/Emotes/Heart.png" alt="Behamot-Emote mit Herz" loading="lazy" />
+            <figcaption>heart</figcaption>
+          </figure>
+          <figure class="gallery-item">
+            <img src="../assets/Emotes/Hmmm.png" alt="Behamot-Emote, nachdenklicher Blick" loading="lazy" />
+            <figcaption>hmmm</figcaption>
+          </figure>
+          <figure class="gallery-item">
+            <img src="../assets/Emotes/Angry.png" alt="Behamot-Emote, wütender Ausdruck" loading="lazy" />
+            <figcaption>angry</figcaption>
+          </figure>
+          <figure class="gallery-item">
+            <img src="../assets/Emotes/Glowstick.png" alt="Behamot-Emote mit Glowsticks" loading="lazy" />
+            <figcaption>glowstick</figcaption>
+          </figure>
+          <figure class="gallery-item">
+            <img src="../assets/Emotes/WOOOW.png" alt="Behamot-Emote überrascht" loading="lazy" />
+            <figcaption>wow</figcaption>
+          </figure>
+          <figure class="gallery-item">
+            <img src="../assets/CharakterSheet.jpg" alt="Ausschnitt aus dem offiziellen Charakter-Sheet" loading="lazy" />
+            <figcaption>character sheet</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section id="contact" class="section" data-animate>
+      <div class="container split">
+        <div class="panel">
+          <h2 class="section-title">Kontakt &amp; Kooperationen</h2>
+          <p class="section-lead">Für Anfragen, Collabs oder Booking – die Türen stehen offen.</p>
+          <ul class="contact-list">
+            <li><strong>Business-Mail:</strong> <a href="mailto:contact@behamotvt.com">contact@behamotvt.com</a></li>
+            <li><strong>Direkte DMs:</strong> <a href="https://x.com/BehamotVT" target="_blank" rel="noreferrer">@BehamotVT auf X</a></li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h3 class="section-subtitle">Credits &amp; Hinweise</h3>
+          <p>Illustration &amp; Charakterdesign inspiriert vom offiziellen Character-Sheet. Alle Rechte bei den jeweiligen Artists. Streaming-Inhalte © Behamot.</p>
+          <div class="legal-links">
+            <a href="#">Impressum</a>
+            <span aria-hidden="true">•</span>
+            <a href="#">Datenschutz</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="star-divider" aria-hidden="true"></div>
+      <div class="footer-content">
+        <div class="footer-brand">
+          <img src="../assets/BehamotVtLogo.png" alt="Behamot Zeichen" />
+          <span>Behamot</span>
+        </div>
+        <div class="footer-links">
+          <a href="https://www.twitch.tv/behamotvt" target="_blank" rel="noreferrer">Twitch</a>
+          <a href="https://www.youtube.com/@Behamot" target="_blank" rel="noreferrer">YouTube</a>
+          <a href="https://www.tiktok.com/@behamotvt" target="_blank" rel="noreferrer">TikTok</a>
+          <a href="https://x.com/BehamotVT" target="_blank" rel="noreferrer">X</a>
+        </div>
+        <p class="footer-copy">&copy; <span id="year"></span> Behamot. Wächter zwischen Licht und Schatten.</p>
+      </div>
+    </div>
+  </footer>
+
+  <button class="back-to-top" type="button" aria-label="Zurück nach oben">
+    <span class="back-to-top-icon">✶</span>
+  </button>
+
+  <script src="main.js" type="module"></script>
+</body>
 </html>
