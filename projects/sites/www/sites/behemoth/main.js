@@ -309,6 +309,7 @@ if (galleryItems.length > 0 && galleryLightbox) {
   if (galleryLightbox.parentElement && galleryLightbox.parentElement !== document.body) {
     document.body.appendChild(galleryLightbox);
   }
+  galleryLightbox.hidden = true;
   const lightboxImage = galleryLightbox.querySelector('[data-gallery-image]');
   const lightboxCaption = galleryLightbox.querySelector('[data-gallery-caption]');
   const closeControls = galleryLightbox.querySelectorAll('[data-gallery-close]');
