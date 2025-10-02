@@ -12,6 +12,8 @@ const accordionGroups = document.querySelectorAll('[data-accordion-group]');
 const yearTarget = document.getElementById('year');
 const hero = document.getElementById('hero');
 const heroFigure = document.querySelector('[data-parallax]');
+const galleryItems = Array.from(document.querySelectorAll('[data-gallery-item]'));
+const galleryLightbox = document.querySelector('[data-gallery-lightbox]');
 
 if (yearTarget) {
   yearTarget.textContent = new Date().getFullYear();
@@ -302,10 +304,137 @@ const loadYouTube = () => {
 
 loadYouTube();
 
-// Twitch offline fallback placeholder (optional manual toggle)
-const offlineMessage = document.querySelector('.offline-message');
-if (offlineMessage) {
-  offlineMessage.hidden = true;
+// Gallery lightbox handling
+if (galleryItems.length > 0 && galleryLightbox) {
+  const lightboxImage = galleryLightbox.querySelector('[data-gallery-image]');
+  const lightboxCaption = galleryLightbox.querySelector('[data-gallery-caption]');
+  const closeControls = galleryLightbox.querySelectorAll('[data-gallery-close]');
+  const nextButton = galleryLightbox.querySelector('[data-gallery-next]');
+  const prevButton = galleryLightbox.querySelector('[data-gallery-prev]');
+  galleryLightbox.setAttribute('aria-hidden', 'true');
+
+  const categoryMap = new Map();
+  const entries = galleryItems
+    .map((element) => {
+      const entry = {
+        element,
+        category: element.dataset.galleryCategory || 'default',
+        src: element.dataset.gallerySrc || '',
+        alt: element.dataset.galleryAlt || '',
+        caption: element.dataset.galleryCaption || '',
+        index: 0,
+      };
+      if (!entry.src) return null;
+      if (!categoryMap.has(entry.category)) {
+        categoryMap.set(entry.category, []);
+      }
+      const group = categoryMap.get(entry.category);
+      entry.index = group.length;
+      group.push(entry);
+      return entry;
+    })
+    .filter(Boolean);
+
+  let activeEntries = [];
+  let activeIndex = 0;
+  let lastFocusedElement = null;
+
+  const setNavDisabled = (button, disabled) => {
+    if (!button) return;
+    button.disabled = disabled;
+    button.setAttribute('aria-disabled', String(disabled));
+    if (disabled) {
+      button.setAttribute('tabindex', '-1');
+    } else {
+      button.removeAttribute('tabindex');
+    }
+  };
+
+  const updateLightbox = () => {
+    const current = activeEntries[activeIndex];
+    if (!current || !lightboxImage || !lightboxCaption) return;
+    lightboxImage.src = current.src;
+    lightboxImage.alt = current.alt || current.caption || '';
+    lightboxCaption.textContent = current.caption || current.alt || '';
+    const disableNav = activeEntries.length <= 1;
+    setNavDisabled(nextButton, disableNav);
+    setNavDisabled(prevButton, disableNav);
+  };
+
+  const openLightbox = (category, index) => {
+    const group = categoryMap.get(category);
+    if (!group || !group[index] || !lightboxImage || !lightboxCaption) return;
+    activeEntries = group;
+    activeIndex = index;
+    lastFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    updateLightbox();
+    galleryLightbox.hidden = false;
+    galleryLightbox.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    const focusTarget = galleryLightbox.querySelector('.gallery-lightbox__close');
+    requestAnimationFrame(() => focusTarget?.focus());
+  };
+
+  const closeLightbox = () => {
+    galleryLightbox.hidden = true;
+    galleryLightbox.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('modal-open');
+    if (lightboxImage) {
+      lightboxImage.src = '';
+      lightboxImage.alt = '';
+    }
+    if (lightboxCaption) {
+      lightboxCaption.textContent = '';
+    }
+    if (lastFocusedElement) {
+      requestAnimationFrame(() => lastFocusedElement?.focus());
+    }
+  };
+
+  const showNext = () => {
+    if (activeEntries.length <= 1) return;
+    activeIndex = (activeIndex + 1) % activeEntries.length;
+    updateLightbox();
+  };
+
+  const showPrev = () => {
+    if (activeEntries.length <= 1) return;
+    activeIndex = (activeIndex - 1 + activeEntries.length) % activeEntries.length;
+    updateLightbox();
+  };
+
+  entries.forEach((entry) => {
+    entry.element.addEventListener('click', () => {
+      openLightbox(entry.category, entry.index);
+    });
+  });
+
+  closeControls.forEach((control) => {
+    control.addEventListener('click', closeLightbox);
+  });
+
+  nextButton?.addEventListener('click', showNext);
+  prevButton?.addEventListener('click', showPrev);
+
+  window.addEventListener('keydown', (event) => {
+    if (galleryLightbox.hidden) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeLightbox();
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      showNext();
+    } else if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      showPrev();
+    }
+  });
+}
+
+// Twitch status placeholder (optional manual toggle)
+const twitchStatus = document.querySelector('.twitch-status');
+if (twitchStatus) {
+  twitchStatus.hidden = true;
 }
 
 // Parallax effect on hero figure and ornaments
