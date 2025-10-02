@@ -441,8 +441,35 @@ if (galleryCarousels.length > 0) {
 
     const scrollByAmount = () => track.clientWidth * 0.8;
 
+    const setNavAvailability = (button, available) => {
+      if (!button) return;
+      if (available) {
+        button.removeAttribute('aria-hidden');
+        button.removeAttribute('tabindex');
+      } else {
+        button.setAttribute('aria-hidden', 'true');
+        button.setAttribute('tabindex', '-1');
+      }
+    };
+
     const updateDisabled = () => {
       const maxScrollLeft = Math.max(0, track.scrollWidth - track.clientWidth);
+      const canScroll = maxScrollLeft > 1;
+
+      carousel.classList.toggle('gallery-carousel--nav-hidden', !canScroll);
+      setNavAvailability(prevButton, canScroll);
+      setNavAvailability(nextButton, canScroll);
+
+      if (prevButton) prevButton.disabled = !canScroll;
+      if (nextButton) nextButton.disabled = !canScroll;
+
+      if (!canScroll) {
+        if (track.scrollLeft !== 0) {
+          track.scrollLeft = 0;
+        }
+        return;
+      }
+
       const atStart = track.scrollLeft <= 1;
       const atEnd = track.scrollLeft >= maxScrollLeft - 1;
       if (prevButton) prevButton.disabled = atStart;
@@ -465,6 +492,15 @@ if (galleryCarousels.length > 0) {
 
     track.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('resize', handleScroll, { passive: true });
+
+    if ('ResizeObserver' in window) {
+      const observer = new ResizeObserver(updateDisabled);
+      observer.observe(track);
+    }
+
+    if (document.readyState !== 'complete') {
+      window.addEventListener('load', updateDisabled, { once: true });
+    }
 
     updateDisabled();
   });
