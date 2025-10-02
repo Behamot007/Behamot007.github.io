@@ -34,6 +34,10 @@ body {
   position: relative;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body.star-sky::before {
   content: "";
   position: fixed;
@@ -703,17 +707,37 @@ h4 {
 }
 
 .twitch-status {
-  background: rgba(246, 239, 230, 0.95);
+  background: linear-gradient(135deg, rgba(15, 27, 55, 0.92), rgba(27, 43, 85, 0.88));
   border-radius: 1rem;
-  padding: 1.25rem;
-  border: 1px solid rgba(198, 162, 95, 0.4);
+  padding: 1rem 1.25rem;
+  border: 1px solid rgba(198, 162, 95, 0.35);
   display: grid;
-  gap: 0.75rem;
-  justify-items: start;
+  gap: 0.65rem;
+  justify-items: stretch;
+  color: rgba(246, 239, 230, 0.92);
+  width: min(100%, 24rem);
+  margin: 1.5rem auto 0;
+  box-shadow: 0 18px 40px -28px rgba(0, 0, 0, 0.65);
+  text-align: left;
+}
+
+.twitch-status__title {
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  color: rgba(246, 239, 230, 0.76);
+  margin: 0;
+}
+
+.twitch-status__text {
+  margin: 0;
+  font-size: 0.95rem;
+  color: rgba(246, 239, 230, 0.85);
 }
 
 .twitch-status .btn {
-  width: auto;
+  width: 100%;
 }
 
 .twitch-actions {
@@ -843,6 +867,78 @@ h4 {
   }
 }
 
+.gallery-carousel {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.gallery-carousel__track {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(140px, 1fr);
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding: 0.35rem 0.25rem;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+}
+
+.gallery-carousel__track::-webkit-scrollbar {
+  height: 8px;
+}
+
+.gallery-carousel__track::-webkit-scrollbar-thumb {
+  background: rgba(198, 162, 95, 0.35);
+  border-radius: 999px;
+}
+
+.gallery-carousel__track::-webkit-scrollbar-track {
+  background: rgba(15, 27, 55, 0.15);
+  border-radius: 999px;
+}
+
+.gallery-carousel__nav {
+  border: none;
+  background: rgba(198, 162, 95, 0.18);
+  color: var(--deep-blue);
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  font-size: 1.35rem;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: background 200ms ease, transform 200ms ease;
+}
+
+.gallery-carousel__nav:hover,
+.gallery-carousel__nav:focus-visible {
+  background: rgba(198, 162, 95, 0.32);
+  transform: translateY(-2px);
+  color: var(--navy);
+}
+
+.gallery-carousel__nav:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.gallery-carousel__nav[disabled] {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.gallery-carousel--compact .gallery-carousel__track {
+  grid-auto-columns: minmax(120px, 140px);
+}
+
+.gallery-carousel--artworks .gallery-carousel__track {
+  grid-auto-columns: minmax(180px, 220px);
+}
+
 .gallery-item {
   background: rgba(246, 239, 230, 0.98);
   border-radius: 1.5rem;
@@ -855,6 +951,7 @@ h4 {
   display: block;
   text-align: left;
   transition: transform 220ms ease, box-shadow 220ms ease;
+  scroll-snap-align: center;
 }
 
 .gallery-item img {
@@ -867,13 +964,13 @@ h4 {
 .gallery-item__label {
   position: absolute;
   inset: auto 0 0 0;
-  padding: 0.75rem 1rem;
+  padding: 0.65rem 0.9rem;
   background: linear-gradient(180deg, transparent, rgba(15, 27, 55, 0.92));
   color: var(--cream);
   font-family: "Cormorant Garamond", "Times New Roman", serif;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 .gallery-item:hover img,
