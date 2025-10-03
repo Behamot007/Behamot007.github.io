@@ -221,6 +221,11 @@ button.secondary {
   background: rgba(145, 70, 255, 0.12);
 }
 
+.chat-message--self {
+  border-color: rgba(46, 204, 113, 0.45);
+  background: rgba(46, 204, 113, 0.12);
+}
+
 .chat-message--system {
   font-style: italic;
   color: rgba(255, 255, 255, 0.7);
