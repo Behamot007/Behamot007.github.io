@@ -47,3 +47,7 @@ docker compose logs -f backend
 ```
 
 Der Datensatz liegt standardmäßig unter `dataset/characters.jsonl`. Über das bind-mount `./projects/dev-backend/anime-dataset/dataset:/app/dataset` bleiben Änderungen lokal erhalten.
+
+## Zusätzliche Services
+
+- `twitch-chat-controller/`: Separates Express-Backend, das einen Twitch-Bot verwaltet, Chatnachrichten per SSE streamt und einen OAuth-Test-Flow bereitstellt. Die zugehörige Oberfläche befindet sich unter `projects/sites/dev/services/twitch-bot`.
