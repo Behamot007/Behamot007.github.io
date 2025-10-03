@@ -29,7 +29,7 @@ Der Server lauscht standardmäßig auf Port `4010`. Über einen Reverse-Proxy (z
 | `TWITCH_API_PASSWORD` | Obligatorisches Passwort, das jede Anfrage (außer dem OAuth-Callback) mitliefern muss. |
 | `TWITCH_CLIENT_ID` | Client-ID der Twitch Application für OAuth. |
 | `TWITCH_CLIENT_SECRET` | Client-Secret der Twitch Application für OAuth. |
-| `TWITCH_REDIRECT_URI` | Redirect-URL, die in der Twitch Application hinterlegt ist (z. B. `https://www.behamot.de/services/twitch-bot/oauth/callback`). |
+| `TWITCH_REDIRECT_URI` | Redirect-URL, die in der Twitch Application hinterlegt ist (z. B. `https://www.behamot.de/api/twitch/oauth/callback`). |
 | `TWITCH_BOT_USERNAME` | Benutzername des Bot-Accounts, der den Chat steuert. |
 | `TWITCH_BOT_OAUTH_TOKEN` | OAuth-Token im Format `oauth:...`, das vom Bot-Account generiert wurde. |
 | `TWITCH_DEFAULT_CHANNEL` | (Optional) Kanal, der automatisch beim Start betreten werden soll. |
@@ -40,7 +40,7 @@ Eine minimal ausgefüllte `.env` kann z. B. wie folgt aussehen:
 TWITCH_API_PASSWORD=ein-sicheres-passwort
 TWITCH_CLIENT_ID=deine-client-id
 TWITCH_CLIENT_SECRET=dein-client-secret
-TWITCH_REDIRECT_URI=https://www.behamot.de/services/twitch-bot/oauth/callback
+TWITCH_REDIRECT_URI=https://www.behamot.de/api/twitch/oauth/callback
 TWITCH_BOT_USERNAME=deinbotname
 TWITCH_BOT_OAUTH_TOKEN=oauth:xxxxxxxxxxxxxxxxxxxx
 TWITCH_DEFAULT_CHANNEL=BehamotVT
@@ -54,7 +54,9 @@ TWITCH_DEFAULT_CHANNEL=BehamotVT
 
 1. **Twitch Developer Application anlegen**
    - Öffne <https://dev.twitch.tv/console/apps> und erstelle (oder wähle) eine Anwendung.
-   - Hinterlege unter „OAuth Redirect URLs" exakt die Adresse aus `TWITCH_REDIRECT_URI` (z. B. `https://www.behamot.de/services/twitch-bot/oauth/callback`).
+   - Hinterlege unter „OAuth Redirect URLs" exakt die Adresse aus `TWITCH_REDIRECT_URI` (z. B. `https://www.behamot.de/api/twitch/oauth/callback`).
+     Diese URL muss direkt auf den Backend-Endpunkt `/api/twitch/oauth/callback` zeigen – Frontend-Seiten wie `index.html` funktionieren nicht,
+     weil dort der notwendige Token-Tausch mit `client_secret` nicht stattfinden kann.
    - Kopiere die Werte „Client ID" und „Client Secret" in `TWITCH_CLIENT_ID` bzw. `TWITCH_CLIENT_SECRET` deiner `.env`.
 2. **Bot-Account vorbereiten**
    - Lege (falls noch nicht vorhanden) ein separates Twitch-Konto an, das den Chat steuern soll.
@@ -73,7 +75,7 @@ Für den produktiven Einsatz kann der Dienst über Docker Compose gestartet werd
 TWITCH_API_PASSWORD=ein-sicheres-passwort \
 TWITCH_CLIENT_ID=deine-client-id \
 TWITCH_CLIENT_SECRET=dein-client-secret \
-TWITCH_REDIRECT_URI=https://www.behamot.de/services/twitch-bot/oauth/callback \
+TWITCH_REDIRECT_URI=https://www.behamot.de/api/twitch/oauth/callback \
 TWITCH_BOT_USERNAME=deinbotname \
 TWITCH_BOT_OAUTH_TOKEN=oauth:xxxxxxxxxxxxxxxxxxxx \
 docker compose up -d twitch-controller

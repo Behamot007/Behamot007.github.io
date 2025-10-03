@@ -69,7 +69,7 @@ services:
       - TWITCH_API_PASSWORD=${TWITCH_API_PASSWORD:-}
       - TWITCH_CLIENT_ID=${TWITCH_CLIENT_ID:-}
       - TWITCH_CLIENT_SECRET=${TWITCH_CLIENT_SECRET:-}
-      - TWITCH_REDIRECT_URI=${TWITCH_REDIRECT_URI:-https://www.behamot.de/services/twitch-bot/oauth/callback}
+      - TWITCH_REDIRECT_URI=${TWITCH_REDIRECT_URI:-https://www.behamot.de/api/twitch/oauth/callback}
       - TWITCH_BOT_USERNAME=${TWITCH_BOT_USERNAME:-}
       - TWITCH_BOT_OAUTH_TOKEN=${TWITCH_BOT_OAUTH_TOKEN:-}
       - TWITCH_DEFAULT_CHANNEL=${TWITCH_DEFAULT_CHANNEL:-}
