@@ -43,6 +43,60 @@ const joinedChannels = new Set();
 const channelContexts = new Map();
 const oauthStates = new Map();
 let chatClientReady = false;
+const pendingBotMessages = new Map();
+
+function addPendingBotMessage(channel, message) {
+  const normalizedChannel = normalizeChannelName(channel);
+  if (!normalizedChannel || !message) return;
+  const entry = {
+    message: message.trim(),
+    addedAt: Date.now()
+  };
+  if (!pendingBotMessages.has(normalizedChannel)) {
+    pendingBotMessages.set(normalizedChannel, [entry]);
+    return;
+  }
+  const list = pendingBotMessages.get(normalizedChannel);
+  list.push(entry);
+  cleanupPendingBotMessages(normalizedChannel);
+}
+
+function consumePendingBotMessage(channel, message) {
+  const normalizedChannel = normalizeChannelName(channel);
+  if (!normalizedChannel || !message) return false;
+  if (!pendingBotMessages.has(normalizedChannel)) return false;
+  const trimmed = message.trim();
+  const list = pendingBotMessages.get(normalizedChannel);
+  const now = Date.now();
+  for (let index = 0; index < list.length; index += 1) {
+    const item = list[index];
+    if (now - item.addedAt > 10_000) {
+      continue;
+    }
+    if (item.message === trimmed) {
+      list.splice(index, 1);
+      if (!list.length) {
+        pendingBotMessages.delete(normalizedChannel);
+      }
+      return true;
+    }
+  }
+  cleanupPendingBotMessages(normalizedChannel);
+  return false;
+}
+
+function cleanupPendingBotMessages(channel) {
+  const normalizedChannel = normalizeChannelName(channel);
+  if (!normalizedChannel || !pendingBotMessages.has(normalizedChannel)) return;
+  const list = pendingBotMessages.get(normalizedChannel);
+  const cutoff = Date.now() - 10_000;
+  const filtered = list.filter(item => item.addedAt >= cutoff);
+  if (filtered.length) {
+    pendingBotMessages.set(normalizedChannel, filtered);
+  } else {
+    pendingBotMessages.delete(normalizedChannel);
+  }
+}
 
 function toBase64Url(buffer) {
   return buffer
@@ -151,10 +205,12 @@ function createChatClient() {
   });
 
   client.on('message', (channel, tags, message, self) => {
-    if (self) return;
     const normalized = normalizeChannelName(channel);
+    if (self && consumePendingBotMessage(normalized, message)) {
+      return;
+    }
     const payload = {
-      type: 'message',
+      type: self ? 'self' : 'message',
       channel: normalized,
       userId: tags['user-id'] || null,
       username: tags['display-name'] || tags.username,
@@ -319,6 +375,7 @@ app.post('/api/twitch/chat/send', async (req, res) => {
       await client.join(`#${channel}`);
       joinedChannels.add(channel);
     }
+    addPendingBotMessage(channel, message.trim());
     await client.say(`#${channel}`, message.trim());
     broadcastToChannel(channel, {
       type: 'outgoing',

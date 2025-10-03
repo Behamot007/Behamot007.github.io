@@ -120,6 +120,10 @@ function appendMessage(entry) {
     article.classList.add('chat-message--system');
     userEl.textContent = '# ' + (channel || currentChannel || 'system');
     textEl.textContent = message || '';
+  } else if (type === 'self') {
+    article.classList.add('chat-message--self');
+    userEl.textContent = `${username || userId || 'Du'} · Eigene Nachricht`;
+    textEl.textContent = message || '';
   } else if (type === 'outgoing') {
     article.classList.add('chat-message--bot');
     userEl.textContent = `BOT · ${username || 'Bot'}`;
