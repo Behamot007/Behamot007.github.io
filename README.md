@@ -18,6 +18,7 @@ Eine vollständige Zielstruktur inklusive Naming-Konventionen und README-Templat
 ## Verzeichnisstruktur
 
 - `projects/dev-backend/anime-dataset/`: Node.js-Backend-Service für Spotify-/OpenAI-Bridging sowie den Anime-Datensatz (ohne Frontend-Verwaltung).
+- `projects/dev-backend/twitch-chat-controller/`: Express-Service zum Steuern eines Twitch-Chats inkl. OAuth-Brücke und SSE-Stream.
 - `Dockerfile.frontend`: Build-Anleitung für das nginx-Frontend.
 - `projects/dev-backend/anime-dataset/Dockerfile`: Build-Anleitung für den Backend-Service.
 - `docker-compose.yml`: Definition der Services, Netzwerke und Volumes.
@@ -48,13 +49,14 @@ BACKEND_API_TOKEN=geheim docker compose up -d --build
 docker compose logs -f backend
 ```
 
-Der Befehl `docker compose up -d --build` baut beide Images (`backend`, `frontend`), erstellt die Netzwerke (`internal`, `public`) und startet die Container im Hintergrund. Das Frontend ist anschließend unter `http://localhost:8080` erreichbar. Interne Aufrufe an `/api/*` werden automatisch an den Backend-Service weitergeleitet.
+Der Befehl `docker compose up -d --build` baut alle Images (`backend`, `frontend`, `twitch-controller`), erstellt die Netzwerke (`internal`, `public`) und startet die Container im Hintergrund. Das Frontend ist anschließend unter `http://localhost:8080` erreichbar. Interne Aufrufe an `/api/*` werden automatisch an den passenden Backend-Service weitergeleitet.
 
 ### Frontend ↔ Backend Zusammenspiel
 
 - Der Dev-Bereich (`projects/sites/dev/`, inkl. „Anime Dataset Verwaltung“) erwartet, dass der Backend-Einstiegspunkt unter `/api` erreichbar ist. Für containerisierte Deployments wird dies über das Compose-Environment `FRONTEND_BACKEND_API_BASE` (Default: `http://backend:3000`) sowie die nginx-Proxy-Regeln aus `docker/nginx/default.conf` realisiert.
 - In lokalen Szenarien ohne Docker kann die Variable `BACKEND_API_BASE` beispielsweise per `.env` auf `http://localhost:3000` gesetzt werden; der Dev-Server muss anschließend Anfragen an diesen Host weiterreichen.
 - Statische Assets werden ausschließlich vom Frontend ausgeliefert. Das Backend konzentriert sich auf JSON-APIs (Spotify, OpenAI, Dataset-CRUD) und stellt keine eigene `public/`-Oberfläche mehr bereit.
+- Der Twitch Chat Controller wird über `/api/twitch/*` angesprochen und innerhalb des Stacks automatisch an den neuen Service `twitch-controller` weitergeleitet. Die Oberfläche liegt unter `projects/sites/dev/services/twitch-bot`.
 
 ### Datenpersistenz
 

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Twitch Chat Steuerung</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="app-header__brand">
+        <span class="app-header__logo">🛠️</span>
+        <div>
+          <h1>Twitch Chat Steuerung</h1>
+          <p>Bot-Kanal überwachen &amp; Nachrichten versenden</p>
+        </div>
+      </div>
+      <nav class="app-header__nav">
+        <a href="../../index.html">← Zurück zur Übersicht</a>
+      </nav>
+    </header>
+
+    <main class="app-grid">
+      <section class="card">
+        <h2>Backend-Verbindung</h2>
+        <form id="connectionForm" class="form-grid">
+          <label>
+            <span>API-Basis-URL</span>
+            <input id="apiBase" type="url" placeholder="https://www.behamot.de/api/twitch" required />
+          </label>
+          <label>
+            <span>API-Passwort</span>
+            <input id="apiPassword" type="password" autocomplete="current-password" required />
+          </label>
+          <div class="form-actions">
+            <button type="submit">Verbinden</button>
+            <button type="button" id="clearPassword" class="secondary">Passwort löschen</button>
+          </div>
+        </form>
+        <div id="connectionStatus" class="status-box">Nicht verbunden</div>
+      </section>
+
+      <section class="card">
+        <h2>OAuth-Test</h2>
+        <p>
+          Öffnet den Twitch-Login in einem Pop-up. Nach erfolgreicher Anmeldung sendet das Pop-up die Tokens an diese Seite zurück.
+        </p>
+        <div class="oauth-grid">
+          <button id="oauthStart" disabled>OAuth starten</button>
+          <div class="status-box" id="oauthInfo">Noch kein Token angefordert.</div>
+        </div>
+      </section>
+
+      <section class="card card--wide">
+        <div class="card-header">
+          <h2>Chat-Ansicht</h2>
+          <div class="channel-form">
+            <label>
+              <span>Channel</span>
+              <input id="channelInput" type="text" placeholder="beispielkanal" />
+            </label>
+            <button id="connectChannel" disabled>Chat abonnieren</button>
+          </div>
+        </div>
+        <div id="chatLog" class="chat-log" aria-live="polite"></div>
+        <form id="messageForm" class="message-form">
+          <textarea id="messageInput" rows="2" placeholder="Nachricht schreiben..." required></textarea>
+          <button type="submit" disabled>Senden</button>
+        </form>
+      </section>
+    </main>
+
+    <template id="messageTemplate">
+      <article class="chat-message">
+        <div class="chat-message__meta">
+          <span class="chat-message__user"></span>
+          <time class="chat-message__time"></time>
+        </div>
+        <p class="chat-message__text"></p>
+      </article>
+    </template>
+
+    <script type="module" src="./script.js"></script>
+  </body>
+</html>

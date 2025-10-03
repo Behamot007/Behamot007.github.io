@@ -1,0 +1,17 @@
+{
+  "name": "twitch-chat-controller",
+  "version": "0.1.0",
+  "description": "Backend-Service zum Steuern eines Twitch-Chats über einen Bot-Account",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "tmi.js": "^1.8.5"
+  }
+}

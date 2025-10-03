@@ -65,6 +65,20 @@
           description: 'Errate Anime-Charaktere über das Chat-Interface mit KI-Unterstützung.'
         }
       ]
+    },
+    {
+      type: 'group',
+      id: 'twitch',
+      label: 'Streaming & Twitch',
+      items: [
+        {
+          type: 'page',
+          id: 'twitch-chat',
+          label: 'Twitch Chat Steuerung',
+          url: '../services/twitch-bot/index.html',
+          description: 'Verbinde einen Bot-Account, überwache den Chat und sende Nachrichten direkt aus dem Browser.'
+        }
+      ]
     }
   ];
 
