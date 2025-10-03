@@ -34,7 +34,52 @@ Der Server lauscht standardmäßig auf Port `4010`. Über einen Reverse-Proxy (z
 | `TWITCH_BOT_OAUTH_TOKEN` | OAuth-Token im Format `oauth:...`, das vom Bot-Account generiert wurde. |
 | `TWITCH_DEFAULT_CHANNEL` | (Optional) Kanal, der automatisch beim Start betreten werden soll. |
 
+Eine minimal ausgefüllte `.env` kann z. B. wie folgt aussehen:
+
+```ini
+TWITCH_API_PASSWORD=ein-sicheres-passwort
+TWITCH_CLIENT_ID=deine-client-id
+TWITCH_CLIENT_SECRET=dein-client-secret
+TWITCH_REDIRECT_URI=https://www.behamot.de/services/twitch-bot/oauth/callback
+TWITCH_BOT_USERNAME=deinbotname
+TWITCH_BOT_OAUTH_TOKEN=oauth:xxxxxxxxxxxxxxxxxxxx
+TWITCH_DEFAULT_CHANNEL=BehamotVT
+```
+
+> Achte darauf, dass das Bot-Token tatsächlich mit `oauth:` beginnt – sonst lehnt Twitch die Verbindung ab.
+
 > Hinweis: Das API-Passwort muss im Frontend eingegeben werden. Für Streaming-Endpunkte kann das Passwort als `apiPassword` Query-Parameter gesetzt werden, damit EventSource-Verbindungen funktionieren.
+
+### Zugangsdaten beschaffen
+
+1. **Twitch Developer Application anlegen**
+   - Öffne <https://dev.twitch.tv/console/apps> und erstelle (oder wähle) eine Anwendung.
+   - Hinterlege unter „OAuth Redirect URLs" exakt die Adresse aus `TWITCH_REDIRECT_URI` (z. B. `https://www.behamot.de/services/twitch-bot/oauth/callback`).
+   - Kopiere die Werte „Client ID" und „Client Secret" in `TWITCH_CLIENT_ID` bzw. `TWITCH_CLIENT_SECRET` deiner `.env`.
+2. **Bot-Account vorbereiten**
+   - Lege (falls noch nicht vorhanden) ein separates Twitch-Konto an, das den Chat steuern soll.
+   - Erzeuge ein Chat-OAuth-Token für dieses Konto, z. B. über <https://twitchapps.com/tmi/> oder ein eigenes Skript mit dem Scope `chat:read chat:edit`.
+   - Trage den Benutzernamen in `TWITCH_BOT_USERNAME` und das generierte Token im Format `oauth:…` in `TWITCH_BOT_OAUTH_TOKEN` ein.
+3. **API-Passwort festlegen**
+   - Wähle ein beliebiges starkes Passwort und setze es als `TWITCH_API_PASSWORD`. Dieses Passwort muss anschließend im Frontend eingegeben werden, damit Buttons (z. B. „OAuth starten“) freigeschaltet werden.
+
+Erst wenn alle Pflichtfelder gesetzt sind, meldet `/api/twitch/status` `oauthConfigured: true` – andernfalls bleibt der OAuth-Button im Frontend ausgegraut.
+
+### Betrieb im Container
+
+Für den produktiven Einsatz kann der Dienst über Docker Compose gestartet werden. Im Root-Projekt befindet sich eine `docker-compose.yml`, die einen Service `twitch-controller` definiert. Vor dem Start solltest du die oben genannten Umgebungsvariablen in deiner Shell oder einer `.env` Datei neben `docker-compose.yml` setzen:
+
+```bash
+TWITCH_API_PASSWORD=ein-sicheres-passwort \
+TWITCH_CLIENT_ID=deine-client-id \
+TWITCH_CLIENT_SECRET=dein-client-secret \
+TWITCH_REDIRECT_URI=https://www.behamot.de/services/twitch-bot/oauth/callback \
+TWITCH_BOT_USERNAME=deinbotname \
+TWITCH_BOT_OAUTH_TOKEN=oauth:xxxxxxxxxxxxxxxxxxxx \
+docker compose up -d twitch-controller
+```
+
+Der neue Dockerfile im Verzeichnis `projects/dev-backend/twitch-chat-controller` stellt sicher, dass der Build funktioniert und der Container anschließend auf Port `4010` lauscht.
 
 ## API-Überblick
 
