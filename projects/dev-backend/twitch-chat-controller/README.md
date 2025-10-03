@@ -28,7 +28,7 @@ Der Server lauscht standardmäßig auf Port `4010`. Über einen Reverse-Proxy (z
 | `PORT` | (Optional) Abweichender Port für das Express-Backend (Standard: 4010). |
 | `TWITCH_API_PASSWORD` | Obligatorisches Passwort, das jede Anfrage (außer dem OAuth-Callback) mitliefern muss. |
 | `TWITCH_CLIENT_ID` | Client-ID der Twitch Application für OAuth. |
-| `TWITCH_CLIENT_SECRET` | Client-Secret der Twitch Application für OAuth. |
+| `TWITCH_CLIENT_SECRET` | (Optional) Client-Secret der Twitch Application für OAuth. Ohne diesen Wert nutzt der Server automatisch den Authorization-Code-Flow mit PKCE. |
 | `TWITCH_REDIRECT_URI` | Redirect-URL, die in der Twitch Application hinterlegt ist (z. B. `https://www.behamot.de/api/twitch/oauth/callback`). |
 | `TWITCH_BOT_USERNAME` | Benutzername des Bot-Accounts, der den Chat steuert. |
 | `TWITCH_BOT_OAUTH_TOKEN` | OAuth-Token im Format `oauth:...`, das vom Bot-Account generiert wurde. |
@@ -39,6 +39,7 @@ Eine minimal ausgefüllte `.env` kann z. B. wie folgt aussehen:
 ```ini
 TWITCH_API_PASSWORD=ein-sicheres-passwort
 TWITCH_CLIENT_ID=deine-client-id
+# Optional: Nur notwendig, wenn du kein PKCE verwenden möchtest
 TWITCH_CLIENT_SECRET=dein-client-secret
 TWITCH_REDIRECT_URI=https://www.behamot.de/api/twitch/oauth/callback
 TWITCH_BOT_USERNAME=deinbotname
@@ -55,9 +56,8 @@ TWITCH_DEFAULT_CHANNEL=BehamotVT
 1. **Twitch Developer Application anlegen**
    - Öffne <https://dev.twitch.tv/console/apps> und erstelle (oder wähle) eine Anwendung.
    - Hinterlege unter „OAuth Redirect URLs" exakt die Adresse aus `TWITCH_REDIRECT_URI` (z. B. `https://www.behamot.de/api/twitch/oauth/callback`).
-     Diese URL muss direkt auf den Backend-Endpunkt `/api/twitch/oauth/callback` zeigen – Frontend-Seiten wie `index.html` funktionieren nicht,
-     weil dort der notwendige Token-Tausch mit `client_secret` nicht stattfinden kann.
-   - Kopiere die Werte „Client ID" und „Client Secret" in `TWITCH_CLIENT_ID` bzw. `TWITCH_CLIENT_SECRET` deiner `.env`.
+    Diese URL muss direkt auf den Backend-Endpunkt `/api/twitch/oauth/callback` zeigen – der Server führt dort den Token-Tausch inklusive Client-Secret bzw. PKCE-Code-Verifier durch und sendet das Ergebnis zurück.
+   - Kopiere die Werte „Client ID" und – falls du kein PKCE nutzen möchtest – „Client Secret" in `TWITCH_CLIENT_ID` bzw. `TWITCH_CLIENT_SECRET` deiner `.env`.
 2. **Bot-Account vorbereiten**
    - Lege (falls noch nicht vorhanden) ein separates Twitch-Konto an, das den Chat steuern soll.
    - Erzeuge ein Chat-OAuth-Token für dieses Konto, z. B. über <https://twitchapps.com/tmi/> oder ein eigenes Skript mit dem Scope `chat:read chat:edit`.

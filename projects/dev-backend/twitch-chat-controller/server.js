@@ -20,8 +20,10 @@ if (!TWITCH_API_PASSWORD) {
   console.warn('[twitch-chat-controller] WARN: TWITCH_API_PASSWORD ist nicht gesetzt. Ohne Passwort wird jede Anfrage abgelehnt.');
 }
 
-if (!TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET || !TWITCH_REDIRECT_URI) {
+if (!TWITCH_CLIENT_ID || !TWITCH_REDIRECT_URI) {
   console.warn('[twitch-chat-controller] WARN: OAuth-Konfiguration ist unvollständig. /api/twitch/oauth/* wird nicht funktionieren.');
+} else if (!TWITCH_CLIENT_SECRET) {
+  console.warn('[twitch-chat-controller] WARN: TWITCH_CLIENT_SECRET ist nicht gesetzt. OAuth-Flow verwendet PKCE ohne Client-Secret.');
 }
 
 if (!TWITCH_BOT_USERNAME || !TWITCH_BOT_OAUTH_TOKEN) {
@@ -41,6 +43,22 @@ const joinedChannels = new Set();
 const channelContexts = new Map();
 const oauthStates = new Map();
 let chatClientReady = false;
+
+function toBase64Url(buffer) {
+  return buffer
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+function createCodeVerifier() {
+  return toBase64Url(crypto.randomBytes(32));
+}
+
+function createCodeChallenge(verifier) {
+  return toBase64Url(crypto.createHash('sha256').update(verifier).digest());
+}
 
 function getOrCreateChannelContext(channel) {
   const normalized = normalizeChannelName(channel);
@@ -226,7 +244,7 @@ app.get('/api/twitch/status', (_req, res) => {
     joinedChannels: Array.from(joinedChannels),
     defaultChannel: TWITCH_DEFAULT_CHANNEL ? normalizeChannelName(TWITCH_DEFAULT_CHANNEL) : null,
     hasBotCredentials: Boolean(TWITCH_BOT_USERNAME && TWITCH_BOT_OAUTH_TOKEN),
-    oauthConfigured: Boolean(TWITCH_CLIENT_ID && TWITCH_CLIENT_SECRET && TWITCH_REDIRECT_URI)
+    oauthConfigured: Boolean(TWITCH_CLIENT_ID && TWITCH_REDIRECT_URI)
   });
 });
 
@@ -317,14 +335,19 @@ app.post('/api/twitch/chat/send', async (req, res) => {
 });
 
 app.get('/api/twitch/oauth/authorize', (req, res) => {
-  if (!TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET || !TWITCH_REDIRECT_URI) {
+  if (!TWITCH_CLIENT_ID || !TWITCH_REDIRECT_URI) {
     return res.status(500).json({ error: 'OAuth ist nicht vollständig konfiguriert.' });
   }
   const scopes = Array.isArray(req.query.scope)
     ? req.query.scope
     : (typeof req.query.scope === 'string' ? req.query.scope.split(',').map(s => s.trim()).filter(Boolean) : ['chat:read', 'chat:edit']);
   const state = crypto.randomBytes(24).toString('hex');
-  oauthStates.set(state, { createdAt: Date.now(), scopes });
+  const usePkce = !TWITCH_CLIENT_SECRET;
+  let codeVerifier = null;
+  if (usePkce) {
+    codeVerifier = createCodeVerifier();
+  }
+  oauthStates.set(state, { createdAt: Date.now(), scopes, codeVerifier, usePkce });
   const params = new URLSearchParams({
     client_id: TWITCH_CLIENT_ID,
     redirect_uri: TWITCH_REDIRECT_URI,
@@ -332,10 +355,15 @@ app.get('/api/twitch/oauth/authorize', (req, res) => {
     scope: scopes.join(' '),
     state
   });
+  if (usePkce && codeVerifier) {
+    params.set('code_challenge', createCodeChallenge(codeVerifier));
+    params.set('code_challenge_method', 'S256');
+  }
   res.json({
     url: `https://id.twitch.tv/oauth2/authorize?${params.toString()}`,
     state,
-    scopes
+    scopes,
+    pkce: usePkce
   });
 });
 
@@ -352,17 +380,23 @@ app.get('/api/twitch/oauth/callback', async (req, res) => {
     return renderOauthResult(res, { error: 'invalid_state', errorDescription: 'State ist unbekannt oder abgelaufen.' });
   }
   oauthStates.delete(state);
-  if (!TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET || !TWITCH_REDIRECT_URI) {
+  if (!TWITCH_CLIENT_ID || !TWITCH_REDIRECT_URI) {
     return renderOauthResult(res, { error: 'server_error', errorDescription: 'OAuth ist serverseitig nicht vollständig konfiguriert.' });
   }
   try {
     const params = new URLSearchParams({
       client_id: TWITCH_CLIENT_ID,
-      client_secret: TWITCH_CLIENT_SECRET,
       code,
       grant_type: 'authorization_code',
       redirect_uri: TWITCH_REDIRECT_URI
     });
+    if (TWITCH_CLIENT_SECRET) {
+      params.set('client_secret', TWITCH_CLIENT_SECRET);
+    } else if (entry.codeVerifier) {
+      params.set('code_verifier', entry.codeVerifier);
+    } else {
+      return renderOauthResult(res, { error: 'invalid_request', errorDescription: 'PKCE-Code-Verifier fehlt.' });
+    }
     const tokenResponse = await axios.post('https://id.twitch.tv/oauth2/token', params, {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     });
