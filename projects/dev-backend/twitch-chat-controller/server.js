@@ -409,9 +409,16 @@ app.get('/api/twitch/oauth/callback', async (req, res) => {
   } catch (err) {
     console.error('[twitch-chat-controller] OAuth-Token konnte nicht geholt werden:', err?.response?.data || err);
     const errorPayload = err?.response?.data || {};
+    const errorCode = errorPayload.error || errorPayload.status || 'token_error';
+    const description =
+      errorPayload.error_description ||
+      errorPayload.message ||
+      err.message;
+
     return renderOauthResult(res, {
-      error: errorPayload.error || 'token_error',
-      errorDescription: errorPayload.error_description || err.message
+      error: errorCode,
+      errorDescription: description,
+      details: errorPayload
     });
   }
 });
