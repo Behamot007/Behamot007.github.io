@@ -8,6 +8,7 @@ Dieses Frontend dient als Kontrollzentrale für den Twitch Bot-Service aus `proj
 - **Chat-Ansicht**: Baut eine SSE-Verbindung (`/api/twitch/chat/stream`) auf, zeigt eingehende Nachrichten an (inkl. Bot-Antworten) und erlaubt das Versenden neuer Nachrichten über `/api/twitch/chat/send`.
 - **Befehle**: Oberfläche zum Pflegen des Befehlspräfixes sowie beliebig vieler Chat-Kommandos inklusive Alias-Verwaltung, Benutzerstufen, Antworttypen und optionalen Automatik-Intervallen. Die Konfiguration wird über `/api/twitch/commands` geladen und gespeichert.
 - **Währung**: Tab zur Verwaltung eines kanalweiten Punktesystems. Hier lässt sich der Name der Währung festlegen, ebenso wie die Vergaberate (X Punkte pro Y Minuten aktiver Zuschauer). Der Statusbereich zeigt an, wie viele Konten existieren und welcher Gesamtsaldo aktuell gespeichert ist. Änderungen werden über `/api/twitch/currency` persistiert; Erfolg oder Fehler werden zusätzlich in der Browser-Konsole protokolliert.
+- **OpenAI Zuschauer**: Steuert die automatische KI-Interaktion. Hier lassen sich System-Prompt, Screenshot-Intervall und Ziel-Channel festlegen; Status und letzte Antwort kommen aus `/api/twitch/openai`.
 
 ## Nutzung
 
@@ -18,5 +19,6 @@ Dieses Frontend dient als Kontrollzentrale für den Twitch Bot-Service aus `proj
 5. Channel auswählen (z. B. `behamot007`) und den Chat abonnieren.
 6. Währungssystem konfigurieren (Name, Vergaberate) und speichern, um das Punktesystem zu aktivieren. Anschließend können Befehle optional Kosten definieren, die automatisch vom Nutzerkonto abgebucht werden.
 7. Befehle anpassen und speichern, damit der Bot auf Chat-Kommandos reagieren kann.
+8. Optional: Im Tab „OpenAI Zuschauer“ Automatik aktivieren, Prompt anpassen und das Intervall festlegen. Der Bot sendet dann in den Standard- oder angegebenen Channel periodisch KI-generierte Nachrichten.
 
 Die Seite speichert lediglich den zuletzt verwendeten Channel in `localStorage`. Das Passwort wird aus Sicherheitsgründen nicht persistiert.

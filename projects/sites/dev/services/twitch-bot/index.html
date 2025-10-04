@@ -34,6 +34,9 @@
         <button type="button" class="page-nav__link" data-target="currency" id="nav-currency">
           Währung
         </button>
+        <button type="button" class="page-nav__link" data-target="openai" id="nav-openai">
+          OpenAI Zuschauer
+        </button>
       </nav>
 
       <section class="page-section is-active" id="view-config" aria-labelledby="nav-config">
@@ -188,6 +191,82 @@
               <div class="currency-summary__item">
                 <span class="currency-summary__label">Vergaberate</span>
                 <span class="currency-summary__value" id="currencySummaryRate">—</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="page-section" id="view-openai" aria-labelledby="nav-openai">
+        <div class="cards-grid">
+          <article class="card card--wide">
+            <div class="card-header">
+              <div>
+                <h2>OpenAI Zuschauer</h2>
+                <p class="card__hint">
+                  Automatisch generierte Chat-Nachrichten basierend auf Screenshots des Livestreams und dem aktuellen Chat-Verlauf.
+                </p>
+              </div>
+              <label class="switch" for="openAiEnabled">
+                <input type="checkbox" id="openAiEnabled" />
+                <span>Automatik aktiv</span>
+              </label>
+            </div>
+
+            <form id="openAiForm" class="form-grid" autocomplete="off">
+              <label>
+                <span>Channel (optional)</span>
+                <input id="openAiChannel" type="text" placeholder="Standardchannel verwenden" autocomplete="off" />
+                <p class="field__hint">Leer lassen, um den Default-Channel aus der .env zu nutzen.</p>
+              </label>
+
+              <div class="field field--split">
+                <label for="openAiInterval">
+                  <span class="field__label">Intervall (Sekunden)</span>
+                  <input id="openAiInterval" type="number" min="30" step="5" required />
+                </label>
+                <div class="field">
+                  <span class="field__label">Aktionen</span>
+                  <div class="form-actions">
+                    <button type="submit" id="openAiSave">Konfiguration speichern</button>
+                    <button type="button" id="openAiResetPrompt" class="secondary">Prompt zurücksetzen</button>
+                  </div>
+                </div>
+              </div>
+
+              <label class="field" for="openAiPrompt">
+                <span class="field__label">System-Prompt</span>
+                <textarea id="openAiPrompt" rows="6" required></textarea>
+                <p class="field__hint">Wird als Systemnachricht bei jeder Anfrage an OpenAI verwendet.</p>
+              </label>
+            </form>
+
+            <div id="openAiStatus" class="status-box">Bitte zuerst mit dem Backend verbinden.</div>
+
+            <div id="openAiSummary" class="openai-summary" hidden>
+              <div class="openai-summary__grid">
+                <div class="openai-summary__item">
+                  <span class="openai-summary__label">Ziel-Channel</span>
+                  <span class="openai-summary__value" id="openAiSummaryChannel">—</span>
+                </div>
+                <div class="openai-summary__item">
+                  <span class="openai-summary__label">Intervall</span>
+                  <span class="openai-summary__value" id="openAiSummaryInterval">—</span>
+                </div>
+                <div class="openai-summary__item">
+                  <span class="openai-summary__label">Nächster Lauf</span>
+                  <span class="openai-summary__value" id="openAiSummaryNextRun">—</span>
+                </div>
+                <div class="openai-summary__item">
+                  <span class="openai-summary__label">Letzter Erfolg</span>
+                  <span class="openai-summary__value" id="openAiSummaryLastSuccess">—</span>
+                </div>
+              </div>
+
+              <div class="openai-summary__details">
+                <p><strong>Letzte Nachricht:</strong> <span id="openAiSummaryMessage">—</span></p>
+                <p><strong>Tokenverbrauch:</strong> <span id="openAiSummaryTokens">—</span></p>
+                <p class="openai-summary__error" id="openAiSummaryError" hidden></p>
               </div>
             </div>
           </article>
