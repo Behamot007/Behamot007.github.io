@@ -4,7 +4,8 @@ const navButtons = document.querySelectorAll('.page-nav__link');
 const sections = {
   config: document.getElementById('view-config'),
   chat: document.getElementById('view-chat'),
-  commands: document.getElementById('view-commands')
+  commands: document.getElementById('view-commands'),
+  currency: document.getElementById('view-currency')
 };
 
 const connectionForm = document.getElementById('connectionForm');
@@ -38,10 +39,23 @@ const commandCooldownInput = document.getElementById('commandCooldown');
 const commandAutoIntervalInput = document.getElementById('commandAutoInterval');
 const commandUserLevelSelect = document.getElementById('commandUserLevel');
 const commandResponseTypeSelect = document.getElementById('commandResponseType');
+const commandCostInput = document.getElementById('commandCost');
+const commandCostLabel = document.getElementById('commandCostLabel');
 const commandDeleteBtn = document.getElementById('commandDelete');
 const commandModalError = document.getElementById('commandModalError');
 const commandModalCloseBtn = document.querySelector('[data-command-modal-close]');
 const commandModalCancelBtns = document.querySelectorAll('[data-command-modal-cancel]');
+
+const currencyForm = document.getElementById('currencyForm');
+const currencyNameInput = document.getElementById('currencyName');
+const currencyAmountInput = document.getElementById('currencyAmount');
+const currencyMinutesInput = document.getElementById('currencyMinutes');
+const currencySaveBtn = document.getElementById('currencySave');
+const currencyStatusEl = document.getElementById('currencyStatus');
+const currencySummaryEl = document.getElementById('currencySummary');
+const currencySummaryTotalEl = document.getElementById('currencySummaryTotal');
+const currencySummaryUsersEl = document.getElementById('currencySummaryUsers');
+const currencySummaryRateEl = document.getElementById('currencySummaryRate');
 
 const USER_LEVEL_OPTIONS = [
   { value: 'everyone', label: 'Jeder' },
@@ -63,6 +77,7 @@ const RESPONSE_TYPES = [
 const USER_LEVEL_LABEL = new Map(USER_LEVEL_OPTIONS.map(item => [item.value, item.label]));
 const RESPONSE_TYPE_LABEL = new Map(RESPONSE_TYPES.map(item => [item.value, item.label]));
 const DEFAULT_COMMAND_RESPONSE = 'Hey {user}, dieser Befehl wurde noch nicht angepasst.';
+const NUMBER_FORMATTER = new Intl.NumberFormat('de-DE');
 
 USER_LEVEL_OPTIONS.forEach(option => {
   if (!commandUserLevelSelect) return;
@@ -94,10 +109,22 @@ let commandsLoaded = false;
 let lastOauthPayload = null;
 let commandModalState = { index: null, isNew: true };
 let commandDraft = null;
+let currencyState = null;
+let currencyLoaded = false;
 
 const storedChannel = localStorage.getItem(STORAGE_KEYS.channel);
 if (storedChannel) {
   channelInput.value = storedChannel;
+}
+
+if (currencySummaryEl) {
+  currencySummaryEl.hidden = true;
+}
+if (currencyStatusEl) {
+  currencyStatusEl.textContent = 'Bitte zuerst mit dem Backend verbinden.';
+}
+function getCurrencyName() {
+  return currencyState?.name || 'Währung';
 }
 
 navButtons.forEach(button => {
@@ -184,6 +211,17 @@ function setCommandStatus(text, variant = '') {
     commandStatusEl.classList.add('status-box--ok');
   } else if (variant === 'error') {
     commandStatusEl.classList.add('status-box--error');
+  }
+}
+
+function setCurrencyStatus(text, variant = '') {
+  if (!currencyStatusEl) return;
+  currencyStatusEl.textContent = text;
+  currencyStatusEl.classList.remove('status-box--ok', 'status-box--error');
+  if (variant === 'ok') {
+    currencyStatusEl.classList.add('status-box--ok');
+  } else if (variant === 'error') {
+    currencyStatusEl.classList.add('status-box--error');
   }
 }
 
@@ -382,17 +420,20 @@ async function refreshStatus() {
     connectChannelBtn.textContent = 'Chat abonnieren';
     updateTokenStatus(statusData.botToken);
     enableCommands(true);
+    enableCurrency(true);
     if (!commandsLoaded) {
       await loadCommands();
     } else {
       updateCommandStatusSummary();
     }
+    await loadCurrencySettings();
   } catch (error) {
     setStatus(`Fehler: ${error.message}`, 'error');
     oauthButton.disabled = true;
     connectChannelBtn.disabled = true;
     updateTokenStatus(null);
     enableCommands(false);
+    enableCurrency(false);
     throw error;
   }
 }
@@ -408,6 +449,141 @@ function enableCommands(enabled) {
   if (!enabled) {
     setCommandStatus('Bitte zuerst mit dem Backend verbinden.');
     closeCommandModal();
+    enableCurrency(false);
+  }
+}
+
+function enableCurrency(enabled) {
+  const elements = [currencyNameInput, currencyAmountInput, currencyMinutesInput, currencySaveBtn];
+  elements.forEach(element => {
+    if (element) {
+      element.disabled = !enabled;
+    }
+  });
+  if (!enabled) {
+    setCurrencyStatus('Bitte zuerst mit dem Backend verbinden.');
+    if (currencySummaryEl) {
+      currencySummaryEl.hidden = true;
+    }
+  }
+}
+
+function updateCommandCostLabel() {
+  if (!commandCostLabel) return;
+  commandCostLabel.textContent = `Kosten (${getCurrencyName()})`;
+}
+
+function updateCurrencySummary(summary = null, accrual = null) {
+  if (!currencySummaryEl) return;
+  if (!summary) {
+    currencySummaryEl.hidden = true;
+    return;
+  }
+  const totalBalance = Math.max(0, Number(summary.totalBalance || 0));
+  const totalUsers = Math.max(0, Number(summary.totalUsers || 0));
+  if (currencySummaryTotalEl) {
+    currencySummaryTotalEl.textContent = NUMBER_FORMATTER.format(totalBalance);
+  }
+  if (currencySummaryUsersEl) {
+    currencySummaryUsersEl.textContent = NUMBER_FORMATTER.format(totalUsers);
+  }
+  if (currencySummaryRateEl) {
+    const amount = Math.max(0, Number(accrual?.amount || 0));
+    const minutes = Math.max(0, Number(accrual?.minutes || 0));
+    if (amount > 0 && minutes > 0) {
+      currencySummaryRateEl.textContent = `${NUMBER_FORMATTER.format(amount)} ${getCurrencyName()} alle ${NUMBER_FORMATTER.format(minutes)} min`;
+    } else {
+      currencySummaryRateEl.textContent = 'Keine automatische Vergabe';
+    }
+  }
+  currencySummaryEl.hidden = false;
+}
+
+async function loadCurrencySettings() {
+  if (!currencyForm) return;
+  try {
+    const data = await apiFetch('/currency');
+    const name = typeof data?.name === 'string' && data.name.trim() ? data.name.trim() : getCurrencyName();
+    const amount = Math.max(0, Math.round(Number(data?.accrual?.amount || 0)));
+    const minutes = Math.max(1, Math.round(Number(data?.accrual?.minutes || 0) || 1));
+    currencyState = {
+      name,
+      accrual: { amount, minutes },
+      summary: data?.summary || { totalUsers: 0, totalBalance: 0 }
+    };
+    currencyLoaded = true;
+    if (currencyNameInput) currencyNameInput.value = name;
+    if (currencyAmountInput) currencyAmountInput.value = amount;
+    if (currencyMinutesInput) currencyMinutesInput.value = minutes;
+    updateCurrencySummary(currencyState.summary, currencyState.accrual);
+    updateCommandCostLabel();
+    renderCommands();
+    updateCommandStatusSummary();
+    setCurrencyStatus('Währungseinstellungen geladen.', 'ok');
+    console.info('Währungseinstellungen erfolgreich geladen.', data);
+  } catch (error) {
+    console.error('Währungseinstellungen konnten nicht geladen werden', error);
+    setCurrencyStatus(`Währung konnte nicht geladen werden: ${error.message}`, 'error');
+  }
+}
+
+async function saveCurrencySettings() {
+  if (!currencyForm) return;
+  const name = (currencyNameInput?.value || '').trim();
+  const amountValue = Number(currencyAmountInput?.value ?? 0);
+  const minutesValue = Number(currencyMinutesInput?.value ?? 0);
+  if (!name) {
+    setCurrencyStatus('Bitte einen Währungsnamen angeben.', 'error');
+    return;
+  }
+  if (!Number.isFinite(amountValue) || amountValue < 0) {
+    setCurrencyStatus('Bitte eine gültige Menge pro Vergabe angeben.', 'error');
+    return;
+  }
+  if (!Number.isFinite(minutesValue) || minutesValue <= 0) {
+    setCurrencyStatus('Bitte eine gültige Minutenangabe definieren.', 'error');
+    return;
+  }
+  const payload = {
+    name,
+    accrual: {
+      amount: Math.max(0, Math.round(amountValue)),
+      minutes: Math.max(1, Math.round(minutesValue))
+    }
+  };
+  setCurrencyStatus('Speichere Währungseinstellungen …');
+  if (currencySaveBtn) {
+    currencySaveBtn.disabled = true;
+  }
+  try {
+    const result = await apiFetch('/currency', { method: 'PUT', body: payload });
+    const config = result?.config || payload;
+    const summary = result?.summary || { totalUsers: 0, totalBalance: 0 };
+    currencyState = {
+      name: config.name || payload.name,
+      accrual: {
+        amount: Math.max(0, Math.round(Number(config?.accrual?.amount ?? payload.accrual.amount))),
+        minutes: Math.max(1, Math.round(Number(config?.accrual?.minutes ?? payload.accrual.minutes)))
+      },
+      summary
+    };
+    currencyLoaded = true;
+    if (currencyNameInput) currencyNameInput.value = currencyState.name;
+    if (currencyAmountInput) currencyAmountInput.value = currencyState.accrual.amount;
+    if (currencyMinutesInput) currencyMinutesInput.value = currencyState.accrual.minutes;
+    updateCurrencySummary(currencyState.summary, currencyState.accrual);
+    updateCommandCostLabel();
+    renderCommands();
+    updateCommandStatusSummary();
+    setCurrencyStatus('Währungseinstellungen gespeichert.', 'ok');
+    console.info('Währungseinstellungen erfolgreich persistiert.', result);
+  } catch (error) {
+    console.error('Währungseinstellungen konnten nicht gespeichert werden', error);
+    setCurrencyStatus(`Speichern fehlgeschlagen: ${error.message}`, 'error');
+  } finally {
+    if (currencySaveBtn) {
+      currencySaveBtn.disabled = false;
+    }
   }
 }
 
@@ -444,6 +620,7 @@ function normalizeCommandDraft(command) {
   const autoIntervalSeconds = Math.max(0, Number.parseInt(command.autoIntervalSeconds, 10) || 0);
   const minUserLevel = USER_LEVEL_LABEL.has(command.minUserLevel) ? command.minUserLevel : 'everyone';
   const responseType = RESPONSE_TYPE_LABEL.has(command.responseType) ? command.responseType : 'say';
+  const cost = Math.max(0, Number.parseInt(command.cost, 10) || 0);
   return {
     names: normalizedNames,
     response,
@@ -451,7 +628,8 @@ function normalizeCommandDraft(command) {
     autoIntervalSeconds,
     minUserLevel,
     responseType,
-    enabled: command.enabled !== false
+    enabled: command.enabled !== false,
+    cost
   };
 }
 
@@ -482,7 +660,8 @@ function normalizeLoadedCommand(item) {
     autoIntervalSeconds: Math.max(0, Number.parseInt(item.autoIntervalSeconds, 10) || 0),
     minUserLevel: USER_LEVEL_LABEL.has(item.minUserLevel) ? item.minUserLevel : 'everyone',
     responseType: RESPONSE_TYPE_LABEL.has(item.responseType) ? item.responseType : 'say',
-    enabled: item.enabled !== false
+    enabled: item.enabled !== false,
+    cost: Math.max(0, Number.parseInt(item.cost, 10) || 0)
   };
 }
 
@@ -496,6 +675,9 @@ function updateCommandStatusSummary() {
   const parts = [`Präfix: ${commandsState.prefix}`, `Befehle: ${total}`];
   if (automated) {
     parts.push(`Automatik: ${automated}`);
+  }
+  if (currencyState?.name) {
+    parts.push(`Währung: ${currencyState.name}`);
   }
   setCommandStatus(parts.join(' · '), 'ok');
 }
@@ -556,6 +738,14 @@ function createCommandCard(command, index) {
   badges.appendChild(
     createCommandBadge(interval ? `Automatik: ${interval}s` : 'Automatik: aus', interval ? '' : 'muted')
   );
+  const cost = Math.max(0, Number.parseInt(command.cost, 10) || 0);
+  const currencyName = getCurrencyName();
+  badges.appendChild(
+    createCommandBadge(
+      cost ? `Kosten: ${cost} ${currencyName}` : `Kosten: 0 ${currencyName}`,
+      cost ? '' : 'muted'
+    )
+  );
   if (command.enabled === false) {
     badges.appendChild(createCommandBadge('Deaktiviert', 'muted'));
   }
@@ -567,6 +757,7 @@ function createCommandCard(command, index) {
 function renderCommands() {
   commandList.innerHTML = '';
   commandPrefixInput.value = commandsState.prefix || '!';
+  updateCommandCostLabel();
   enableCommands(commandsEditable);
   if (!commandsState.items.length) {
     const empty = document.createElement('p');
@@ -604,7 +795,8 @@ function openCommandModal(index = null) {
         autoIntervalSeconds: 0,
         minUserLevel: 'everyone',
         responseType: 'say',
-        enabled: true
+        enabled: true,
+        cost: 0
       };
   commandDraft = baseCommand;
   if (!USER_LEVEL_LABEL.has(commandDraft.minUserLevel)) {
@@ -613,6 +805,8 @@ function openCommandModal(index = null) {
   if (!RESPONSE_TYPE_LABEL.has(commandDraft.responseType)) {
     commandDraft.responseType = 'say';
   }
+  const draftCostValue = Number(commandDraft.cost);
+  commandDraft.cost = Number.isFinite(draftCostValue) ? Math.max(0, Math.round(draftCostValue)) : 0;
   commandModalTitle.textContent = commandModalState.isNew
     ? 'Neuen Befehl erstellen'
     : `Befehl bearbeiten · ${commandsState.prefix}${commandDraft.names[0] || ''}`;
@@ -622,6 +816,10 @@ function openCommandModal(index = null) {
   commandAutoIntervalInput.value = Number(commandDraft.autoIntervalSeconds || 0);
   commandUserLevelSelect.value = commandDraft.minUserLevel || 'everyone';
   commandResponseTypeSelect.value = commandDraft.responseType || 'say';
+  if (commandCostInput) {
+    commandCostInput.value = Number(commandDraft.cost || 0);
+  }
+  updateCommandCostLabel();
   resetCommandModalError();
   renderCommandNames();
   commandDeleteBtn.hidden = commandModalState.isNew;
@@ -708,6 +906,10 @@ function handleCommandFormSubmit(event) {
   commandDraft.autoIntervalSeconds = Number(commandAutoIntervalInput.value || 0);
   commandDraft.minUserLevel = commandUserLevelSelect.value;
   commandDraft.responseType = commandResponseTypeSelect.value;
+  if (commandCostInput) {
+    const draftInputCost = Number(commandCostInput.value);
+    commandDraft.cost = Number.isFinite(draftInputCost) ? Math.max(0, Math.round(draftInputCost)) : 0;
+  }
 
   const normalized = normalizeCommandDraft(commandDraft);
   if (!normalized) {
@@ -738,6 +940,7 @@ async function loadCommands() {
     commandsLoaded = true;
     renderCommands();
     updateCommandStatusSummary();
+    console.info('Befehlskonfiguration erfolgreich geladen.', data);
   } catch (error) {
     console.error('Befehle konnten nicht geladen werden', error);
     setCommandStatus(`Befehle konnten nicht geladen werden: ${error.message}`, 'error');
@@ -773,6 +976,7 @@ async function saveCommands() {
     renderCommands();
     updateCommandStatusSummary();
     setCommandStatus('Befehle erfolgreich gespeichert.', 'ok');
+    console.info('Befehle erfolgreich persistiert.', payload);
   } catch (error) {
     console.error('Befehle konnten nicht gespeichert werden', error);
     setCommandStatus(`Speichern fehlgeschlagen: ${error.message}`, 'error');
@@ -835,6 +1039,7 @@ clearPasswordBtn.addEventListener('click', () => {
   connectChannelBtn.textContent = 'Chat abonnieren';
   updateTokenStatus(null);
   enableCommands(false);
+  enableCurrency(false);
   commandsLoaded = false;
   commandsState = { prefix: '!', items: [] };
   commandList.innerHTML = '';
@@ -843,6 +1048,14 @@ clearPasswordBtn.addEventListener('click', () => {
   closeStream();
   messageSubmit.disabled = true;
   setCommandStatus('Befehle noch nicht geladen.');
+  currencyLoaded = false;
+  currencyState = null;
+  if (currencyNameInput) currencyNameInput.value = '';
+  if (currencyAmountInput) currencyAmountInput.value = '';
+  if (currencyMinutesInput) currencyMinutesInput.value = '';
+  updateCurrencySummary(null);
+  updateCommandCostLabel();
+  setCurrencyStatus('Bitte zuerst mit dem Backend verbinden.');
 });
 
 connectChannelBtn.addEventListener('click', async () => {
@@ -964,6 +1177,17 @@ commandModalCancelBtns.forEach(button => {
     closeCommandModal();
   });
 });
+
+if (currencyForm) {
+  currencyForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    if (!apiPassword) {
+      setCurrencyStatus('Bitte zuerst mit dem Backend verbinden.', 'error');
+      return;
+    }
+    await saveCurrencySettings();
+  });
+}
 
 if (commandDeleteBtn) {
   commandDeleteBtn.addEventListener('click', () => {

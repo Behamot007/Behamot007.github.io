@@ -59,7 +59,8 @@ const DEFAULT_COMMANDS = [
     autoIntervalSeconds: 0,
     minUserLevel: 'everyone',
     responseType: 'say',
-    enabled: true
+    enabled: true,
+    cost: 0
   },
   {
     names: ['discord'],
@@ -68,7 +69,8 @@ const DEFAULT_COMMANDS = [
     autoIntervalSeconds: 0,
     minUserLevel: 'everyone',
     responseType: 'say',
-    enabled: true
+    enabled: true,
+    cost: 0
   },
   {
     names: ['socials'],
@@ -78,17 +80,314 @@ const DEFAULT_COMMANDS = [
     autoIntervalSeconds: 0,
     minUserLevel: 'everyone',
     responseType: 'say',
-    enabled: true
+    enabled: true,
+    cost: 0
   }
 ];
+
+const DEFAULT_CURRENCY_CONFIG = {
+  name: 'Stream-Coins',
+  accrual: {
+    amount: 10,
+    minutes: 5
+  }
+};
+
+const NUMBER_FORMATTER = new Intl.NumberFormat('de-DE');
 
 const runtimeState = {
   botToken: null,
   commands: {
     prefix: '!',
     items: DEFAULT_COMMANDS.map(item => ({ ...item }))
-  }
+  },
+  currency: createDefaultCurrencyState()
 };
+
+function createDefaultCurrencyState() {
+  return {
+    name: DEFAULT_CURRENCY_CONFIG.name,
+    accrual: {
+      amount: DEFAULT_CURRENCY_CONFIG.accrual.amount,
+      minutes: DEFAULT_CURRENCY_CONFIG.accrual.minutes
+    },
+    balances: {}
+  };
+}
+
+function normalizeCurrencyState(state = {}) {
+  const base = createDefaultCurrencyState();
+  const name = typeof state.name === 'string' && state.name.trim() ? state.name.trim() : base.name;
+  const amountSource = state.accrual?.amount ?? state.amount;
+  const minutesSource = state.accrual?.minutes ?? state.minutes;
+  const amountValue = Number(amountSource);
+  const minutesValue = Number(minutesSource);
+  const amount = Number.isFinite(amountValue) ? Math.max(0, Math.round(amountValue)) : base.accrual.amount;
+  const minutes = Number.isFinite(minutesValue) ? Math.max(1, Math.round(minutesValue)) : base.accrual.minutes;
+  const balances = {};
+  if (state.balances && typeof state.balances === 'object') {
+    Object.entries(state.balances).forEach(([channelKey, entries]) => {
+      const normalizedChannel = normalizeChannelName(channelKey);
+      if (!normalizedChannel) {
+        return;
+      }
+      if (!balances[normalizedChannel]) {
+        balances[normalizedChannel] = {};
+      }
+      if (!entries || typeof entries !== 'object') {
+        return;
+      }
+      Object.entries(entries).forEach(([userKey, entry]) => {
+        if (!userKey) {
+          return;
+        }
+        const source = entry && typeof entry === 'object' ? entry : { balance: entry };
+        const balanceValue = Number(source.balance);
+        if (!Number.isFinite(balanceValue) || balanceValue < 0) {
+          return;
+        }
+        balances[normalizedChannel][userKey] = {
+          balance: Math.max(0, Math.round(balanceValue)),
+          userId: source.userId ? String(source.userId) : null,
+          username: source.username ? String(source.username).toLowerCase() : null,
+          displayName: source.displayName ? String(source.displayName) : null,
+          updatedAt: source.updatedAt ? String(source.updatedAt) : null
+        };
+      });
+    });
+  }
+  return {
+    name,
+    accrual: {
+      amount,
+      minutes
+    },
+    balances
+  };
+}
+
+function getCurrencyConfiguration() {
+  runtimeState.currency = normalizeCurrencyState(runtimeState.currency);
+  return runtimeState.currency;
+}
+
+function serializeCurrencyConfig(config = getCurrencyConfiguration()) {
+  return {
+    name: config.name,
+    accrual: {
+      amount: config.accrual.amount,
+      minutes: config.accrual.minutes
+    }
+  };
+}
+
+function getCurrencySummary() {
+  const config = getCurrencyConfiguration();
+  let totalUsers = 0;
+  let totalBalance = 0;
+  Object.values(config.balances || {}).forEach(channelBalances => {
+    if (!channelBalances || typeof channelBalances !== 'object') {
+      return;
+    }
+    Object.values(channelBalances).forEach(entry => {
+      const value = Number(entry?.balance ?? 0);
+      if (!Number.isFinite(value) || value < 0) {
+        return;
+      }
+      totalUsers += 1;
+      totalBalance += value;
+    });
+  });
+  return {
+    totalUsers,
+    totalBalance: Math.max(0, Math.round(totalBalance))
+  };
+}
+
+function ensureCurrencyChannelStore(channel) {
+  const normalized = normalizeChannelName(channel);
+  if (!normalized) {
+    return null;
+  }
+  const config = getCurrencyConfiguration();
+  if (!config.balances || typeof config.balances !== 'object') {
+    config.balances = {};
+  }
+  if (!config.balances[normalized]) {
+    config.balances[normalized] = {};
+  }
+  return config.balances[normalized];
+}
+
+function getCurrencyIdentity(tags) {
+  if (!tags) {
+    return null;
+  }
+  const userId = tags['user-id'] ? String(tags['user-id']) : null;
+  const username = typeof tags.username === 'string' ? tags.username.toLowerCase() : null;
+  const displayName = tags['display-name'] || tags.username || null;
+  if (userId) {
+    return { key: `id:${userId}`, userId, username, displayName };
+  }
+  if (username) {
+    return { key: `name:${username}`, userId: null, username, displayName };
+  }
+  return null;
+}
+
+function getCurrencyBalance(channel, identityOrKey) {
+  const store = ensureCurrencyChannelStore(channel);
+  if (!store) {
+    return 0;
+  }
+  const key = typeof identityOrKey === 'string' ? identityOrKey : identityOrKey?.key;
+  if (!key) {
+    return 0;
+  }
+  const entry = store[key];
+  const value = Number(entry?.balance ?? 0);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+async function addCurrencyBalance(channel, identity, amount) {
+  if (!identity || !Number.isFinite(Number(amount)) || amount <= 0) {
+    return getCurrencyBalance(channel, identity);
+  }
+  const store = ensureCurrencyChannelStore(channel);
+  if (!store) {
+    return 0;
+  }
+  const key = identity.key;
+  const existing =
+    store[key] && typeof store[key] === 'object'
+      ? { ...store[key] }
+      : {
+          balance: 0,
+          userId: null,
+          username: null,
+          displayName: null,
+          updatedAt: null
+        };
+  const currentBalance = Number(existing.balance) || 0;
+  existing.balance = Math.max(0, Math.round(currentBalance + amount));
+  existing.userId = identity.userId || existing.userId || null;
+  existing.username = identity.username || existing.username || null;
+  existing.displayName = identity.displayName || existing.displayName || null;
+  existing.updatedAt = new Date().toISOString();
+  store[key] = existing;
+  await persistRuntimeState();
+  return existing.balance;
+}
+
+async function spendCurrencyBalance(channel, identity, amount) {
+  if (!identity || !Number.isFinite(Number(amount)) || amount <= 0) {
+    return getCurrencyBalance(channel, identity);
+  }
+  const store = ensureCurrencyChannelStore(channel);
+  if (!store) {
+    throw new Error('Währungsspeicher nicht verfügbar.');
+  }
+  const key = identity.key;
+  const existing =
+    store[key] && typeof store[key] === 'object'
+      ? { ...store[key] }
+      : {
+          balance: 0,
+          userId: null,
+          username: null,
+          displayName: null,
+          updatedAt: null
+        };
+  const currentBalance = Number(existing.balance) || 0;
+  if (currentBalance < amount) {
+    const error = new Error('Nicht genügend Guthaben.');
+    error.code = 'INSUFFICIENT_FUNDS';
+    throw error;
+  }
+  existing.balance = Math.max(0, Math.round(currentBalance - amount));
+  existing.userId = identity.userId || existing.userId || null;
+  existing.username = identity.username || existing.username || null;
+  existing.displayName = identity.displayName || existing.displayName || null;
+  existing.updatedAt = new Date().toISOString();
+  store[key] = existing;
+  await persistRuntimeState();
+  return existing.balance;
+}
+
+async function applyCurrencyConfiguration(update) {
+  const current = getCurrencyConfiguration();
+  const nextName = typeof update?.name === 'string' && update.name.trim() ? update.name.trim() : current.name;
+  const amountSource = update?.accrual?.amount ?? update?.amount;
+  const minutesSource = update?.accrual?.minutes ?? update?.minutes;
+  const amountValue = Number(amountSource);
+  const minutesValue = Number(minutesSource);
+  const amount = Number.isFinite(amountValue) ? Math.max(0, Math.round(amountValue)) : current.accrual.amount;
+  const minutes = Number.isFinite(minutesValue) ? Math.max(1, Math.round(minutesValue)) : current.accrual.minutes;
+  runtimeState.currency = normalizeCurrencyState({
+    ...current,
+    name: nextName,
+    accrual: { amount, minutes }
+  });
+  await persistRuntimeState();
+  currencyActivity.clear();
+  return serializeCurrencyConfig(runtimeState.currency);
+}
+
+const currencyActivity = new Map();
+
+function getCurrencyActivityStore(channel) {
+  const normalized = normalizeChannelName(channel);
+  if (!normalized) {
+    return new Map();
+  }
+  if (!currencyActivity.has(normalized)) {
+    currencyActivity.set(normalized, new Map());
+  }
+  return currencyActivity.get(normalized);
+}
+
+async function handleCurrencyViewerActivity(channel, tags) {
+  const normalizedChannel = normalizeChannelName(channel);
+  if (!normalizedChannel) {
+    return;
+  }
+  const config = getCurrencyConfiguration();
+  const grantAmount = Number(config.accrual?.amount || 0);
+  const grantIntervalMinutes = Number(config.accrual?.minutes || 0);
+  if (!Number.isFinite(grantAmount) || grantAmount <= 0) {
+    return;
+  }
+  if (!Number.isFinite(grantIntervalMinutes) || grantIntervalMinutes <= 0) {
+    return;
+  }
+  const identity = getCurrencyIdentity(tags);
+  if (!identity) {
+    return;
+  }
+  const intervalMs = grantIntervalMinutes * 60_000;
+  if (!Number.isFinite(intervalMs) || intervalMs <= 0) {
+    return;
+  }
+  const store = getCurrencyActivityStore(normalizedChannel);
+  const tracker = store.get(identity.key) || { lastSeen: 0, lastGrant: Date.now() };
+  const now = Date.now();
+  if (!Number.isFinite(tracker.lastGrant)) {
+    tracker.lastGrant = now;
+  }
+  const elapsed = now - tracker.lastGrant;
+  const grants = Math.floor(elapsed / intervalMs);
+  if (grants > 0) {
+    const totalAmount = grants * grantAmount;
+    try {
+      await addCurrencyBalance(normalizedChannel, identity, totalAmount);
+      tracker.lastGrant += grants * intervalMs;
+    } catch (error) {
+      console.error('[twitch-chat-controller] Währung konnte nicht gutgeschrieben werden:', error);
+    }
+  }
+  tracker.lastSeen = now;
+  store.set(identity.key, tracker);
+}
 
 const automaticCommandTimers = new Map();
 
@@ -121,6 +420,13 @@ async function loadRuntimeState() {
           : runtimeState.commands.items
       };
     }
+    if (data.currency) {
+      runtimeState.currency = normalizeCurrencyState({
+        ...runtimeState.currency,
+        ...data.currency,
+        balances: data.currency.balances || runtimeState.currency.balances
+      });
+    }
   } catch (error) {
     if (error.code !== 'ENOENT') {
       console.warn('[twitch-chat-controller] Konnte Zustand nicht laden:', error);
@@ -135,6 +441,7 @@ async function persistRuntimeState() {
     await fs.writeFile(STATE_FILE, payload, 'utf8');
   } catch (error) {
     console.error('[twitch-chat-controller] Zustand konnte nicht gespeichert werden:', error);
+    throw error;
   }
 }
 
@@ -302,6 +609,7 @@ function normalizeCommandItem(item) {
     : 0;
   const minUserLevel = USER_LEVEL_ORDER.has(item.minUserLevel) ? item.minUserLevel : 'everyone';
   const responseType = RESPONSE_TYPES.includes(item.responseType) ? item.responseType : 'say';
+  const cost = Number.isFinite(Number(item.cost)) ? Math.max(0, Math.round(Number(item.cost))) : 0;
   return {
     names: sanitizedNames,
     response,
@@ -309,7 +617,8 @@ function normalizeCommandItem(item) {
     autoIntervalSeconds,
     minUserLevel,
     responseType,
-    enabled: item.enabled !== false
+    enabled: item.enabled !== false,
+    cost
   };
 }
 
@@ -631,7 +940,7 @@ function createChatClient() {
     console.warn('[twitch-chat-controller] Twitch-Verbindung getrennt:', reason);
   });
 
-  client.on('message', (channel, tags, message, self) => {
+  client.on('message', async (channel, tags, message, self) => {
     const normalized = normalizeChannelName(channel);
     if (self && consumePendingBotMessage(normalized, message)) {
       return;
@@ -648,9 +957,16 @@ function createChatClient() {
     };
     broadcastToChannel(normalized, payload);
     if (!self) {
-      handleCommandExecution(normalized, tags, message).catch(error => {
+      try {
+        await handleCurrencyViewerActivity(normalized, tags);
+      } catch (error) {
+        console.error('[twitch-chat-controller] Fehler bei der Währungsberechnung:', error);
+      }
+      try {
+        await handleCommandExecution(normalized, tags, message);
+      } catch (error) {
         console.error('[twitch-chat-controller] Fehler beim Ausführen eines Befehls:', error);
-      });
+      }
     }
   });
 
@@ -847,6 +1163,98 @@ async function notifyInsufficientPermission(channel, tags, command, userLevel, p
   });
 }
 
+async function notifyInsufficientCurrency(channel, tags, command, currencyConfig, balance, cost, prefix) {
+  const normalizedChannel = normalizeChannelName(channel);
+  const displayName = tags?.['display-name'] || tags?.username || 'Nutzer';
+  const primary = Array.isArray(command?.names) && command.names.length ? command.names[0] : command?.name;
+  const commandDisplay = primary ? `${prefix}${primary}` : 'diesen Befehl';
+  const currencyName = currencyConfig?.name || 'Währung';
+  const formattedBalance = NUMBER_FORMATTER.format(Math.max(0, Math.round(balance || 0)));
+  const formattedCost = NUMBER_FORMATTER.format(Math.max(0, Math.round(cost || 0)));
+
+  try {
+    await ensureChatClientConnected();
+  } catch (error) {
+    console.warn('[twitch-chat-controller] Whisper bei unzureichender Währung nicht möglich:', error?.message || error);
+  }
+  const client = getChatClient();
+  if (client && tags?.username) {
+    const whisperMessage = `Hey ${displayName}, du benötigst ${formattedCost} ${currencyName} für ${commandDisplay}, hast aber nur ${formattedBalance}.`;
+    try {
+      await client.whisper(tags.username, whisperMessage);
+    } catch (error) {
+      console.warn('[twitch-chat-controller] Flüstern bei unzureichender Währung fehlgeschlagen:', error?.message || error);
+    }
+    if (tags.id) {
+      try {
+        await client.deletemessage(`#${normalizedChannel}`, tags.id);
+      } catch (error) {
+        console.warn('[twitch-chat-controller] Nachricht konnte nicht gelöscht werden:', error?.message || error);
+      }
+    }
+  }
+
+  broadcastToChannel(normalizedChannel, {
+    type: 'system',
+    channel: normalizedChannel,
+    message: `${displayName} hatte nicht genügend ${currencyName} (${formattedBalance}/${formattedCost}) für ${commandDisplay}.`,
+    timestamp: new Date().toISOString(),
+    meta: {
+      command: Array.isArray(command?.names) ? command.names[0] : command?.name || null,
+      aliases: Array.isArray(command?.names)
+        ? command.names
+        : command?.name
+        ? [command.name]
+        : [],
+      currencyName,
+      requiredCurrency: cost,
+      availableCurrency: balance,
+      reason: 'insufficient_currency'
+    }
+  });
+}
+
+async function notifyCurrencyProcessingFailure(channel, tags, command, currencyConfig, prefix, reason) {
+  const normalizedChannel = normalizeChannelName(channel);
+  const displayName = tags?.['display-name'] || tags?.username || 'Nutzer';
+  const primary = Array.isArray(command?.names) && command.names.length ? command.names[0] : command?.name;
+  const commandDisplay = primary ? `${prefix}${primary}` : 'diesen Befehl';
+  const currencyName = currencyConfig?.name || 'Währung';
+
+  try {
+    await ensureChatClientConnected();
+  } catch (error) {
+    console.warn('[twitch-chat-controller] Whisper bei Währungsfehler nicht möglich:', error?.message || error);
+  }
+  const client = getChatClient();
+  if (client && tags?.username) {
+    const whisperMessage = `Hey ${displayName}, leider konnte ${commandDisplay} nicht ausgeführt werden, da es einen Fehler im ${currencyName}-System gab.`;
+    try {
+      await client.whisper(tags.username, whisperMessage);
+    } catch (error) {
+      console.warn('[twitch-chat-controller] Flüstern bei Währungsfehler fehlgeschlagen:', error?.message || error);
+    }
+  }
+
+  broadcastToChannel(normalizedChannel, {
+    type: 'system',
+    channel: normalizedChannel,
+    message: `${commandDisplay} wurde wegen eines Währungsfehlers nicht ausgeführt.`,
+    timestamp: new Date().toISOString(),
+    meta: {
+      command: Array.isArray(command?.names) ? command.names[0] : command?.name || null,
+      aliases: Array.isArray(command?.names)
+        ? command.names
+        : command?.name
+        ? [command.name]
+        : [],
+      currencyName,
+      reason: 'currency_processing_error',
+      details: reason || 'unknown'
+    }
+  });
+}
+
 async function dispatchCommandResponse(command, context) {
   if (!command) return;
   const {
@@ -955,6 +1363,10 @@ async function dispatchCommandResponse(command, context) {
 }
 
 async function handleCommandExecution(channel, tags, message) {
+  const normalizedChannel = normalizeChannelName(channel);
+  if (!normalizedChannel) {
+    return;
+  }
   const config = getCommandConfiguration();
   const prefix = config.prefix || '!';
   if (!prefix || !message.startsWith(prefix)) {
@@ -988,14 +1400,14 @@ async function handleCommandExecution(channel, tags, message) {
   const userLevel = getUserLevel(tags);
   const requiredLevel = command.minUserLevel || 'everyone';
   if (!isUserLevelAllowed(requiredLevel, userLevel)) {
-    await notifyInsufficientPermission(channel, tags, command, userLevel, prefix);
+    await notifyInsufficientPermission(normalizedChannel, tags, command, userLevel, prefix);
     return;
   }
 
   const cooldownIdentifier = Array.isArray(command.names) && command.names.length
     ? command.names.map(name => name.toLowerCase()).sort().join('|')
     : command.name?.toLowerCase() || commandName;
-  const cooldownKey = `${channel}::${cooldownIdentifier}`;
+  const cooldownKey = `${normalizedChannel}::${cooldownIdentifier}`;
   const cooldownMs = (Number(command.cooldownSeconds) || 0) * 1000;
   if (cooldownMs > 0) {
     const lastExecution = commandCooldowns.get(cooldownKey) || 0;
@@ -1005,9 +1417,65 @@ async function handleCommandExecution(channel, tags, message) {
   }
 
   const userDisplayName = tags['display-name'] || tags.username || 'Zuschauer';
+  const primaryName = Array.isArray(command.names) && command.names.length ? command.names[0] : command.name || commandName;
+  const cost = Number.isFinite(Number(command.cost)) ? Math.max(0, Math.round(Number(command.cost))) : 0;
+  if (cost > 0) {
+    const currencyConfig = getCurrencyConfiguration();
+    const identity = getCurrencyIdentity(tags);
+    if (!identity) {
+      await notifyCurrencyProcessingFailure(normalizedChannel, tags, command, currencyConfig, prefix, 'missing_identity');
+      return;
+    }
+    const currentBalance = getCurrencyBalance(normalizedChannel, identity);
+    if (currentBalance < cost) {
+      await notifyInsufficientCurrency(normalizedChannel, tags, command, currencyConfig, currentBalance, cost, prefix);
+      return;
+    }
+    try {
+      const newBalance = await spendCurrencyBalance(normalizedChannel, identity, cost);
+      const formattedCost = NUMBER_FORMATTER.format(cost);
+      const formattedBalance = NUMBER_FORMATTER.format(Math.max(0, Math.round(newBalance)));
+      const aliases = Array.isArray(command.names)
+        ? command.names
+        : command.name
+        ? [command.name]
+        : [];
+      broadcastToChannel(normalizedChannel, {
+        type: 'system',
+        channel: normalizedChannel,
+        message: `${userDisplayName} hat ${formattedCost} ${currencyConfig.name} für ${prefix}${primaryName} ausgegeben (Rest: ${formattedBalance}).`,
+        timestamp: new Date().toISOString(),
+        meta: {
+          command: aliases[0] || null,
+          aliases,
+          currencyName: currencyConfig.name,
+          cost,
+          balance: newBalance,
+          reason: 'currency_spent'
+        }
+      });
+    } catch (error) {
+      if (error?.code === 'INSUFFICIENT_FUNDS') {
+        const latestBalance = getCurrencyBalance(normalizedChannel, identity);
+        await notifyInsufficientCurrency(normalizedChannel, tags, command, currencyConfig, latestBalance, cost, prefix);
+      } else {
+        console.error('[twitch-chat-controller] Währung konnte nicht abgebucht werden:', error);
+        await notifyCurrencyProcessingFailure(
+          normalizedChannel,
+          tags,
+          command,
+          currencyConfig,
+          prefix,
+          error?.code || 'persist_failed'
+        );
+      }
+      return;
+    }
+  }
+
   const remainder = args.join(' ');
   await dispatchCommandResponse(command, {
-    channel,
+    channel: normalizedChannel,
     tags,
     userDisplayName,
     remainder,
@@ -1058,6 +1526,8 @@ app.use((req, res, next) => {
 app.get('/api/twitch/status', (_req, res) => {
   const token = getStoredBotToken();
   const commands = getCommandConfiguration();
+  const currencyConfig = serializeCurrencyConfig();
+  const currencySummary = getCurrencySummary();
   res.json({
     ready: chatClientReady,
     joinedChannels: Array.from(joinedChannels),
@@ -1075,6 +1545,11 @@ app.get('/api/twitch/status', (_req, res) => {
     commands: {
       prefix: commands.prefix,
       total: Array.isArray(commands.items) ? commands.items.length : 0
+    },
+    currency: {
+      name: currencyConfig.name,
+      accrual: currencyConfig.accrual,
+      summary: currencySummary
     }
   });
 });
@@ -1103,6 +1578,27 @@ app.put('/api/twitch/commands', async (req, res) => {
   } catch (error) {
     console.error('[twitch-chat-controller] Befehle konnten nicht aktualisiert werden:', error);
     res.status(400).json({ error: error.message || 'Befehle konnten nicht gespeichert werden.' });
+  }
+});
+
+app.get('/api/twitch/currency', (_req, res) => {
+  const config = serializeCurrencyConfig();
+  const summary = getCurrencySummary();
+  res.json({
+    name: config.name,
+    accrual: config.accrual,
+    summary
+  });
+});
+
+app.put('/api/twitch/currency', async (req, res) => {
+  try {
+    const config = await applyCurrencyConfiguration(req.body || {});
+    const summary = getCurrencySummary();
+    res.json({ success: true, config, summary });
+  } catch (error) {
+    console.error('[twitch-chat-controller] Währungskonfiguration konnte nicht aktualisiert werden:', error);
+    res.status(400).json({ error: error.message || 'Währungskonfiguration konnte nicht gespeichert werden.' });
   }
 });
 

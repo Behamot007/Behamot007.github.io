@@ -141,6 +141,39 @@ body {
   color: rgba(255, 255, 255, 0.8);
 }
 
+.currency-summary {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  margin-top: 0.5rem;
+}
+
+.currency-summary[hidden] {
+  display: none;
+}
+
+.currency-summary__item {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.currency-summary__label {
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.currency-summary__value {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
 .command-prefix label {
   width: 160px;
 }

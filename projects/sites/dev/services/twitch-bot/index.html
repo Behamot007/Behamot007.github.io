@@ -31,6 +31,9 @@
         <button type="button" class="page-nav__link" data-target="commands" id="nav-commands">
           Befehle
         </button>
+        <button type="button" class="page-nav__link" data-target="currency" id="nav-currency">
+          Währung
+        </button>
       </nav>
 
       <section class="page-section is-active" id="view-config" aria-labelledby="nav-config">
@@ -138,6 +141,58 @@
           </article>
         </div>
       </section>
+
+      <section class="page-section" id="view-currency" aria-labelledby="nav-currency">
+        <div class="cards-grid">
+          <article class="card card--wide">
+            <div class="card-header">
+              <div>
+                <h2>Währungssystem</h2>
+                <p class="card__hint">
+                  Vergabe von Punkten für aktive Zuschauer konfigurieren und festlegen, wie Commands Währung verbrauchen.
+                </p>
+              </div>
+            </div>
+
+            <form id="currencyForm" class="form-grid">
+              <label>
+                <span>Währungsname</span>
+                <input id="currencyName" type="text" maxlength="32" required />
+              </label>
+              <div class="field field--split">
+                <label for="currencyAmount">
+                  <span class="field__label">Währung pro Vergabe</span>
+                  <input type="number" id="currencyAmount" min="0" step="1" required />
+                </label>
+                <label for="currencyMinutes">
+                  <span class="field__label">Vergabe alle (Minuten)</span>
+                  <input type="number" id="currencyMinutes" min="1" step="1" required />
+                </label>
+              </div>
+              <div class="form-actions">
+                <button type="submit" id="currencySave">Währung speichern</button>
+              </div>
+            </form>
+
+            <div id="currencyStatus" class="status-box">Währung noch nicht geladen.</div>
+
+            <div class="currency-summary" id="currencySummary" hidden>
+              <div class="currency-summary__item">
+                <span class="currency-summary__label">Gesamtsaldo</span>
+                <span class="currency-summary__value" id="currencySummaryTotal">0</span>
+              </div>
+              <div class="currency-summary__item">
+                <span class="currency-summary__label">Aktive Konten</span>
+                <span class="currency-summary__value" id="currencySummaryUsers">0</span>
+              </div>
+              <div class="currency-summary__item">
+                <span class="currency-summary__label">Vergaberate</span>
+                <span class="currency-summary__value" id="currencySummaryRate">—</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
     </main>
 
     <div id="commandModal" class="modal" hidden>
@@ -192,6 +247,12 @@
             <label class="field" for="commandResponseType">
               <span class="field__label">Antworttyp</span>
               <select id="commandResponseType"></select>
+            </label>
+
+            <label class="field" for="commandCost">
+              <span class="field__label" id="commandCostLabel">Kosten (Währung)</span>
+              <input type="number" id="commandCost" min="0" step="1" />
+              <p class="field__hint">Wird beim Ausführen vom Nutzerkonto abgezogen.</p>
             </label>
 
             <p id="commandModalError" class="modal__error" hidden></p>
