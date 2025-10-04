@@ -71,9 +71,18 @@ const openAiSummaryChannelEl = document.getElementById('openAiSummaryChannel');
 const openAiSummaryIntervalEl = document.getElementById('openAiSummaryInterval');
 const openAiSummaryNextRunEl = document.getElementById('openAiSummaryNextRun');
 const openAiSummaryLastSuccessEl = document.getElementById('openAiSummaryLastSuccess');
+const openAiSummaryStreamStatusEl = document.getElementById('openAiSummaryStreamStatus');
 const openAiSummaryMessageEl = document.getElementById('openAiSummaryMessage');
 const openAiSummaryTokensEl = document.getElementById('openAiSummaryTokens');
 const openAiSummaryErrorEl = document.getElementById('openAiSummaryError');
+const openAiDebugPanel = document.getElementById('openAiDebugPanel');
+const openAiDebugMetaEl = document.getElementById('openAiDebugMeta');
+const openAiDebugScreenshotWrapper = document.getElementById('openAiDebugScreenshotWrapper');
+const openAiDebugScreenshotEl = document.getElementById('openAiDebugScreenshot');
+const openAiDebugRequestEl = document.getElementById('openAiDebugRequest');
+const openAiDebugResponseEl = document.getElementById('openAiDebugResponse');
+const openAiDebugHistoryList = document.getElementById('openAiDebugHistory');
+const openAiDebugEmptyEl = document.getElementById('openAiDebugEmpty');
 
 const USER_LEVEL_OPTIONS = [
   { value: 'everyone', label: 'Jeder' },
@@ -133,6 +142,7 @@ let currencyState = null;
 let currencyLoaded = false;
 let openAiConfig = null;
 let openAiRuntimeState = null;
+let openAiRuntimeRefreshTimeout = null;
 
 const storedChannel = localStorage.getItem(STORAGE_KEYS.channel);
 if (storedChannel) {
@@ -150,6 +160,27 @@ if (openAiSummaryEl) {
 }
 if (openAiStatusEl) {
   openAiStatusEl.textContent = 'Bitte zuerst mit dem Backend verbinden.';
+}
+if (openAiDebugPanel) {
+  openAiDebugPanel.hidden = true;
+}
+if (openAiDebugMetaEl) {
+  openAiDebugMetaEl.textContent = 'Keine Daten verfügbar.';
+}
+if (openAiDebugScreenshotWrapper) {
+  openAiDebugScreenshotWrapper.hidden = true;
+}
+if (openAiDebugRequestEl) {
+  openAiDebugRequestEl.textContent = '—';
+}
+if (openAiDebugResponseEl) {
+  openAiDebugResponseEl.textContent = '—';
+}
+if (openAiDebugHistoryList) {
+  openAiDebugHistoryList.innerHTML = '';
+}
+if (openAiDebugEmptyEl) {
+  openAiDebugEmptyEl.hidden = false;
 }
 if (openAiPromptInput) {
   openAiPromptInput.value = OPEN_AI_DEFAULT_PROMPT;
@@ -331,6 +362,10 @@ function enableOpenAi(enabled) {
 function resetOpenAiUi() {
   openAiConfig = null;
   openAiRuntimeState = null;
+  if (openAiRuntimeRefreshTimeout) {
+    clearTimeout(openAiRuntimeRefreshTimeout);
+    openAiRuntimeRefreshTimeout = null;
+  }
   if (openAiEnabledInput) openAiEnabledInput.checked = false;
   if (openAiChannelInput) openAiChannelInput.value = '';
   if (openAiIntervalInput) openAiIntervalInput.value = '';
@@ -339,6 +374,7 @@ function resetOpenAiUi() {
   if (openAiSummaryIntervalEl) openAiSummaryIntervalEl.textContent = '—';
   if (openAiSummaryNextRunEl) openAiSummaryNextRunEl.textContent = '—';
   if (openAiSummaryLastSuccessEl) openAiSummaryLastSuccessEl.textContent = '—';
+  if (openAiSummaryStreamStatusEl) openAiSummaryStreamStatusEl.textContent = '—';
   if (openAiSummaryMessageEl) openAiSummaryMessageEl.textContent = '—';
   if (openAiSummaryTokensEl) openAiSummaryTokensEl.textContent = '—';
   if (openAiSummaryErrorEl) {
@@ -348,6 +384,7 @@ function resetOpenAiUi() {
   if (openAiSummaryEl) {
     openAiSummaryEl.hidden = true;
   }
+  renderOpenAiDebug(null);
   setOpenAiStatus('Bitte zuerst mit dem Backend verbinden.');
 }
 
@@ -358,6 +395,164 @@ function formatTimestamp(value) {
     return value;
   }
   return date.toLocaleString('de-DE');
+}
+
+function formatDebugJson(value) {
+  if (value == null) {
+    return '—';
+  }
+  if (typeof value === 'string') {
+    return value.trim() ? value : '—';
+  }
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch (error) {
+    return String(value);
+  }
+}
+
+function renderOpenAiDebug(runtime = openAiRuntimeState) {
+  if (!openAiDebugPanel) {
+    return;
+  }
+  const history = Array.isArray(runtime?.history) ? runtime.history : [];
+  if (!history.length) {
+    openAiDebugPanel.hidden = true;
+    if (openAiDebugMetaEl) {
+      openAiDebugMetaEl.textContent = 'Keine Daten verfügbar.';
+    }
+    if (openAiDebugRequestEl) {
+      openAiDebugRequestEl.textContent = '—';
+    }
+    if (openAiDebugResponseEl) {
+      openAiDebugResponseEl.textContent = '—';
+    }
+    if (openAiDebugScreenshotWrapper) {
+      openAiDebugScreenshotWrapper.hidden = true;
+    }
+    if (openAiDebugHistoryList) {
+      openAiDebugHistoryList.innerHTML = '';
+    }
+    if (openAiDebugEmptyEl) {
+      openAiDebugEmptyEl.hidden = false;
+    }
+    return;
+  }
+
+  openAiDebugPanel.hidden = false;
+  const latest = history[0] || {};
+
+  if (openAiDebugMetaEl) {
+    const metaParts = [];
+    if (latest.channel) {
+      metaParts.push(`#${latest.channel}`);
+    }
+    if (latest.createdAt) {
+      metaParts.push(formatTimestamp(latest.createdAt));
+    }
+    if (latest.reason) {
+      metaParts.push(`Auslöser: ${latest.reason}`);
+    }
+    const tokenMeta = [];
+    if (latest.promptTokens != null) {
+      tokenMeta.push(`Prompt ${NUMBER_FORMATTER.format(latest.promptTokens)}`);
+    }
+    if (latest.completionTokens != null) {
+      tokenMeta.push(`Completion ${NUMBER_FORMATTER.format(latest.completionTokens)}`);
+    }
+    if (tokenMeta.length) {
+      metaParts.push(`Tokens: ${tokenMeta.join(' / ')}`);
+    } else if (latest.totalTokens != null) {
+      metaParts.push(`Tokens gesamt: ${NUMBER_FORMATTER.format(latest.totalTokens)}`);
+    }
+    openAiDebugMetaEl.textContent = metaParts.length ? metaParts.join(' · ') : 'Letzte Ausführung';
+  }
+
+  if (openAiDebugScreenshotWrapper) {
+    if (latest.screenshotDataUrl) {
+      openAiDebugScreenshotWrapper.hidden = false;
+      if (openAiDebugScreenshotEl) {
+        openAiDebugScreenshotEl.src = latest.screenshotDataUrl;
+      }
+    } else {
+      openAiDebugScreenshotWrapper.hidden = true;
+      if (openAiDebugScreenshotEl) {
+        openAiDebugScreenshotEl.removeAttribute('src');
+      }
+    }
+  }
+
+  if (openAiDebugRequestEl) {
+    openAiDebugRequestEl.textContent = formatDebugJson(latest.requestPayload);
+  }
+  if (openAiDebugResponseEl) {
+    openAiDebugResponseEl.textContent = formatDebugJson(latest.responsePayload);
+  }
+
+  if (openAiDebugHistoryList) {
+    openAiDebugHistoryList.innerHTML = '';
+    history.forEach(entry => {
+      const listItem = document.createElement('li');
+      listItem.className = 'openai-debug__history-item';
+      const time = document.createElement('time');
+      time.dateTime = entry.createdAt || '';
+      time.textContent = formatTimestamp(entry.createdAt);
+      const message = document.createElement('p');
+      message.textContent = entry.message || '—';
+      const meta = document.createElement('p');
+      meta.className = 'openai-debug__history-meta';
+      const infoParts = [];
+      if (entry.channel) {
+        infoParts.push(`#${entry.channel}`);
+      }
+      if (entry.reason) {
+        infoParts.push(`Auslöser: ${entry.reason}`);
+      }
+      const entryTokens = [];
+      if (entry.promptTokens != null) {
+        entryTokens.push(`Prompt ${NUMBER_FORMATTER.format(entry.promptTokens)}`);
+      }
+      if (entry.completionTokens != null) {
+        entryTokens.push(`Completion ${NUMBER_FORMATTER.format(entry.completionTokens)}`);
+      }
+      if (entryTokens.length) {
+        infoParts.push(`Tokens: ${entryTokens.join(' / ')}`);
+      } else if (entry.totalTokens != null) {
+        infoParts.push(`Tokens gesamt: ${NUMBER_FORMATTER.format(entry.totalTokens)}`);
+      }
+      if (entry.screenshotBytes != null) {
+        infoParts.push(`${NUMBER_FORMATTER.format(entry.screenshotBytes)} Bytes`);
+      }
+      meta.textContent = infoParts.length ? infoParts.join(' · ') : '—';
+      listItem.append(time, message, meta);
+      openAiDebugHistoryList.appendChild(listItem);
+    });
+  }
+
+  if (openAiDebugEmptyEl) {
+    openAiDebugEmptyEl.hidden = history.length > 0;
+  }
+}
+
+function scheduleOpenAiRuntimeRefresh(delay = 400) {
+  if (!openAiForm) {
+    return;
+  }
+  if (openAiRuntimeRefreshTimeout) {
+    return;
+  }
+  openAiRuntimeRefreshTimeout = setTimeout(async () => {
+    openAiRuntimeRefreshTimeout = null;
+    try {
+      const data = await apiFetch('/openai');
+      if (data?.runtime) {
+        openAiRuntimeState = data.runtime;
+        updateOpenAiSummary(openAiRuntimeState, openAiConfig);
+      }
+    } catch (error) {
+      console.error('OpenAI-Laufzeit konnte nicht aktualisiert werden', error);
+    }
+  }, delay);
 }
 
 function updateOpenAiSummary(runtime = openAiRuntimeState, config = openAiConfig) {
@@ -394,12 +589,37 @@ function updateOpenAiSummary(runtime = openAiRuntimeState, config = openAiConfig
       null;
     openAiSummaryLastSuccessEl.textContent = formatTimestamp(last);
   }
+  if (openAiSummaryStreamStatusEl) {
+    const streamStatus = runtime?.lastStreamStatus || statusData?.openAi?.lastStreamStatus || null;
+    let statusText = '—';
+    if (streamStatus) {
+      if (streamStatus.live === true) {
+        const parts = ['Live'];
+        if (streamStatus.title) {
+          parts.push(streamStatus.title);
+        }
+        if (streamStatus.viewerCount != null) {
+          parts.push(`${NUMBER_FORMATTER.format(streamStatus.viewerCount)} Zuschauer`);
+        }
+        statusText = parts.join(' · ');
+      } else if (streamStatus.live === false) {
+        const when = formatTimestamp(streamStatus.checkedAt);
+        statusText = when && when !== '—' ? `Offline · ${when}` : 'Offline';
+      } else if (streamStatus.live === null) {
+        const when = formatTimestamp(streamStatus.checkedAt);
+        statusText = when && when !== '—' ? `Status unbekannt · ${when}` : 'Status unbekannt';
+      }
+    }
+    openAiSummaryStreamStatusEl.textContent = statusText;
+  }
   if (openAiSummaryMessageEl) {
     openAiSummaryMessageEl.textContent = runtime?.lastMessage || statusData?.openAi?.lastMessage || '—';
   }
   if (openAiSummaryTokensEl) {
-    const promptTokens = runtime?.usage?.promptTokens;
-    const completionTokens = runtime?.usage?.completionTokens;
+    const promptTokens =
+      runtime?.usage?.promptTokens ?? statusData?.openAi?.usage?.promptTokens ?? null;
+    const completionTokens =
+      runtime?.usage?.completionTokens ?? statusData?.openAi?.usage?.completionTokens ?? null;
     if (promptTokens != null || completionTokens != null) {
       const parts = [];
       if (promptTokens != null) {
@@ -414,7 +634,7 @@ function updateOpenAiSummary(runtime = openAiRuntimeState, config = openAiConfig
     }
   }
   if (openAiSummaryErrorEl) {
-    const error = runtime?.lastError;
+    const error = runtime?.lastError || statusData?.openAi?.lastError || null;
     if (error?.message) {
       const timeLabel = formatTimestamp(error.occurredAt);
       openAiSummaryErrorEl.textContent = `${timeLabel !== '—' ? `${timeLabel}: ` : ''}${error.message}`;
@@ -425,6 +645,7 @@ function updateOpenAiSummary(runtime = openAiRuntimeState, config = openAiConfig
     }
   }
   openAiSummaryEl.hidden = false;
+  renderOpenAiDebug(runtime);
 }
 
 async function loadOpenAiSettings() {
@@ -471,6 +692,7 @@ async function loadOpenAiSettings() {
     if (openAiSummaryEl) {
       openAiSummaryEl.hidden = true;
     }
+    renderOpenAiDebug(null);
   } finally {
     if (openAiSaveBtn) {
       openAiSaveBtn.disabled = false;
@@ -572,6 +794,7 @@ function applyOpenAiRuntimeUpdate(meta = {}) {
     openAiConfig.intervalSeconds = meta.intervalSeconds;
   }
   updateOpenAiSummary(openAiRuntimeState, openAiConfig);
+  scheduleOpenAiRuntimeRefresh();
   if (apiPassword && openAiConfig?.enabled) {
     setOpenAiStatus('OpenAI-Antwort wurde gesendet.', 'ok');
   }
