@@ -4,6 +4,8 @@ import cors from 'cors';
 import axios from 'axios';
 import tmi from 'tmi.js';
 import crypto from 'node:crypto';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
 const {
   PORT = 4010,
@@ -13,7 +15,8 @@ const {
   TWITCH_BOT_USERNAME,
   TWITCH_BOT_OAUTH_TOKEN,
   TWITCH_DEFAULT_CHANNEL,
-  TWITCH_API_PASSWORD
+  TWITCH_API_PASSWORD,
+  TWITCH_STATE_FILE
 } = process.env;
 
 if (!TWITCH_API_PASSWORD) {
@@ -30,6 +33,243 @@ if (!TWITCH_BOT_USERNAME || !TWITCH_BOT_OAUTH_TOKEN) {
   console.warn('[twitch-chat-controller] WARN: Bot-Zugangsdaten fehlen. Chat-Verbindungen können nicht aufgebaut werden.');
 }
 
+const STATE_FILE = TWITCH_STATE_FILE
+  ? path.resolve(TWITCH_STATE_FILE)
+  : path.resolve(process.cwd(), 'runtime-state.json');
+
+const DEFAULT_COMMANDS = [
+  {
+    name: 'hallo',
+    description: 'Begrüßt den Nutzer freundlich im Chat.',
+    response: 'Hey {user}, willkommen im Stream! 👋',
+    cooldownSeconds: 30,
+    enabled: true
+  },
+  {
+    name: 'discord',
+    description: 'Teilt den Community-Discord-Link.',
+    response: 'Komm auf unseren Discord-Server: https://discord.gg/deinlink',
+    cooldownSeconds: 60,
+    enabled: true
+  },
+  {
+    name: 'socials',
+    description: 'Verweist auf weitere Social-Media-Kanäle.',
+    response: 'Folge Behamot auch auf Twitter & Instagram: https://twitter.com/deinprofil · https://instagram.com/deinprofil',
+    cooldownSeconds: 120,
+    enabled: true
+  }
+];
+
+const runtimeState = {
+  botToken: null,
+  commands: {
+    prefix: '!',
+    items: DEFAULT_COMMANDS.map(item => ({ ...item }))
+  }
+};
+
+let refreshTimeout = null;
+
+async function ensureStateFileDir() {
+  const dir = path.dirname(STATE_FILE);
+  await fs.mkdir(dir, { recursive: true });
+}
+
+async function loadRuntimeState() {
+  try {
+    const raw = await fs.readFile(STATE_FILE, 'utf8');
+    const data = JSON.parse(raw);
+    if (data.botToken) {
+      runtimeState.botToken = {
+        ...(runtimeState.botToken || {}),
+        ...data.botToken
+      };
+    }
+    if (data.commands) {
+      const restoredItems = Array.isArray(data.commands.items)
+        ? data.commands.items.map(entry => normalizeCommandItem(entry)).filter(Boolean)
+        : [];
+      runtimeState.commands = {
+        ...runtimeState.commands,
+        ...data.commands,
+        items: restoredItems.length
+          ? restoredItems
+          : runtimeState.commands.items
+      };
+    }
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      console.warn('[twitch-chat-controller] Konnte Zustand nicht laden:', error);
+    }
+  }
+}
+
+async function persistRuntimeState() {
+  try {
+    await ensureStateFileDir();
+    const payload = JSON.stringify(runtimeState, null, 2);
+    await fs.writeFile(STATE_FILE, payload, 'utf8');
+  } catch (error) {
+    console.error('[twitch-chat-controller] Zustand konnte nicht gespeichert werden:', error);
+  }
+}
+
+function getStoredBotToken() {
+  return runtimeState.botToken;
+}
+
+function getCommandConfiguration() {
+  return runtimeState.commands || { prefix: '!', items: [] };
+}
+
+function computeExpiresAt(expiresIn) {
+  if (!expiresIn || Number.isNaN(Number(expiresIn))) return null;
+  const expiresMs = Date.now() + Number(expiresIn) * 1000;
+  return new Date(expiresMs).toISOString();
+}
+
+function normalizeOauthToken(token) {
+  if (!token) return null;
+  return token.startsWith('oauth:') ? token : `oauth:${token}`;
+}
+
+function getBotPassword() {
+  const token = getStoredBotToken()?.accessToken;
+  if (token) {
+    return normalizeOauthToken(token);
+  }
+  if (TWITCH_BOT_OAUTH_TOKEN) {
+    return normalizeOauthToken(TWITCH_BOT_OAUTH_TOKEN);
+  }
+  return null;
+}
+
+function scheduleTokenRefresh() {
+  if (refreshTimeout) {
+    clearTimeout(refreshTimeout);
+    refreshTimeout = null;
+  }
+  const token = getStoredBotToken();
+  if (!token?.refreshToken || !token?.expiresAt) {
+    return;
+  }
+  if (!TWITCH_CLIENT_ID) {
+    console.warn('[twitch-chat-controller] Token-Refresh nicht möglich: TWITCH_CLIENT_ID fehlt.');
+    return;
+  }
+  if (!TWITCH_CLIENT_SECRET) {
+    console.warn('[twitch-chat-controller] Token-Refresh nicht möglich: TWITCH_CLIENT_SECRET fehlt.');
+    return;
+  }
+  const expiresAt = new Date(token.expiresAt).getTime();
+  if (!Number.isFinite(expiresAt)) {
+    return;
+  }
+  const leadTime = 2 * 60 * 1000;
+  const delay = Math.max(expiresAt - Date.now() - leadTime, 5_000);
+  refreshTimeout = setTimeout(() => {
+    refreshBotToken().catch(error => {
+      console.error('[twitch-chat-controller] Automatischer Token-Refresh fehlgeschlagen:', error);
+    });
+  }, delay);
+  refreshTimeout.unref?.();
+}
+
+async function refreshBotToken() {
+  const stored = getStoredBotToken();
+  if (!stored?.refreshToken) {
+    console.warn('[twitch-chat-controller] Kein Refresh-Token vorhanden.');
+    return;
+  }
+  if (!TWITCH_CLIENT_ID || !TWITCH_CLIENT_SECRET) {
+    console.warn('[twitch-chat-controller] Refresh-Token kann ohne Client-ID und Client-Secret nicht verwendet werden.');
+    return;
+  }
+  const params = new URLSearchParams({
+    client_id: TWITCH_CLIENT_ID,
+    client_secret: TWITCH_CLIENT_SECRET,
+    grant_type: 'refresh_token',
+    refresh_token: stored.refreshToken
+  });
+  const response = await axios.post('https://id.twitch.tv/oauth2/token', params, {
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+  });
+  const data = response.data || {};
+  await applyBotToken({
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token || stored.refreshToken,
+    expiresIn: data.expires_in,
+    scope: data.scope
+  }, { validate: false });
+}
+
+async function applyBotToken(payload, options = {}) {
+  const { accessToken, refreshToken, expiresIn, scope, login } = payload;
+  if (!accessToken || typeof accessToken !== 'string') {
+    throw new Error('Ungültiges Access-Token.');
+  }
+  runtimeState.botToken = {
+    accessToken,
+    refreshToken: refreshToken || runtimeState.botToken?.refreshToken || null,
+    scope: scope || runtimeState.botToken?.scope || [],
+    expiresAt: computeExpiresAt(expiresIn) || runtimeState.botToken?.expiresAt || null,
+    obtainedAt: new Date().toISOString(),
+    login: login || runtimeState.botToken?.login || null
+  };
+  await persistRuntimeState();
+  scheduleTokenRefresh();
+  if (!options.skipReconnect) {
+    await restartChatClient();
+  }
+}
+
+async function applyCommandConfiguration(config) {
+  const prefix = typeof config?.prefix === 'string' ? config.prefix.trim() : '!';
+  const normalizedPrefix = prefix.length ? prefix : '!';
+  const items = Array.isArray(config?.items) ? config.items : [];
+  const normalizedItems = items
+    .map(item => normalizeCommandItem(item))
+    .filter(Boolean);
+  runtimeState.commands = {
+    prefix: normalizedPrefix,
+    items: normalizedItems.length ? normalizedItems : DEFAULT_COMMANDS.map(item => ({ ...item }))
+  };
+  await persistRuntimeState();
+  resetCommandCooldowns();
+}
+
+function normalizeCommandItem(item) {
+  if (!item) return null;
+  const name = typeof item.name === 'string' ? item.name.trim() : '';
+  const response = typeof item.response === 'string' ? item.response.trim() : '';
+  if (!name || !response) {
+    return null;
+  }
+  const description = typeof item.description === 'string' ? item.description.trim() : '';
+  const cooldownSeconds = Number.isFinite(Number(item.cooldownSeconds))
+    ? Math.max(0, Number(item.cooldownSeconds))
+    : 0;
+  return {
+    name,
+    response,
+    description,
+    cooldownSeconds,
+    enabled: item.enabled !== false
+  };
+}
+
+function resetCommandCooldowns() {
+  commandCooldowns.clear();
+}
+
+async function initializeRuntime() {
+  await loadRuntimeState();
+  scheduleTokenRefresh();
+}
+
+await initializeRuntime();
+
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '256kb' }));
@@ -44,6 +284,7 @@ const channelContexts = new Map();
 const oauthStates = new Map();
 let chatClientReady = false;
 const pendingBotMessages = new Map();
+const commandCooldowns = new Map();
 
 function addPendingBotMessage(channel, message) {
   const normalizedChannel = normalizeChannelName(channel);
@@ -151,8 +392,11 @@ function broadcastToChannel(channel, payload) {
 }
 
 async function ensureChatClientConnected() {
-  if (!TWITCH_BOT_USERNAME || !TWITCH_BOT_OAUTH_TOKEN) {
-    throw new Error('Bot Zugangsdaten sind nicht vollständig gesetzt.');
+  if (!TWITCH_BOT_USERNAME) {
+    throw new Error('Bot Benutzername ist nicht gesetzt.');
+  }
+  if (!getBotPassword()) {
+    throw new Error('Bot OAuth-Token ist nicht verfügbar.');
   }
   if (chatClientReady) return;
   if (ensureChatClientConnected._connecting) {
@@ -178,12 +422,16 @@ async function ensureChatClientConnected() {
 }
 
 function createChatClient() {
+  const password = getBotPassword();
+  if (!password) {
+    throw new Error('Bot OAuth-Token ist nicht verfügbar.');
+  }
   const client = new tmi.Client({
     options: { debug: false },
     connection: { reconnect: true, secure: true },
     identity: {
       username: TWITCH_BOT_USERNAME,
-      password: TWITCH_BOT_OAUTH_TOKEN
+      password
     },
     channels: TWITCH_DEFAULT_CHANNEL
       ? [`#${normalizeChannelName(TWITCH_DEFAULT_CHANNEL)}`]
@@ -220,6 +468,11 @@ function createChatClient() {
       timestamp: new Date().toISOString()
     };
     broadcastToChannel(normalized, payload);
+    if (!self) {
+      handleCommandExecution(normalized, tags, message).catch(error => {
+        console.error('[twitch-chat-controller] Fehler beim Ausführen eines Befehls:', error);
+      });
+    }
   });
 
   client.on('join', (channel, username, self) => {
@@ -259,6 +512,132 @@ function getChatClient() {
   return ensureChatClientConnected._client;
 }
 
+async function restartChatClient() {
+  const client = getChatClient();
+  const channelsToRejoin = new Set(joinedChannels);
+  for (const key of channelContexts.keys()) {
+    if (key) {
+      channelsToRejoin.add(key);
+    }
+  }
+  if (client) {
+    try {
+      await client.disconnect();
+    } catch (error) {
+      console.warn('[twitch-chat-controller] Chat-Client konnte nicht sauber getrennt werden:', error);
+    }
+  }
+  chatClientReady = false;
+  ensureChatClientConnected._client = null;
+  ensureChatClientConnected._connecting = null;
+  joinedChannels.clear();
+  try {
+    const newClient = await ensureChatClientConnected();
+    for (const channel of channelsToRejoin) {
+      try {
+        await newClient.join(`#${channel}`);
+        joinedChannels.add(channel);
+        broadcastToChannel(channel, {
+          type: 'system',
+          channel,
+          message: 'Bot-Verbindung wurde mit aktualisiertem Token neu aufgebaut.',
+          timestamp: new Date().toISOString()
+        });
+      } catch (error) {
+        console.error('[twitch-chat-controller] Channel konnte nach Tokenwechsel nicht erneut verbunden werden:', error);
+        broadcastToChannel(channel, {
+          type: 'system',
+          channel,
+          message: 'Bot konnte nach Tokenwechsel nicht erneut verbinden. Bitte manuell neu abonnieren.',
+          timestamp: new Date().toISOString()
+        });
+      }
+    }
+  } catch (error) {
+    console.error('[twitch-chat-controller] Neuaufbau nach Tokenwechsel fehlgeschlagen:', error);
+  }
+}
+
+async function validateAccessToken(accessToken) {
+  if (!accessToken) return null;
+  try {
+    const response = await axios.get('https://id.twitch.tv/oauth2/validate', {
+      headers: { Authorization: `OAuth ${accessToken}` }
+    });
+    return response.data;
+  } catch (error) {
+    console.warn('[twitch-chat-controller] OAuth-Token konnte nicht validiert werden:', error?.response?.data || error.message);
+    return null;
+  }
+}
+
+async function handleCommandExecution(channel, tags, message) {
+  const config = getCommandConfiguration();
+  const prefix = config.prefix || '!';
+  if (!prefix || !message.startsWith(prefix)) {
+    return;
+  }
+  const withoutPrefix = message.slice(prefix.length).trim();
+  if (!withoutPrefix) {
+    return;
+  }
+  const [commandNameRaw, ...args] = withoutPrefix.split(/\s+/);
+  const commandName = commandNameRaw?.toLowerCase();
+  if (!commandName) {
+    return;
+  }
+  const command = (config.items || []).find(item => item.enabled !== false && item.name.toLowerCase() === commandName);
+  if (!command) {
+    return;
+  }
+  const cooldownKey = `${channel}::${command.name.toLowerCase()}`;
+  const now = Date.now();
+  const cooldownMs = (Number(command.cooldownSeconds) || 0) * 1000;
+  if (cooldownMs > 0) {
+    const lastExecution = commandCooldowns.get(cooldownKey) || 0;
+    if (now - lastExecution < cooldownMs) {
+      return;
+    }
+    commandCooldowns.set(cooldownKey, now);
+  }
+  const userDisplayName = tags['display-name'] || tags.username || 'Zuschauer';
+  const rawResponse = command.response || '';
+  if (!rawResponse) {
+    return;
+  }
+  const remainder = args.join(' ');
+  const replacements = new Map([
+    ['{user}', userDisplayName],
+    ['{channel}', channel],
+    ['{message}', remainder]
+  ]);
+  let responseMessage = rawResponse;
+  replacements.forEach((value, key) => {
+    responseMessage = responseMessage.replace(new RegExp(key, 'gi'), value);
+  });
+  if (!responseMessage.trim()) {
+    return;
+  }
+  await ensureChatClientConnected();
+  const client = getChatClient();
+  if (!client) {
+    throw new Error('Chat-Client ist nicht verbunden.');
+  }
+  addPendingBotMessage(channel, responseMessage.trim());
+  await client.say(`#${channel}`, responseMessage.trim());
+  broadcastToChannel(channel, {
+    type: 'outgoing',
+    channel,
+    username: TWITCH_BOT_USERNAME,
+    message: responseMessage.trim(),
+    timestamp: new Date().toISOString(),
+    meta: {
+      triggeredBy: userDisplayName,
+      command: command.name
+    }
+  });
+}
+
 function getPasswordFromRequest(req) {
   const header = req.get('x-api-password');
   if (header) return header;
@@ -295,12 +674,26 @@ app.use((req, res, next) => {
 });
 
 app.get('/api/twitch/status', (_req, res) => {
+  const token = getStoredBotToken();
+  const commands = getCommandConfiguration();
   res.json({
     ready: chatClientReady,
     joinedChannels: Array.from(joinedChannels),
     defaultChannel: TWITCH_DEFAULT_CHANNEL ? normalizeChannelName(TWITCH_DEFAULT_CHANNEL) : null,
-    hasBotCredentials: Boolean(TWITCH_BOT_USERNAME && TWITCH_BOT_OAUTH_TOKEN),
-    oauthConfigured: Boolean(TWITCH_CLIENT_ID && TWITCH_REDIRECT_URI)
+    hasBotCredentials: Boolean(TWITCH_BOT_USERNAME && getBotPassword()),
+    oauthConfigured: Boolean(TWITCH_CLIENT_ID && TWITCH_REDIRECT_URI),
+    botToken: token
+      ? {
+          login: token.login || null,
+          expiresAt: token.expiresAt || null,
+          obtainedAt: token.obtainedAt || null,
+          hasRefresh: Boolean(token.refreshToken)
+        }
+      : null,
+    commands: {
+      prefix: commands.prefix,
+      total: Array.isArray(commands.items) ? commands.items.length : 0
+    }
   });
 });
 
@@ -311,6 +704,24 @@ app.get('/api/twitch/config', (_req, res) => {
     clientId: TWITCH_CLIENT_ID || '',
     scopes: ['chat:read', 'chat:edit', 'channel:moderate']
   });
+});
+
+app.get('/api/twitch/commands', (_req, res) => {
+  const config = getCommandConfiguration();
+  res.json({
+    prefix: config.prefix,
+    items: config.items
+  });
+});
+
+app.put('/api/twitch/commands', async (req, res) => {
+  try {
+    await applyCommandConfiguration(req.body || {});
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[twitch-chat-controller] Befehle konnten nicht aktualisiert werden:', error);
+    res.status(400).json({ error: error.message || 'Befehle konnten nicht gespeichert werden.' });
+  }
 });
 
 app.get('/api/twitch/chat/stream', async (req, res) => {
@@ -490,6 +901,36 @@ app.get('/api/twitch/oauth/callback', async (req, res) => {
       errorDescription: description,
       details: errorPayload
     });
+  }
+});
+
+app.post('/api/twitch/oauth/apply', async (req, res) => {
+  try {
+    const { accessToken, refreshToken, expiresIn, scope } = req.body || {};
+    if (!accessToken || typeof accessToken !== 'string') {
+      return res.status(400).json({ error: 'Access-Token fehlt oder ist ungültig.' });
+    }
+    const validation = await validateAccessToken(accessToken);
+    await applyBotToken(
+      {
+        accessToken,
+        refreshToken: typeof refreshToken === 'string' && refreshToken ? refreshToken : null,
+        expiresIn: Number(expiresIn) || null,
+        scope: scope,
+        login: validation?.login || null
+      },
+      { skipReconnect: false }
+    );
+    res.json({
+      success: true,
+      login: validation?.login || null,
+      expiresAt: runtimeState.botToken?.expiresAt || null,
+      hasRefresh: Boolean(runtimeState.botToken?.refreshToken)
+    });
+  } catch (error) {
+    console.error('[twitch-chat-controller] OAuth-Token konnte nicht übernommen werden:', error);
+    const message = error?.response?.data?.message || error.message || 'Token konnte nicht gespeichert werden.';
+    res.status(500).json({ error: message });
   }
 });
 

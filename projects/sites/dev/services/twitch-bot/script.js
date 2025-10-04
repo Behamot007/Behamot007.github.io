@@ -1,8 +1,17 @@
+const API_BASE = '/api/twitch';
+
+const navButtons = document.querySelectorAll('.page-nav__link');
+const sections = {
+  config: document.getElementById('view-config'),
+  chat: document.getElementById('view-chat'),
+  commands: document.getElementById('view-commands')
+};
+
 const connectionForm = document.getElementById('connectionForm');
-const apiBaseInput = document.getElementById('apiBase');
 const apiPasswordInput = document.getElementById('apiPassword');
 const clearPasswordBtn = document.getElementById('clearPassword');
 const connectionStatusEl = document.getElementById('connectionStatus');
+const tokenStatusEl = document.getElementById('tokenStatus');
 const oauthButton = document.getElementById('oauthStart');
 const oauthInfoEl = document.getElementById('oauthInfo');
 const channelInput = document.getElementById('channelInput');
@@ -12,43 +21,46 @@ const messageForm = document.getElementById('messageForm');
 const messageInput = document.getElementById('messageInput');
 const messageSubmit = messageForm.querySelector('button');
 const messageTemplate = document.getElementById('messageTemplate');
+const commandPrefixInput = document.getElementById('commandPrefix');
+const commandList = document.getElementById('commandList');
+const addCommandBtn = document.getElementById('addCommand');
+const saveCommandsBtn = document.getElementById('saveCommands');
+const commandStatusEl = document.getElementById('commandStatus');
 
 const STORAGE_KEYS = {
-  apiBase: 'twitch-bot.apiBase',
   channel: 'twitch-bot.channel'
 };
 
-let apiBase = localStorage.getItem(STORAGE_KEYS.apiBase) || '/api/twitch';
 let apiPassword = '';
 let currentChannel = '';
 let eventSource = null;
-let lastOauthPayload = null;
 let statusData = null;
+let commandsState = { prefix: '!', items: [] };
+let commandsEditable = false;
+let commandsLoaded = false;
+let lastOauthPayload = null;
 
-apiBaseInput.value = apiBase;
 const storedChannel = localStorage.getItem(STORAGE_KEYS.channel);
 if (storedChannel) {
   channelInput.value = storedChannel;
 }
 
-function trimBase(value) {
-  let result = (value || '').trim().replace(/\/$/, '');
-  if (result && !/^https?:/i.test(result) && !result.startsWith('/')) {
-    result = `/${result}`;
-  }
-  return result;
-}
+navButtons.forEach(button => {
+  button.addEventListener('click', () => {
+    const target = button.dataset.target;
+    if (!target || !sections[target]) return;
+    navButtons.forEach(btn => btn.classList.toggle('is-active', btn === button));
+    Object.entries(sections).forEach(([key, section]) => {
+      section.classList.toggle('is-active', key === target);
+    });
+  });
+});
 
 function buildUrl(path) {
-  const base = trimBase(apiBase || '');
-  if (!base) return path;
-  if (base.startsWith('http')) {
-    return `${base}${path}`;
-  }
   if (!path.startsWith('/')) {
-    return `${base}/${path}`;
+    return `${API_BASE}/${path}`;
   }
-  return `${base}${path}`;
+  return `${API_BASE}${path}`;
 }
 
 async function apiFetch(path, options = {}) {
@@ -100,13 +112,72 @@ function setOauthInfo(content, variant = '') {
   }
 }
 
+function setTokenStatus(text, variant = '') {
+  tokenStatusEl.textContent = text;
+  tokenStatusEl.classList.remove('status-box--ok', 'status-box--error');
+  if (variant === 'ok') {
+    tokenStatusEl.classList.add('status-box--ok');
+  } else if (variant === 'error') {
+    tokenStatusEl.classList.add('status-box--error');
+  }
+}
+
+function setCommandStatus(text, variant = '') {
+  commandStatusEl.textContent = text;
+  commandStatusEl.classList.remove('status-box--ok', 'status-box--error');
+  if (variant === 'ok') {
+    commandStatusEl.classList.add('status-box--ok');
+  } else if (variant === 'error') {
+    commandStatusEl.classList.add('status-box--error');
+  }
+}
+
+function updateTokenStatus(token) {
+  if (!token) {
+    setTokenStatus('Noch kein Bot-Token hinterlegt.');
+    return;
+  }
+  const parts = [];
+  let variant = 'ok';
+  if (token.login) {
+    parts.push(`Token für ${token.login}`);
+  } else {
+    parts.push('Bot-Token gespeichert');
+  }
+  if (token.obtainedAt) {
+    const obtained = new Date(token.obtainedAt);
+    if (!Number.isNaN(obtained.getTime())) {
+      parts.push(`aktualisiert am ${obtained.toLocaleString('de-DE')}`);
+    }
+  }
+  if (token.expiresAt) {
+    const expires = new Date(token.expiresAt);
+    if (!Number.isNaN(expires.getTime())) {
+      const diff = expires.getTime() - Date.now();
+      if (diff > 0) {
+        const minutes = Math.round(diff / 60000);
+        parts.push(`läuft in ca. ${minutes} Minuten ab`);
+      } else {
+        parts.push('Token ist abgelaufen.');
+        variant = 'error';
+      }
+    }
+  } else {
+    parts.push('läuft nicht ab.');
+  }
+  if (token.hasRefresh) {
+    parts.push('Automatischer Refresh aktiv.');
+  }
+  setTokenStatus(parts.join(' · '), variant);
+}
+
 function clearChat() {
   chatLog.innerHTML = '';
 }
 
 function appendMessage(entry) {
   if (!entry) return;
-  const { type, username, message, timestamp, channel, userId } = entry;
+  const { type, username, message, timestamp, channel, userId, meta } = entry;
   const clone = messageTemplate.content.firstElementChild.cloneNode(true);
   const article = clone;
   const userEl = clone.querySelector('.chat-message__user');
@@ -114,7 +185,11 @@ function appendMessage(entry) {
   const textEl = clone.querySelector('.chat-message__text');
 
   const date = timestamp ? new Date(timestamp) : new Date();
-  timeEl.textContent = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  timeEl.textContent = date.toLocaleTimeString('de-DE', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
 
   if (type === 'system') {
     article.classList.add('chat-message--system');
@@ -128,6 +203,12 @@ function appendMessage(entry) {
     article.classList.add('chat-message--bot');
     userEl.textContent = `BOT · ${username || 'Bot'}`;
     textEl.textContent = message || '';
+    if (meta?.command) {
+      const hint = document.createElement('span');
+      hint.className = 'command-item__tag';
+      hint.textContent = `Befehl: ${meta.command}${meta.triggeredBy ? ` · Auslöser: ${meta.triggeredBy}` : ''}`;
+      article.appendChild(hint);
+    }
   } else {
     userEl.textContent = username || userId || 'Unbekannt';
     textEl.textContent = message || '';
@@ -184,13 +265,13 @@ async function connectChannel(channel) {
     message: `Verbinde zu #${normalized}...`,
     timestamp: new Date().toISOString()
   });
-  const streamUrl = `${trimBase(apiBase)}/chat/stream?channel=${encodeURIComponent(normalized)}&apiPassword=${encodeURIComponent(apiPassword)}`;
+  const streamUrl = `${API_BASE}/chat/stream?channel=${encodeURIComponent(normalized)}&apiPassword=${encodeURIComponent(apiPassword)}`;
   eventSource = new EventSource(streamUrl);
   eventSource.onopen = () => {
     appendMessage({
       type: 'system',
       channel: normalized,
-      message: `Chat-Stream aktiv.`,
+      message: 'Chat-Stream aktiv.',
       timestamp: new Date().toISOString()
     });
     connectChannelBtn.disabled = false;
@@ -220,23 +301,279 @@ async function refreshStatus() {
     oauthButton.disabled = !statusData.oauthConfigured;
     connectChannelBtn.disabled = false;
     connectChannelBtn.textContent = 'Chat abonnieren';
+    updateTokenStatus(statusData.botToken);
+    enableCommands(true);
+    if (!commandsLoaded) {
+      await loadCommands();
+    } else {
+      setCommandStatus(`Aktueller Präfix: ${commandsState.prefix} · Befehle: ${commandsState.items.length}`, 'ok');
+    }
   } catch (error) {
     setStatus(`Fehler: ${error.message}`, 'error');
     oauthButton.disabled = true;
     connectChannelBtn.disabled = true;
+    updateTokenStatus(null);
+    enableCommands(false);
     throw error;
+  }
+}
+
+function enableCommands(enabled) {
+  commandsEditable = enabled;
+  commandPrefixInput.disabled = !enabled;
+  addCommandBtn.disabled = !enabled;
+  saveCommandsBtn.disabled = !enabled;
+  commandList.querySelectorAll('input, textarea, button').forEach(element => {
+    if (element.dataset.keepEnabled === 'true') return;
+    element.disabled = !enabled;
+  });
+  if (!enabled) {
+    setCommandStatus('Bitte zuerst mit dem Backend verbinden.');
+  }
+}
+
+function sanitizePrefix(value) {
+  const trimmed = (value || '').replace(/\s+/g, '');
+  return (trimmed || '!').slice(0, 5);
+}
+
+function updateCommandTitles() {
+  commandList.querySelectorAll('[data-command-title]').forEach(titleEl => {
+    const index = Number(titleEl.dataset.index);
+    const command = commandsState.items[index];
+    if (!command) return;
+    titleEl.textContent = `${commandsState.prefix}${command.name}`;
+  });
+}
+
+function createCommandItem(command, index) {
+  const wrapper = document.createElement('article');
+  wrapper.className = 'command-item';
+  wrapper.dataset.index = String(index);
+
+  const header = document.createElement('div');
+  header.className = 'command-item__header';
+  const title = document.createElement('h3');
+  title.dataset.commandTitle = 'true';
+  title.dataset.index = String(index);
+  title.textContent = `${commandsState.prefix}${command.name}`;
+  header.appendChild(title);
+
+  const toggleLabel = document.createElement('label');
+  toggleLabel.className = 'command-item__toggle';
+  const toggle = document.createElement('input');
+  toggle.type = 'checkbox';
+  toggle.checked = command.enabled !== false;
+  toggle.disabled = !commandsEditable;
+  toggle.addEventListener('change', () => {
+    commandsState.items[index].enabled = toggle.checked;
+  });
+  toggleLabel.appendChild(toggle);
+  toggleLabel.append(' Aktiv');
+  header.appendChild(toggleLabel);
+
+  wrapper.appendChild(header);
+
+  const meta = document.createElement('div');
+  meta.className = 'command-item__meta';
+
+  const nameLabel = document.createElement('label');
+  nameLabel.innerHTML = '<span>Befehlsname</span>';
+  const nameInput = document.createElement('input');
+  nameInput.type = 'text';
+  nameInput.value = command.name;
+  nameInput.disabled = !commandsEditable;
+  nameInput.addEventListener('input', () => {
+    commandsState.items[index].name = nameInput.value.trim();
+    updateCommandTitles();
+  });
+  nameLabel.appendChild(nameInput);
+  meta.appendChild(nameLabel);
+
+  const descriptionLabel = document.createElement('label');
+  descriptionLabel.innerHTML = '<span>Beschreibung</span>';
+  const descriptionInput = document.createElement('textarea');
+  descriptionInput.value = command.description || '';
+  descriptionInput.disabled = !commandsEditable;
+  descriptionInput.addEventListener('input', () => {
+    commandsState.items[index].description = descriptionInput.value;
+  });
+  descriptionLabel.appendChild(descriptionInput);
+  meta.appendChild(descriptionLabel);
+
+  const responseLabel = document.createElement('label');
+  responseLabel.innerHTML = '<span>Antwort</span>';
+  const responseInput = document.createElement('textarea');
+  responseInput.value = command.response || '';
+  responseInput.disabled = !commandsEditable;
+  responseInput.addEventListener('input', () => {
+    commandsState.items[index].response = responseInput.value;
+  });
+  responseLabel.appendChild(responseInput);
+  meta.appendChild(responseLabel);
+
+  const cooldownLabel = document.createElement('label');
+  cooldownLabel.innerHTML = '<span>Cooldown (Sek.)</span>';
+  const cooldownInput = document.createElement('input');
+  cooldownInput.type = 'number';
+  cooldownInput.min = '0';
+  cooldownInput.step = '1';
+  cooldownInput.value = Number(command.cooldownSeconds || 0);
+  cooldownInput.disabled = !commandsEditable;
+  cooldownInput.addEventListener('input', () => {
+    const value = Number.parseInt(cooldownInput.value, 10);
+    commandsState.items[index].cooldownSeconds = Number.isFinite(value) && value >= 0 ? value : 0;
+  });
+  cooldownLabel.appendChild(cooldownInput);
+  meta.appendChild(cooldownLabel);
+
+  wrapper.appendChild(meta);
+
+  const actions = document.createElement('div');
+  actions.className = 'command-item__actions';
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'secondary';
+  removeBtn.textContent = 'Befehl entfernen';
+  removeBtn.disabled = !commandsEditable;
+  removeBtn.addEventListener('click', () => {
+    commandsState.items.splice(index, 1);
+    renderCommands();
+  });
+  actions.appendChild(removeBtn);
+  wrapper.appendChild(actions);
+
+  return wrapper;
+}
+
+function renderCommands() {
+  commandList.innerHTML = '';
+  commandPrefixInput.value = commandsState.prefix || '!';
+  if (!commandsState.items.length) {
+    const empty = document.createElement('p');
+    empty.className = 'card__hint';
+    empty.textContent = 'Noch keine Befehle vorhanden. Füge über den Button einen neuen Befehl hinzu.';
+    commandList.appendChild(empty);
+    return;
+  }
+  commandsState.items.forEach((command, index) => {
+    commandList.appendChild(createCommandItem(command, index));
+  });
+  enableCommands(commandsEditable);
+}
+
+function generateCommandName(base = 'befehl') {
+  let suffix = 1;
+  let candidate = base;
+  const existing = commandsState.items.map(item => item.name.toLowerCase());
+  while (existing.includes(candidate.toLowerCase())) {
+    candidate = `${base}${suffix}`;
+    suffix += 1;
+  }
+  return candidate;
+}
+
+async function loadCommands() {
+  try {
+    const data = await apiFetch('/commands');
+    commandsState = {
+      prefix: sanitizePrefix(data.prefix),
+      items: Array.isArray(data.items) ? data.items.map(item => ({
+        name: item.name || '',
+        description: item.description || '',
+        response: item.response || '',
+        cooldownSeconds: Number(item.cooldownSeconds || 0),
+        enabled: item.enabled !== false
+      })) : []
+    };
+    commandsLoaded = true;
+    renderCommands();
+    setCommandStatus(`Befehle geladen · Präfix: ${commandsState.prefix} · Anzahl: ${commandsState.items.length}`, 'ok');
+  } catch (error) {
+    console.error('Befehle konnten nicht geladen werden', error);
+    setCommandStatus(`Befehle konnten nicht geladen werden: ${error.message}`, 'error');
+  }
+}
+
+function addCommand() {
+  const newCommand = {
+    name: generateCommandName('befehl'),
+    description: 'Antwort für einen neuen Befehl – bitte anpassen.',
+    response: 'Hey {user}, dieser Befehl wurde noch nicht angepasst.',
+    cooldownSeconds: 30,
+    enabled: true
+  };
+  commandsState.items.push(newCommand);
+  renderCommands();
+  setCommandStatus('Neuer Befehl hinzugefügt. Vergiss nicht zu speichern!', 'ok');
+}
+
+async function saveCommands() {
+  try {
+    const payload = {
+      prefix: sanitizePrefix(commandPrefixInput.value),
+      items: commandsState.items
+        .filter(item => item.name && item.response)
+        .map(item => ({
+          name: item.name.trim(),
+          description: (item.description || '').trim(),
+          response: item.response,
+          cooldownSeconds: Number(item.cooldownSeconds || 0),
+          enabled: item.enabled !== false
+        }))
+    };
+    commandsState.prefix = payload.prefix;
+    await apiFetch('/commands', {
+      method: 'PUT',
+      body: payload
+    });
+    renderCommands();
+    setCommandStatus('Befehle erfolgreich gespeichert.', 'ok');
+  } catch (error) {
+    console.error('Befehle konnten nicht gespeichert werden', error);
+    setCommandStatus(`Speichern fehlgeschlagen: ${error.message}`, 'error');
+  }
+}
+
+async function applyOauthPayload(payload) {
+  if (!payload) return;
+  if (!apiPassword) {
+    setOauthInfo('Bitte zuerst mit dem Backend verbinden.', 'error');
+    return;
+  }
+  if (payload.error) {
+    setOauthInfo(`OAuth-Fehler: ${payload.errorDescription || payload.error}`, 'error');
+    return;
+  }
+  setOauthInfo('Speichere Token im Backend …');
+  try {
+    const result = await apiFetch('/oauth/apply', {
+      method: 'POST',
+      body: {
+        accessToken: payload.accessToken,
+        refreshToken: payload.refreshToken,
+        expiresIn: payload.expiresIn,
+        scope: payload.scope
+      }
+    });
+    setOauthInfo(
+      `Bot-Token gespeichert${result.login ? ` für ${result.login}` : ''}.` +
+        (result.hasRefresh ? ' Automatischer Refresh aktiv.' : ''),
+      'ok'
+    );
+    await refreshStatus();
+  } catch (error) {
+    setOauthInfo(`Token konnte nicht gespeichert werden: ${error.message}`, 'error');
   }
 }
 
 connectionForm.addEventListener('submit', async event => {
   event.preventDefault();
-  apiBase = trimBase(apiBaseInput.value.trim() || '');
   apiPassword = apiPasswordInput.value.trim();
-  if (!apiBase || !apiPassword) {
-    setStatus('Bitte Basis-URL und Passwort angeben.', 'error');
+  if (!apiPassword) {
+    setStatus('Bitte ein API-Passwort angeben.', 'error');
     return;
   }
-  localStorage.setItem(STORAGE_KEYS.apiBase, apiBase);
   setStatus('Prüfe Backend …');
   try {
     await refreshStatus();
@@ -252,6 +589,12 @@ clearPasswordBtn.addEventListener('click', () => {
   oauthButton.disabled = true;
   connectChannelBtn.disabled = true;
   connectChannelBtn.textContent = 'Chat abonnieren';
+  updateTokenStatus(null);
+  enableCommands(false);
+  commandsLoaded = false;
+  commandsState = { prefix: '!', items: [] };
+  commandList.innerHTML = '';
+  commandPrefixInput.value = '!';
   closeStream();
   messageSubmit.disabled = true;
 });
@@ -318,11 +661,27 @@ window.addEventListener('message', event => {
     setOauthInfo(`OAuth-Fehler: ${data.payload.errorDescription || data.payload.error}`, 'error');
     return;
   }
-  setOauthInfo(
-    `Token erhalten (läuft in ${data.payload?.expiresIn || '?'}s ab). Scopes: ${(data.payload?.scope || []).join(', ')}`,
-    'ok'
-  );
-  console.log('OAuth Payload', data.payload);
+  const expiresIn = data.payload?.expiresIn || '?';
+  const scopes = Array.isArray(data.payload?.scope) ? data.payload.scope.join(', ') : '';
+  setOauthInfo(`Token erhalten (läuft in ${expiresIn}s ab).${scopes ? ` Scopes: ${scopes}` : ''}`);
+  applyOauthPayload(data.payload);
+});
+
+commandPrefixInput.addEventListener('input', () => {
+  if (!commandsEditable) return;
+  commandsState.prefix = sanitizePrefix(commandPrefixInput.value);
+  commandPrefixInput.value = commandsState.prefix;
+  updateCommandTitles();
+});
+
+addCommandBtn.addEventListener('click', () => {
+  if (!commandsEditable) return;
+  addCommand();
+});
+
+saveCommandsBtn.addEventListener('click', () => {
+  if (!commandsEditable) return;
+  saveCommands();
 });
 
 window.addEventListener('beforeunload', () => {
@@ -332,6 +691,10 @@ window.addEventListener('beforeunload', () => {
 setStatus('Bitte verbinde dich mit dem Backend.');
 messageSubmit.disabled = true;
 connectChannelBtn.disabled = true;
+enableCommands(false);
+updateTokenStatus(null);
+
+setCommandStatus('Befehle noch nicht geladen.');
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {
