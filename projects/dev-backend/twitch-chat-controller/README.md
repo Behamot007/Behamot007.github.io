@@ -10,6 +10,7 @@ Dieser Service stellt eine abgesicherte API bereit, um einen Twitch-Chat über e
 - Konfigurierbares API-Passwort, das sowohl von der Web-Oberfläche als auch von externen Clients abgefragt wird
 - Verwaltung benutzerdefinierter Chat-Befehle (inkl. Präfix, Cooldowns & Antworten)
 - Automatischer OpenAI-Zuschauer, der anhand von Stream-Screenshots periodisch Chat-Nachrichten erzeugt
+- Persistente Speicherung aller Konfigurationen und des Währungssystems in PostgreSQL
 
 ## Schnellstart
 
@@ -35,9 +36,15 @@ Der Server lauscht standardmäßig auf Port `4010`. Über einen Reverse-Proxy (z
 | `TWITCH_BOT_USERNAME` | Benutzername des Bot-Accounts, der den Chat steuert. |
 | `TWITCH_BOT_OAUTH_TOKEN` | (Optional) OAuth-Token im Format `oauth:...` als Initialwert. Kann später durch den OAuth-Flow ersetzt werden. |
 | `TWITCH_DEFAULT_CHANNEL` | (Optional) Kanal, der automatisch beim Start betreten werden soll. |
-| `TWITCH_STATE_FILE` | (Optional) Pfad zu einer JSON-Datei, in der Laufzeitdaten (Tokens, Befehle) persistiert werden. Standard: `runtime-state.json`. |
 | `OPENAI_API_KEY` | Secret für den automatischen Zuschauer, wird für Chat-Completions inklusive Bildanalyse benötigt. |
 | `OPENAI_DEFAULT_MODEL` | (Optional) Vorbelegtes OpenAI-Modell (z. B. `gpt-4o-mini`). |
+| `DATABASE_URL` | (Optional) PostgreSQL-Verbindungszeichenfolge. Wenn gesetzt, werden die folgenden `POSTGRES_*` Variablen ignoriert. |
+| `POSTGRES_HOST` | Hostname bzw. Service-Name der PostgreSQL-Instanz (Standard: `postgres`). |
+| `POSTGRES_PORT` | Port der PostgreSQL-Instanz (Standard: `5432`). |
+| `POSTGRES_DB` | Datenbankname, in dem Einstellungen und Währungskonten gespeichert werden (Standard: `app`). |
+| `POSTGRES_USER` | Benutzername für die Datenbank (Standard: `app`). |
+| `POSTGRES_PASSWORD` | Passwort für den angegebenen Datenbankbenutzer (Standard: `change-me`). |
+| `POSTGRES_SSL` | Auf `true` setzen, wenn für die Verbindung TLS benötigt wird (Standard: `false`). |
 
 Eine minimal ausgefüllte `.env` kann z. B. wie folgt aussehen:
 
@@ -50,18 +57,23 @@ TWITCH_REDIRECT_URI=https://www.behamot.de/api/twitch/oauth/callback
 TWITCH_BOT_USERNAME=deinbotname
 # Optional: Anfangstoken, wird durch den OAuth-Flow überschrieben
 TWITCH_BOT_OAUTH_TOKEN=oauth:xxxxxxxxxxxxxxxxxxxx
-# Optional: Speicherort für Laufzeitdaten (Standard: runtime-state.json)
-# TWITCH_STATE_FILE=/app/data/twitch-state.json
 TWITCH_DEFAULT_CHANNEL=BehamotVT
 OPENAI_API_KEY=sk-...
 OPENAI_DEFAULT_MODEL=gpt-4o-mini
+# Optional: Datenbank-Konfiguration (wenn kein DATABASE_URL genutzt wird)
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+POSTGRES_DB=app
+POSTGRES_USER=app
+POSTGRES_PASSWORD=change-me
+POSTGRES_SSL=false
 ```
 
 > Achte darauf, dass ein manuell gesetztes Bot-Token mit `oauth:` beginnt – sonst lehnt Twitch die Verbindung ab.
 
 > Hinweis: Das API-Passwort muss im Frontend eingegeben werden. Für Streaming-Endpunkte kann das Passwort als `apiPassword` Query-Parameter gesetzt werden, damit EventSource-Verbindungen funktionieren.
 
-> Laufzeitdaten (z. B. gespeicherte Bot-Tokens und Befehle) werden standardmäßig in `runtime-state.json` neben dem Server abgelegt. Mit `TWITCH_STATE_FILE` lässt sich der Speicherort in einen persistenten Pfad verlagern.
+> Laufzeitdaten (z. B. gespeicherte Bot-Tokens, Befehle, Konfigurationen und das Währungssystem) werden vollständig in PostgreSQL persistiert. Verwende entweder `DATABASE_URL` oder die einzelnen `POSTGRES_*` Variablen, um auf eine dauerhafte Datenbank zu verweisen. In der bereitgestellten `docker-compose.yml` sorgt das Volume `postgres_data` automatisch dafür, dass Daten auch nach Container-Neustarts erhalten bleiben.
 
 ### Zugangsdaten beschaffen
 
@@ -81,7 +93,7 @@ Erst wenn alle Pflichtfelder gesetzt sind, meldet `/api/twitch/status` `oauthCon
 
 ### Betrieb im Container
 
-Für den produktiven Einsatz kann der Dienst über Docker Compose gestartet werden. Im Root-Projekt befindet sich eine `docker-compose.yml`, die einen Service `twitch-controller` definiert. Vor dem Start solltest du die oben genannten Umgebungsvariablen in deiner Shell oder einer `.env` Datei neben `docker-compose.yml` setzen:
+Für den produktiven Einsatz kann der Dienst über Docker Compose gestartet werden. Im Root-Projekt befindet sich eine `docker-compose.yml`, die einen Service `twitch-controller` sowie eine PostgreSQL-Instanz mit persistentem Volume definiert. Vor dem Start solltest du die oben genannten Umgebungsvariablen in deiner Shell oder einer `.env` Datei neben `docker-compose.yml` setzen:
 
 ```bash
 TWITCH_API_PASSWORD=ein-sicheres-passwort \

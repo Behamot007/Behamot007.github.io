@@ -4,8 +4,7 @@ import cors from 'cors';
 import axios from 'axios';
 import tmi from 'tmi.js';
 import crypto from 'node:crypto';
-import fs from 'node:fs/promises';
-import path from 'node:path';
+import pg from 'pg';
 
 const {
   PORT = 4010,
@@ -16,9 +15,15 @@ const {
   TWITCH_BOT_OAUTH_TOKEN,
   TWITCH_DEFAULT_CHANNEL,
   TWITCH_API_PASSWORD,
-  TWITCH_STATE_FILE,
   OPENAI_API_KEY,
-  OPENAI_DEFAULT_MODEL
+  OPENAI_DEFAULT_MODEL,
+  DATABASE_URL,
+  POSTGRES_HOST,
+  POSTGRES_PORT,
+  POSTGRES_DB,
+  POSTGRES_USER,
+  POSTGRES_PASSWORD,
+  POSTGRES_SSL
 } = process.env;
 
 if (!TWITCH_API_PASSWORD) {
@@ -35,9 +40,185 @@ if (!TWITCH_BOT_USERNAME || !TWITCH_BOT_OAUTH_TOKEN) {
   console.warn('[twitch-chat-controller] WARN: Bot-Zugangsdaten fehlen. Chat-Verbindungen können nicht aufgebaut werden.');
 }
 
-const STATE_FILE = TWITCH_STATE_FILE
-  ? path.resolve(TWITCH_STATE_FILE)
-  : path.resolve(process.cwd(), 'runtime-state.json');
+const { Pool } = pg;
+
+const poolConfig = DATABASE_URL
+  ? { connectionString: DATABASE_URL }
+  : {
+      host: POSTGRES_HOST || 'postgres',
+      port: Number(POSTGRES_PORT) || 5432,
+      database: POSTGRES_DB || 'app',
+      user: POSTGRES_USER || 'app',
+      password: POSTGRES_PASSWORD || 'change-me'
+    };
+
+if (String(POSTGRES_SSL).toLowerCase() === 'true') {
+  poolConfig.ssl = { rejectUnauthorized: false };
+}
+
+const dbPool = new Pool(poolConfig);
+dbPool.on('error', error => {
+  console.error('[twitch-chat-controller] Datenbankfehler im Verbindungs-Pool:', error);
+});
+
+async function withDatabase(callback) {
+  const client = await dbPool.connect();
+  try {
+    return await callback(client);
+  } finally {
+    client.release();
+  }
+}
+
+async function initializeDatabase() {
+  const maxAttempts = 10;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      await withDatabase(async client => {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS twitch_settings (
+            key TEXT PRIMARY KEY,
+            value JSONB NOT NULL,
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          )
+        `);
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS twitch_currency_balances (
+            channel TEXT NOT NULL,
+            user_key TEXT NOT NULL,
+            balance BIGINT NOT NULL DEFAULT 0,
+            user_id TEXT,
+            username TEXT,
+            display_name TEXT,
+            updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            PRIMARY KEY (channel, user_key)
+          )
+        `);
+        await client.query(`
+          CREATE INDEX IF NOT EXISTS idx_twitch_currency_balances_channel
+            ON twitch_currency_balances (channel)
+        `);
+      });
+      return;
+    } catch (error) {
+      const isLastAttempt = attempt === maxAttempts;
+      console.warn(
+        `[twitch-chat-controller] Datenbank-Initialisierung fehlgeschlagen (Versuch ${attempt}/${maxAttempts}):`,
+        error?.message || error
+      );
+      if (isLastAttempt) {
+        throw error;
+      }
+      const delayMs = Math.min(5_000, 500 * attempt);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+}
+
+async function loadSettingsFromDatabase() {
+  const result = await withDatabase(client => client.query('SELECT key, value FROM twitch_settings'));
+  const settings = new Map();
+  for (const row of result.rows || []) {
+    settings.set(row.key, row.value);
+  }
+  return settings;
+}
+
+async function saveSetting(key, value) {
+  if (!key) return;
+  await withDatabase(client =>
+    client.query(
+      `INSERT INTO twitch_settings (key, value, updated_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (key) DO UPDATE
+         SET value = EXCLUDED.value,
+             updated_at = EXCLUDED.updated_at`,
+      [key, value]
+    )
+  );
+}
+
+async function deleteSetting(key) {
+  if (!key) return;
+  await withDatabase(client => client.query('DELETE FROM twitch_settings WHERE key = $1', [key]));
+}
+
+async function loadCurrencyBalancesFromDatabase() {
+  const result = await withDatabase(client =>
+    client.query(
+      'SELECT channel, user_key, balance, user_id, username, display_name, updated_at FROM twitch_currency_balances'
+    )
+  );
+  const balances = {};
+  for (const row of result.rows || []) {
+    const channel = typeof row.channel === 'string' ? row.channel.trim().toLowerCase() : null;
+    if (!channel) {
+      continue;
+    }
+    if (!balances[channel]) {
+      balances[channel] = {};
+    }
+    const balanceValue = Number(row.balance);
+    if (!Number.isFinite(balanceValue) || balanceValue < 0) {
+      continue;
+    }
+    balances[channel][row.user_key] = {
+      balance: Math.max(0, Math.round(balanceValue)),
+      userId: row.user_id ? String(row.user_id) : null,
+      username: row.username ? String(row.username).toLowerCase() : null,
+      displayName: row.display_name ? String(row.display_name) : null,
+      updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : null
+    };
+  }
+  return balances;
+}
+
+async function saveCurrencyBalanceToDatabase(channel, userKey, entry) {
+  if (!channel || !userKey || !entry) {
+    return;
+  }
+  const balanceValue = Number(entry.balance) || 0;
+  const updatedAt = entry.updatedAt ? new Date(entry.updatedAt).toISOString() : new Date().toISOString();
+  const userId = entry.userId ? String(entry.userId) : null;
+  const username = entry.username ? String(entry.username).toLowerCase() : null;
+  const displayName = entry.displayName ? String(entry.displayName) : null;
+  await withDatabase(client =>
+    client.query(
+      `INSERT INTO twitch_currency_balances (channel, user_key, balance, user_id, username, display_name, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       ON CONFLICT (channel, user_key) DO UPDATE
+         SET balance = EXCLUDED.balance,
+             user_id = EXCLUDED.user_id,
+             username = EXCLUDED.username,
+             display_name = EXCLUDED.display_name,
+             updated_at = EXCLUDED.updated_at`,
+      [channel, userKey, balanceValue, userId, username, displayName, updatedAt]
+    )
+  );
+}
+
+async function persistBotTokenState() {
+  if (runtimeState.botToken) {
+    await saveSetting('botToken', runtimeState.botToken);
+  } else {
+    await deleteSetting('botToken');
+  }
+}
+
+async function persistCommandConfiguration() {
+  const config = getCommandConfiguration();
+  await saveSetting('commands', config);
+}
+
+async function persistCurrencyConfiguration() {
+  const config = serializeCurrencyConfig();
+  await saveSetting('currency', config);
+}
+
+async function persistOpenAiConfiguration() {
+  const config = serializeOpenAiConfig();
+  await saveSetting('openAi', config);
+}
 
 const USER_LEVELS = [
   { id: 'everyone', label: 'Jeder' },
@@ -289,7 +470,11 @@ async function addCurrencyBalance(channel, identity, amount) {
   if (!identity || !Number.isFinite(Number(amount)) || amount <= 0) {
     return getCurrencyBalance(channel, identity);
   }
-  const store = ensureCurrencyChannelStore(channel);
+  const normalizedChannel = normalizeChannelName(channel);
+  if (!normalizedChannel) {
+    return 0;
+  }
+  const store = ensureCurrencyChannelStore(normalizedChannel);
   if (!store) {
     return 0;
   }
@@ -311,7 +496,7 @@ async function addCurrencyBalance(channel, identity, amount) {
   existing.displayName = identity.displayName || existing.displayName || null;
   existing.updatedAt = new Date().toISOString();
   store[key] = existing;
-  await persistRuntimeState();
+  await saveCurrencyBalanceToDatabase(normalizedChannel, key, existing);
   return existing.balance;
 }
 
@@ -319,7 +504,11 @@ async function spendCurrencyBalance(channel, identity, amount) {
   if (!identity || !Number.isFinite(Number(amount)) || amount <= 0) {
     return getCurrencyBalance(channel, identity);
   }
-  const store = ensureCurrencyChannelStore(channel);
+  const normalizedChannel = normalizeChannelName(channel);
+  if (!normalizedChannel) {
+    throw new Error('Währungsspeicher nicht verfügbar.');
+  }
+  const store = ensureCurrencyChannelStore(normalizedChannel);
   if (!store) {
     throw new Error('Währungsspeicher nicht verfügbar.');
   }
@@ -346,7 +535,7 @@ async function spendCurrencyBalance(channel, identity, amount) {
   existing.displayName = identity.displayName || existing.displayName || null;
   existing.updatedAt = new Date().toISOString();
   store[key] = existing;
-  await persistRuntimeState();
+  await saveCurrencyBalanceToDatabase(normalizedChannel, key, existing);
   return existing.balance;
 }
 
@@ -364,7 +553,7 @@ async function applyCurrencyConfiguration(update) {
     name: nextName,
     accrual: { amount, minutes }
   });
-  await persistRuntimeState();
+  await persistCurrencyConfiguration();
   currencyActivity.clear();
   return serializeCurrencyConfig(runtimeState.currency);
 }
@@ -425,7 +614,7 @@ async function applyOpenAiConfiguration(update) {
   };
   const normalized = normalizeOpenAiConfig(merged);
   runtimeState.openAiCompanion = normalized;
-  await persistRuntimeState();
+  await persistOpenAiConfiguration();
   restartOpenAiScheduler();
   return normalized;
 }
@@ -834,61 +1023,57 @@ const automaticCommandTimers = new Map();
 
 let refreshTimeout = null;
 
-async function ensureStateFileDir() {
-  const dir = path.dirname(STATE_FILE);
-  await fs.mkdir(dir, { recursive: true });
-}
-
 async function loadRuntimeState() {
   try {
-    const raw = await fs.readFile(STATE_FILE, 'utf8');
-    const data = JSON.parse(raw);
-    if (data.botToken) {
+    const settings = await loadSettingsFromDatabase();
+    const hasCommands = settings.has('commands');
+    const hasCurrencyConfig = settings.has('currency');
+    const hasOpenAiConfig = settings.has('openAi');
+    const storedBotToken = settings.get('botToken');
+    if (storedBotToken) {
       runtimeState.botToken = {
         ...(runtimeState.botToken || {}),
-        ...data.botToken
+        ...storedBotToken
       };
     }
-    if (data.commands) {
-      const restoredItems = Array.isArray(data.commands.items)
-        ? data.commands.items.map(entry => normalizeCommandItem(entry)).filter(Boolean)
+    const storedCommands = settings.get('commands');
+    if (storedCommands) {
+      const restoredItems = Array.isArray(storedCommands.items)
+        ? storedCommands.items.map(entry => normalizeCommandItem(entry)).filter(Boolean)
         : [];
       runtimeState.commands = {
         ...runtimeState.commands,
-        ...data.commands,
-        items: restoredItems.length
-          ? restoredItems
-          : runtimeState.commands.items
+        ...storedCommands,
+        items: restoredItems.length ? restoredItems : runtimeState.commands.items
       };
     }
-    if (data.currency) {
-      runtimeState.currency = normalizeCurrencyState({
-        ...runtimeState.currency,
-        ...data.currency,
-        balances: data.currency.balances || runtimeState.currency.balances
-      });
-    }
-    if (data.openAiCompanion) {
+    const storedCurrency = settings.get('currency');
+    const currencyState = normalizeCurrencyState({
+      ...runtimeState.currency,
+      ...(storedCurrency || {}),
+      balances: {}
+    });
+    const storedBalances = await loadCurrencyBalancesFromDatabase();
+    currencyState.balances = storedBalances;
+    runtimeState.currency = currencyState;
+    const storedOpenAi = settings.get('openAi');
+    if (storedOpenAi) {
       runtimeState.openAiCompanion = normalizeOpenAiConfig({
         ...runtimeState.openAiCompanion,
-        ...data.openAiCompanion
+        ...storedOpenAi
       });
     }
-  } catch (error) {
-    if (error.code !== 'ENOENT') {
-      console.warn('[twitch-chat-controller] Konnte Zustand nicht laden:', error);
+    if (!hasCommands) {
+      await persistCommandConfiguration();
     }
-  }
-}
-
-async function persistRuntimeState() {
-  try {
-    await ensureStateFileDir();
-    const payload = JSON.stringify(runtimeState, null, 2);
-    await fs.writeFile(STATE_FILE, payload, 'utf8');
+    if (!hasCurrencyConfig) {
+      await persistCurrencyConfiguration();
+    }
+    if (!hasOpenAiConfig) {
+      await persistOpenAiConfiguration();
+    }
   } catch (error) {
-    console.error('[twitch-chat-controller] Zustand konnte nicht gespeichert werden:', error);
-    throw error;
+    console.warn('[twitch-chat-controller] Konnte Zustand nicht laden:', error);
   }
 }
 
@@ -994,7 +1179,7 @@ async function applyBotToken(payload, options = {}) {
     obtainedAt: new Date().toISOString(),
     login: login || runtimeState.botToken?.login || null
   };
-  await persistRuntimeState();
+  await persistBotTokenState();
   scheduleTokenRefresh();
   if (!options.skipReconnect) {
     await restartChatClient();
@@ -1012,7 +1197,7 @@ async function applyCommandConfiguration(config) {
     prefix: normalizedPrefix,
     items: normalizedItems.length ? normalizedItems : DEFAULT_COMMANDS.map(item => ({ ...item }))
   };
-  await persistRuntimeState();
+  await persistCommandConfiguration();
   resetCommandCooldowns();
   setupAutomaticCommands();
 }
@@ -1166,6 +1351,7 @@ async function initializeRuntime() {
   restartOpenAiScheduler();
 }
 
+await initializeDatabase();
 await initializeRuntime();
 
 const app = express();
