@@ -26,6 +26,59 @@ const commandList = document.getElementById('commandList');
 const addCommandBtn = document.getElementById('addCommand');
 const saveCommandsBtn = document.getElementById('saveCommands');
 const commandStatusEl = document.getElementById('commandStatus');
+const commandModal = document.getElementById('commandModal');
+const commandForm = document.getElementById('commandForm');
+const commandModalTitle = document.getElementById('commandModalTitle');
+const commandEnabledInput = document.getElementById('commandEnabled');
+const commandNamesContainer = document.getElementById('commandNames');
+const commandNameInput = document.getElementById('commandNameInput');
+const commandNameAddBtn = document.getElementById('commandNameAdd');
+const commandResponseInput = document.getElementById('commandResponse');
+const commandCooldownInput = document.getElementById('commandCooldown');
+const commandAutoIntervalInput = document.getElementById('commandAutoInterval');
+const commandUserLevelSelect = document.getElementById('commandUserLevel');
+const commandResponseTypeSelect = document.getElementById('commandResponseType');
+const commandDeleteBtn = document.getElementById('commandDelete');
+const commandModalError = document.getElementById('commandModalError');
+const commandModalCloseBtn = document.querySelector('[data-command-modal-close]');
+const commandModalCancelBtns = document.querySelectorAll('[data-command-modal-cancel]');
+
+const USER_LEVEL_OPTIONS = [
+  { value: 'everyone', label: 'Jeder' },
+  { value: 'subscriber', label: 'Abonnenten' },
+  { value: 'regular', label: 'Stammgast' },
+  { value: 'vip', label: 'VIP' },
+  { value: 'moderator', label: 'Moderator' },
+  { value: 'super-moderator', label: 'Super-Moderator' },
+  { value: 'broadcaster', label: 'Broadcaster' }
+];
+
+const RESPONSE_TYPES = [
+  { value: 'say', label: 'Sagen' },
+  { value: 'mention', label: 'Erwähnen' },
+  { value: 'reply', label: 'Antworten' },
+  { value: 'whisper', label: 'Flüstern' }
+];
+
+const USER_LEVEL_LABEL = new Map(USER_LEVEL_OPTIONS.map(item => [item.value, item.label]));
+const RESPONSE_TYPE_LABEL = new Map(RESPONSE_TYPES.map(item => [item.value, item.label]));
+const DEFAULT_COMMAND_RESPONSE = 'Hey {user}, dieser Befehl wurde noch nicht angepasst.';
+
+USER_LEVEL_OPTIONS.forEach(option => {
+  if (!commandUserLevelSelect) return;
+  const element = document.createElement('option');
+  element.value = option.value;
+  element.textContent = option.label;
+  commandUserLevelSelect.appendChild(element);
+});
+
+RESPONSE_TYPES.forEach(option => {
+  if (!commandResponseTypeSelect) return;
+  const element = document.createElement('option');
+  element.value = option.value;
+  element.textContent = option.label;
+  commandResponseTypeSelect.appendChild(element);
+});
 
 const STORAGE_KEYS = {
   channel: 'twitch-bot.channel'
@@ -39,6 +92,8 @@ let commandsState = { prefix: '!', items: [] };
 let commandsEditable = false;
 let commandsLoaded = false;
 let lastOauthPayload = null;
+let commandModalState = { index: null, isNew: true };
+let commandDraft = null;
 
 const storedChannel = localStorage.getItem(STORAGE_KEYS.channel);
 if (storedChannel) {
@@ -203,11 +258,35 @@ function appendMessage(entry) {
     article.classList.add('chat-message--bot');
     userEl.textContent = `BOT · ${username || 'Bot'}`;
     textEl.textContent = message || '';
-    if (meta?.command) {
-      const hint = document.createElement('span');
-      hint.className = 'command-item__tag';
-      hint.textContent = `Befehl: ${meta.command}${meta.triggeredBy ? ` · Auslöser: ${meta.triggeredBy}` : ''}`;
-      article.appendChild(hint);
+    if (meta) {
+      const prefix = commandsState?.prefix || '!';
+      const names = Array.isArray(meta.aliases) && meta.aliases.length
+        ? meta.aliases
+        : meta.command
+        ? [meta.command]
+        : [];
+      const info = [];
+      if (names.length) {
+        info.push(`Befehl: ${names.map(name => `${prefix}${name}`).join(', ')}`);
+      }
+      if (meta.trigger === 'auto') {
+        info.push('Automatik');
+      } else if (meta.triggeredBy) {
+        info.push(`Auslöser: ${meta.triggeredBy}`);
+      }
+      if (meta.responseType) {
+        const label = RESPONSE_TYPE_LABEL.get(meta.responseType) || meta.responseType;
+        info.push(`Antwort: ${label}`);
+      }
+      if (meta.targetUser && meta.responseType === 'whisper') {
+        info.push(`An: ${meta.targetUser}`);
+      }
+      if (info.length) {
+        const hint = document.createElement('span');
+        hint.className = 'command-meta';
+        hint.textContent = info.join(' · ');
+        article.appendChild(hint);
+      }
     }
   } else {
     userEl.textContent = username || userId || 'Unbekannt';
@@ -306,7 +385,7 @@ async function refreshStatus() {
     if (!commandsLoaded) {
       await loadCommands();
     } else {
-      setCommandStatus(`Aktueller Präfix: ${commandsState.prefix} · Befehle: ${commandsState.items.length}`, 'ok');
+      updateCommandStatusSummary();
     }
   } catch (error) {
     setStatus(`Fehler: ${error.message}`, 'error');
@@ -323,12 +402,12 @@ function enableCommands(enabled) {
   commandPrefixInput.disabled = !enabled;
   addCommandBtn.disabled = !enabled;
   saveCommandsBtn.disabled = !enabled;
-  commandList.querySelectorAll('input, textarea, button').forEach(element => {
-    if (element.dataset.keepEnabled === 'true') return;
-    element.disabled = !enabled;
+  commandList.querySelectorAll('button.command-card').forEach(button => {
+    button.disabled = !enabled;
   });
   if (!enabled) {
     setCommandStatus('Bitte zuerst mit dem Backend verbinden.');
+    closeCommandModal();
   }
 }
 
@@ -337,118 +416,158 @@ function sanitizePrefix(value) {
   return (trimmed || '!').slice(0, 5);
 }
 
-function updateCommandTitles() {
-  commandList.querySelectorAll('[data-command-title]').forEach(titleEl => {
-    const index = Number(titleEl.dataset.index);
-    const command = commandsState.items[index];
-    if (!command) return;
-    titleEl.textContent = `${commandsState.prefix}${command.name}`;
-  });
+function sanitizeCommandName(value) {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  const prefix = commandsState.prefix || '!';
+  const withoutPrefix = trimmed.startsWith(prefix) ? trimmed.slice(prefix.length).trim() : trimmed;
+  return withoutPrefix.replace(/\s+/g, '').toLowerCase();
 }
 
-function createCommandItem(command, index) {
-  const wrapper = document.createElement('article');
-  wrapper.className = 'command-item';
-  wrapper.dataset.index = String(index);
+function normalizeCommandDraft(command) {
+  if (!command) return null;
+  const names = Array.isArray(command.names) ? command.names : [];
+  const seen = new Set();
+  const normalizedNames = [];
+  names.forEach(name => {
+    const cleaned = sanitizeCommandName(name);
+    if (!cleaned || seen.has(cleaned)) return;
+    seen.add(cleaned);
+    normalizedNames.push(cleaned);
+  });
+  const response = typeof command.response === 'string' ? command.response.trim() : '';
+  if (!normalizedNames.length || !response) {
+    return null;
+  }
+  const cooldownSeconds = Math.max(0, Number.parseInt(command.cooldownSeconds, 10) || 0);
+  const autoIntervalSeconds = Math.max(0, Number.parseInt(command.autoIntervalSeconds, 10) || 0);
+  const minUserLevel = USER_LEVEL_LABEL.has(command.minUserLevel) ? command.minUserLevel : 'everyone';
+  const responseType = RESPONSE_TYPE_LABEL.has(command.responseType) ? command.responseType : 'say';
+  return {
+    names: normalizedNames,
+    response,
+    cooldownSeconds,
+    autoIntervalSeconds,
+    minUserLevel,
+    responseType,
+    enabled: command.enabled !== false
+  };
+}
 
-  const header = document.createElement('div');
-  header.className = 'command-item__header';
+function normalizeLoadedCommand(item) {
+  if (!item) return null;
+  const sourceNames = [];
+  if (Array.isArray(item.names)) {
+    item.names.forEach(name => {
+      if (typeof name === 'string' && name.trim()) {
+        sourceNames.push(name);
+      }
+    });
+  } else if (typeof item.name === 'string' && item.name.trim()) {
+    sourceNames.push(item.name);
+  }
+  const names = sourceNames
+    .map(name => name.replace(/^!+/, '').replace(/\s+/g, '').toLowerCase())
+    .filter(Boolean);
+  const uniqueNames = Array.from(new Set(names));
+  const response = typeof item.response === 'string' ? item.response : '';
+  if (!uniqueNames.length || !response) {
+    return null;
+  }
+  return {
+    names: uniqueNames,
+    response,
+    cooldownSeconds: Math.max(0, Number.parseInt(item.cooldownSeconds, 10) || 0),
+    autoIntervalSeconds: Math.max(0, Number.parseInt(item.autoIntervalSeconds, 10) || 0),
+    minUserLevel: USER_LEVEL_LABEL.has(item.minUserLevel) ? item.minUserLevel : 'everyone',
+    responseType: RESPONSE_TYPE_LABEL.has(item.responseType) ? item.responseType : 'say',
+    enabled: item.enabled !== false
+  };
+}
+
+function updateCommandStatusSummary() {
+  if (!commandsLoaded) {
+    setCommandStatus('Befehle noch nicht geladen.');
+    return;
+  }
+  const total = commandsState.items.length;
+  const automated = commandsState.items.filter(item => item.autoIntervalSeconds > 0 && item.enabled !== false).length;
+  const parts = [`Präfix: ${commandsState.prefix}`, `Befehle: ${total}`];
+  if (automated) {
+    parts.push(`Automatik: ${automated}`);
+  }
+  setCommandStatus(parts.join(' · '), 'ok');
+}
+
+function createCommandBadge(text, variant = '') {
+  const badge = document.createElement('span');
+  badge.className = 'command-card__badge';
+  if (variant === 'muted') {
+    badge.classList.add('command-card__badge--muted');
+  }
+  badge.textContent = text;
+  return badge;
+}
+
+function createCommandCard(command, index) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'command-card';
+  if (command.enabled === false) {
+    button.classList.add('command-card--inactive');
+  }
+  button.dataset.index = String(index);
+  button.addEventListener('click', () => {
+    if (!commandsEditable) return;
+    openCommandModal(index);
+  });
+
   const title = document.createElement('h3');
-  title.dataset.commandTitle = 'true';
-  title.dataset.index = String(index);
-  title.textContent = `${commandsState.prefix}${command.name}`;
-  header.appendChild(title);
+  title.className = 'command-card__title';
+  const primaryName = Array.isArray(command.names) && command.names.length ? command.names[0] : 'befehl';
+  title.textContent = `${commandsState.prefix}${primaryName}`;
+  button.appendChild(title);
 
-  const toggleLabel = document.createElement('label');
-  toggleLabel.className = 'command-item__toggle';
-  const toggle = document.createElement('input');
-  toggle.type = 'checkbox';
-  toggle.checked = command.enabled !== false;
-  toggle.disabled = !commandsEditable;
-  toggle.addEventListener('change', () => {
-    commandsState.items[index].enabled = toggle.checked;
-  });
-  toggleLabel.appendChild(toggle);
-  toggleLabel.append(' Aktiv');
-  header.appendChild(toggleLabel);
+  if (Array.isArray(command.names) && command.names.length > 1) {
+    const aliases = document.createElement('p');
+    aliases.className = 'command-card__aliases';
+    const others = command.names.slice(1).map(name => `${commandsState.prefix}${name}`).join(', ');
+    aliases.textContent = `Weitere: ${others}`;
+    button.appendChild(aliases);
+  }
 
-  wrapper.appendChild(header);
+  const badges = document.createElement('div');
+  badges.className = 'command-card__badges';
+  const levelLabel = USER_LEVEL_LABEL.get(command.minUserLevel) || USER_LEVEL_LABEL.get('everyone');
+  badges.appendChild(
+    createCommandBadge(`Stufe: ${levelLabel}`, command.minUserLevel === 'everyone' ? 'muted' : '')
+  );
+  const responseLabel = RESPONSE_TYPE_LABEL.get(command.responseType) || RESPONSE_TYPE_LABEL.get('say');
+  badges.appendChild(createCommandBadge(`Antwort: ${responseLabel}`, command.responseType === 'say' ? 'muted' : ''));
+  const cooldown = Math.max(0, Number(command.cooldownSeconds || 0));
+  badges.appendChild(
+    createCommandBadge(
+      cooldown ? `Cooldown: ${cooldown}s` : 'Cooldown: —',
+      cooldown ? '' : 'muted'
+    )
+  );
+  const interval = Math.max(0, Number(command.autoIntervalSeconds || 0));
+  badges.appendChild(
+    createCommandBadge(interval ? `Automatik: ${interval}s` : 'Automatik: aus', interval ? '' : 'muted')
+  );
+  if (command.enabled === false) {
+    badges.appendChild(createCommandBadge('Deaktiviert', 'muted'));
+  }
+  button.appendChild(badges);
 
-  const meta = document.createElement('div');
-  meta.className = 'command-item__meta';
-
-  const nameLabel = document.createElement('label');
-  nameLabel.innerHTML = '<span>Befehlsname</span>';
-  const nameInput = document.createElement('input');
-  nameInput.type = 'text';
-  nameInput.value = command.name;
-  nameInput.disabled = !commandsEditable;
-  nameInput.addEventListener('input', () => {
-    commandsState.items[index].name = nameInput.value.trim();
-    updateCommandTitles();
-  });
-  nameLabel.appendChild(nameInput);
-  meta.appendChild(nameLabel);
-
-  const descriptionLabel = document.createElement('label');
-  descriptionLabel.innerHTML = '<span>Beschreibung</span>';
-  const descriptionInput = document.createElement('textarea');
-  descriptionInput.value = command.description || '';
-  descriptionInput.disabled = !commandsEditable;
-  descriptionInput.addEventListener('input', () => {
-    commandsState.items[index].description = descriptionInput.value;
-  });
-  descriptionLabel.appendChild(descriptionInput);
-  meta.appendChild(descriptionLabel);
-
-  const responseLabel = document.createElement('label');
-  responseLabel.innerHTML = '<span>Antwort</span>';
-  const responseInput = document.createElement('textarea');
-  responseInput.value = command.response || '';
-  responseInput.disabled = !commandsEditable;
-  responseInput.addEventListener('input', () => {
-    commandsState.items[index].response = responseInput.value;
-  });
-  responseLabel.appendChild(responseInput);
-  meta.appendChild(responseLabel);
-
-  const cooldownLabel = document.createElement('label');
-  cooldownLabel.innerHTML = '<span>Cooldown (Sek.)</span>';
-  const cooldownInput = document.createElement('input');
-  cooldownInput.type = 'number';
-  cooldownInput.min = '0';
-  cooldownInput.step = '1';
-  cooldownInput.value = Number(command.cooldownSeconds || 0);
-  cooldownInput.disabled = !commandsEditable;
-  cooldownInput.addEventListener('input', () => {
-    const value = Number.parseInt(cooldownInput.value, 10);
-    commandsState.items[index].cooldownSeconds = Number.isFinite(value) && value >= 0 ? value : 0;
-  });
-  cooldownLabel.appendChild(cooldownInput);
-  meta.appendChild(cooldownLabel);
-
-  wrapper.appendChild(meta);
-
-  const actions = document.createElement('div');
-  actions.className = 'command-item__actions';
-  const removeBtn = document.createElement('button');
-  removeBtn.type = 'button';
-  removeBtn.className = 'secondary';
-  removeBtn.textContent = 'Befehl entfernen';
-  removeBtn.disabled = !commandsEditable;
-  removeBtn.addEventListener('click', () => {
-    commandsState.items.splice(index, 1);
-    renderCommands();
-  });
-  actions.appendChild(removeBtn);
-  wrapper.appendChild(actions);
-
-  return wrapper;
+  return button;
 }
 
 function renderCommands() {
   commandList.innerHTML = '';
   commandPrefixInput.value = commandsState.prefix || '!';
+  enableCommands(commandsEditable);
   if (!commandsState.items.length) {
     const empty = document.createElement('p');
     empty.className = 'card__hint';
@@ -457,15 +576,14 @@ function renderCommands() {
     return;
   }
   commandsState.items.forEach((command, index) => {
-    commandList.appendChild(createCommandItem(command, index));
+    commandList.appendChild(createCommandCard(command, index));
   });
-  enableCommands(commandsEditable);
 }
 
 function generateCommandName(base = 'befehl') {
   let suffix = 1;
   let candidate = base;
-  const existing = commandsState.items.map(item => item.name.toLowerCase());
+  const existing = commandsState.items.flatMap(item => (Array.isArray(item.names) ? item.names : [])).map(name => name.toLowerCase());
   while (existing.includes(candidate.toLowerCase())) {
     candidate = `${base}${suffix}`;
     suffix += 1;
@@ -473,22 +591,153 @@ function generateCommandName(base = 'befehl') {
   return candidate;
 }
 
+function openCommandModal(index = null) {
+  if (!commandsEditable) return;
+  const isEditing = typeof index === 'number' && commandsState.items[index];
+  commandModalState = { index: isEditing ? index : null, isNew: !isEditing };
+  const baseCommand = isEditing
+    ? { ...commandsState.items[index], names: [...commandsState.items[index].names] }
+    : {
+        names: [generateCommandName('befehl')],
+        response: DEFAULT_COMMAND_RESPONSE,
+        cooldownSeconds: 30,
+        autoIntervalSeconds: 0,
+        minUserLevel: 'everyone',
+        responseType: 'say',
+        enabled: true
+      };
+  commandDraft = baseCommand;
+  if (!USER_LEVEL_LABEL.has(commandDraft.minUserLevel)) {
+    commandDraft.minUserLevel = 'everyone';
+  }
+  if (!RESPONSE_TYPE_LABEL.has(commandDraft.responseType)) {
+    commandDraft.responseType = 'say';
+  }
+  commandModalTitle.textContent = commandModalState.isNew
+    ? 'Neuen Befehl erstellen'
+    : `Befehl bearbeiten · ${commandsState.prefix}${commandDraft.names[0] || ''}`;
+  commandEnabledInput.checked = commandDraft.enabled !== false;
+  commandResponseInput.value = commandDraft.response || '';
+  commandCooldownInput.value = Number(commandDraft.cooldownSeconds || 0);
+  commandAutoIntervalInput.value = Number(commandDraft.autoIntervalSeconds || 0);
+  commandUserLevelSelect.value = commandDraft.minUserLevel || 'everyone';
+  commandResponseTypeSelect.value = commandDraft.responseType || 'say';
+  resetCommandModalError();
+  renderCommandNames();
+  commandDeleteBtn.hidden = commandModalState.isNew;
+  commandDeleteBtn.disabled = commandModalState.isNew;
+  commandNameInput.value = '';
+  commandModal.removeAttribute('hidden');
+  document.body.classList.add('modal-open');
+  setTimeout(() => {
+    commandNameInput.focus();
+  }, 0);
+}
+
+function closeCommandModal() {
+  if (!commandModal || commandModal.hasAttribute('hidden')) {
+    commandDraft = null;
+    commandModalState = { index: null, isNew: true };
+    return;
+  }
+  commandModal.setAttribute('hidden', '');
+  document.body.classList.remove('modal-open');
+  resetCommandModalError();
+  commandDraft = null;
+  commandModalState = { index: null, isNew: true };
+}
+
+function resetCommandModalError() {
+  if (commandModalError) {
+    commandModalError.hidden = true;
+    commandModalError.textContent = '';
+  }
+}
+
+function renderCommandNames() {
+  commandNamesContainer.innerHTML = '';
+  if (!commandDraft || !Array.isArray(commandDraft.names)) {
+    return;
+  }
+  commandDraft.names.forEach((name, index) => {
+    const tag = document.createElement('span');
+    tag.className = 'tag';
+    const label = document.createElement('span');
+    label.textContent = `${commandsState.prefix}${name}`;
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.innerHTML = '×';
+    removeBtn.addEventListener('click', () => {
+      commandDraft.names.splice(index, 1);
+      renderCommandNames();
+    });
+    tag.appendChild(label);
+    tag.appendChild(removeBtn);
+    commandNamesContainer.appendChild(tag);
+  });
+}
+
+function addCommandNameFromInput() {
+  const value = commandNameInput.value;
+  if (!commandDraft) return;
+  const sanitized = sanitizeCommandName(value);
+  if (!sanitized) {
+    commandNameInput.value = '';
+    return;
+  }
+  if (!Array.isArray(commandDraft.names)) {
+    commandDraft.names = [];
+  }
+  if (commandDraft.names.includes(sanitized)) {
+    commandNameInput.value = '';
+    return;
+  }
+  commandDraft.names.push(sanitized);
+  commandNameInput.value = '';
+  resetCommandModalError();
+  renderCommandNames();
+}
+
+function handleCommandFormSubmit(event) {
+  event.preventDefault();
+  if (!commandsEditable || !commandDraft) return;
+  resetCommandModalError();
+  commandDraft.enabled = commandEnabledInput.checked;
+  commandDraft.response = commandResponseInput.value;
+  commandDraft.cooldownSeconds = Number(commandCooldownInput.value || 0);
+  commandDraft.autoIntervalSeconds = Number(commandAutoIntervalInput.value || 0);
+  commandDraft.minUserLevel = commandUserLevelSelect.value;
+  commandDraft.responseType = commandResponseTypeSelect.value;
+
+  const normalized = normalizeCommandDraft(commandDraft);
+  if (!normalized) {
+    commandModalError.textContent = 'Bitte mindestens einen gültigen Befehlsnamen und eine Antwort angeben.';
+    commandModalError.hidden = false;
+    return;
+  }
+
+  if (commandModalState.isNew) {
+    commandsState.items.push(normalized);
+  } else if (typeof commandModalState.index === 'number') {
+    commandsState.items.splice(commandModalState.index, 1, normalized);
+  }
+
+  closeCommandModal();
+  renderCommands();
+  commandsLoaded = true;
+  updateCommandStatusSummary();
+  setCommandStatus('Befehl aktualisiert. Vergiss nicht zu speichern!', 'ok');
+}
+
 async function loadCommands() {
   try {
     const data = await apiFetch('/commands');
-    commandsState = {
-      prefix: sanitizePrefix(data.prefix),
-      items: Array.isArray(data.items) ? data.items.map(item => ({
-        name: item.name || '',
-        description: item.description || '',
-        response: item.response || '',
-        cooldownSeconds: Number(item.cooldownSeconds || 0),
-        enabled: item.enabled !== false
-      })) : []
-    };
+    const prefix = sanitizePrefix(data.prefix);
+    const items = Array.isArray(data.items) ? data.items.map(normalizeLoadedCommand).filter(Boolean) : [];
+    commandsState = { prefix, items };
     commandsLoaded = true;
     renderCommands();
-    setCommandStatus(`Befehle geladen · Präfix: ${commandsState.prefix} · Anzahl: ${commandsState.items.length}`, 'ok');
+    updateCommandStatusSummary();
   } catch (error) {
     console.error('Befehle konnten nicht geladen werden', error);
     setCommandStatus(`Befehle konnten nicht geladen werden: ${error.message}`, 'error');
@@ -496,38 +745,33 @@ async function loadCommands() {
 }
 
 function addCommand() {
-  const newCommand = {
-    name: generateCommandName('befehl'),
-    description: 'Antwort für einen neuen Befehl – bitte anpassen.',
-    response: 'Hey {user}, dieser Befehl wurde noch nicht angepasst.',
-    cooldownSeconds: 30,
-    enabled: true
-  };
-  commandsState.items.push(newCommand);
-  renderCommands();
-  setCommandStatus('Neuer Befehl hinzugefügt. Vergiss nicht zu speichern!', 'ok');
+  openCommandModal(null);
 }
 
 async function saveCommands() {
   try {
+    const prefix = sanitizePrefix(commandPrefixInput.value);
+    const sanitizedItems = commandsState.items.map(normalizeCommandDraft).filter(Boolean);
+    if (!sanitizedItems.length && commandsState.items.length) {
+      setCommandStatus('Bitte alle Befehle vollständig konfigurieren, bevor du speicherst.', 'error');
+      return;
+    }
+    if (sanitizedItems.length !== commandsState.items.length) {
+      setCommandStatus('Einige Befehle sind unvollständig. Bitte ergänzen oder löschen.', 'error');
+      return;
+    }
     const payload = {
-      prefix: sanitizePrefix(commandPrefixInput.value),
-      items: commandsState.items
-        .filter(item => item.name && item.response)
-        .map(item => ({
-          name: item.name.trim(),
-          description: (item.description || '').trim(),
-          response: item.response,
-          cooldownSeconds: Number(item.cooldownSeconds || 0),
-          enabled: item.enabled !== false
-        }))
+      prefix,
+      items: sanitizedItems
     };
-    commandsState.prefix = payload.prefix;
+    commandsState.prefix = prefix;
+    commandsState.items = sanitizedItems.map(item => ({ ...item }));
     await apiFetch('/commands', {
       method: 'PUT',
       body: payload
     });
     renderCommands();
+    updateCommandStatusSummary();
     setCommandStatus('Befehle erfolgreich gespeichert.', 'ok');
   } catch (error) {
     console.error('Befehle konnten nicht gespeichert werden', error);
@@ -595,8 +839,10 @@ clearPasswordBtn.addEventListener('click', () => {
   commandsState = { prefix: '!', items: [] };
   commandList.innerHTML = '';
   commandPrefixInput.value = '!';
+  closeCommandModal();
   closeStream();
   messageSubmit.disabled = true;
+  setCommandStatus('Befehle noch nicht geladen.');
 });
 
 connectChannelBtn.addEventListener('click', async () => {
@@ -671,7 +917,11 @@ commandPrefixInput.addEventListener('input', () => {
   if (!commandsEditable) return;
   commandsState.prefix = sanitizePrefix(commandPrefixInput.value);
   commandPrefixInput.value = commandsState.prefix;
-  updateCommandTitles();
+  renderCommands();
+  updateCommandStatusSummary();
+  if (commandDraft && !commandModal.hasAttribute('hidden')) {
+    renderCommandNames();
+  }
 });
 
 addCommandBtn.addEventListener('click', () => {
@@ -682,6 +932,65 @@ addCommandBtn.addEventListener('click', () => {
 saveCommandsBtn.addEventListener('click', () => {
   if (!commandsEditable) return;
   saveCommands();
+});
+
+if (commandNameAddBtn) {
+  commandNameAddBtn.addEventListener('click', () => {
+    addCommandNameFromInput();
+  });
+}
+
+if (commandNameInput) {
+  commandNameInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      addCommandNameFromInput();
+    }
+  });
+}
+
+if (commandForm) {
+  commandForm.addEventListener('submit', handleCommandFormSubmit);
+}
+
+if (commandModalCloseBtn) {
+  commandModalCloseBtn.addEventListener('click', () => {
+    closeCommandModal();
+  });
+}
+
+commandModalCancelBtns.forEach(button => {
+  button.addEventListener('click', () => {
+    closeCommandModal();
+  });
+});
+
+if (commandDeleteBtn) {
+  commandDeleteBtn.addEventListener('click', () => {
+    if (!commandsEditable || commandModalState.isNew || typeof commandModalState.index !== 'number') {
+      closeCommandModal();
+      return;
+    }
+    commandsState.items.splice(commandModalState.index, 1);
+    closeCommandModal();
+    renderCommands();
+    updateCommandStatusSummary();
+    setCommandStatus('Befehl entfernt. Vergiss nicht zu speichern!', 'ok');
+  });
+}
+
+if (commandModal) {
+  commandModal.addEventListener('click', event => {
+    if (event.target === commandModal) {
+      closeCommandModal();
+    }
+  });
+}
+
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && commandModal && !commandModal.hasAttribute('hidden')) {
+    closeCommandModal();
+  }
 });
 
 window.addEventListener('beforeunload', () => {

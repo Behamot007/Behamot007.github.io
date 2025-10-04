@@ -6,7 +6,7 @@ Dieses Frontend dient als Kontrollzentrale für den Twitch Bot-Service aus `proj
 
 - **Konfiguration**: Formular für das API-Passwort (mit Passwortmanager-Kompatibilität), Anzeige des aktuellen Bot-Token-Status sowie Start des OAuth-Flows. Erfolgreiche Logins werden automatisch an das Backend übermittelt und dort gespeichert/erneuert.
 - **Chat-Ansicht**: Baut eine SSE-Verbindung (`/api/twitch/chat/stream`) auf, zeigt eingehende Nachrichten an (inkl. Bot-Antworten) und erlaubt das Versenden neuer Nachrichten über `/api/twitch/chat/send`.
-- **Befehle**: Oberfläche zum Pflegen des Befehlspräfixes sowie beliebig vieler Chat-Kommandos. Die Konfiguration wird über `/api/twitch/commands` geladen und gespeichert.
+- **Befehle**: Oberfläche zum Pflegen des Befehlspräfixes sowie beliebig vieler Chat-Kommandos inklusive Alias-Verwaltung, Benutzerstufen, Antworttypen und optionalen Automatik-Intervallen. Die Konfiguration wird über `/api/twitch/commands` geladen und gespeichert.
 
 ## Nutzung
 

@@ -37,26 +37,47 @@ const STATE_FILE = TWITCH_STATE_FILE
   ? path.resolve(TWITCH_STATE_FILE)
   : path.resolve(process.cwd(), 'runtime-state.json');
 
+const USER_LEVELS = [
+  { id: 'everyone', label: 'Jeder' },
+  { id: 'subscriber', label: 'Abonnenten' },
+  { id: 'regular', label: 'Stammgast' },
+  { id: 'vip', label: 'VIP' },
+  { id: 'moderator', label: 'Moderator' },
+  { id: 'super-moderator', label: 'Super-Moderator' },
+  { id: 'broadcaster', label: 'Broadcaster' }
+];
+
+const RESPONSE_TYPES = ['say', 'mention', 'reply', 'whisper'];
+
+const USER_LEVEL_ORDER = new Map(USER_LEVELS.map((entry, index) => [entry.id, index]));
+
 const DEFAULT_COMMANDS = [
   {
-    name: 'hallo',
-    description: 'Begrüßt den Nutzer freundlich im Chat.',
+    names: ['hallo'],
     response: 'Hey {user}, willkommen im Stream! 👋',
     cooldownSeconds: 30,
+    autoIntervalSeconds: 0,
+    minUserLevel: 'everyone',
+    responseType: 'say',
     enabled: true
   },
   {
-    name: 'discord',
-    description: 'Teilt den Community-Discord-Link.',
+    names: ['discord'],
     response: 'Komm auf unseren Discord-Server: https://discord.gg/deinlink',
     cooldownSeconds: 60,
+    autoIntervalSeconds: 0,
+    minUserLevel: 'everyone',
+    responseType: 'say',
     enabled: true
   },
   {
-    name: 'socials',
-    description: 'Verweist auf weitere Social-Media-Kanäle.',
-    response: 'Folge Behamot auch auf Twitter & Instagram: https://twitter.com/deinprofil · https://instagram.com/deinprofil',
+    names: ['socials'],
+    response:
+      'Folge Behamot auch auf Twitter & Instagram: https://twitter.com/deinprofil · https://instagram.com/deinprofil',
     cooldownSeconds: 120,
+    autoIntervalSeconds: 0,
+    minUserLevel: 'everyone',
+    responseType: 'say',
     enabled: true
   }
 ];
@@ -68,6 +89,8 @@ const runtimeState = {
     items: DEFAULT_COMMANDS.map(item => ({ ...item }))
   }
 };
+
+const automaticCommandTimers = new Map();
 
 let refreshTimeout = null;
 
@@ -237,26 +260,143 @@ async function applyCommandConfiguration(config) {
   };
   await persistRuntimeState();
   resetCommandCooldowns();
+  setupAutomaticCommands();
 }
 
 function normalizeCommandItem(item) {
   if (!item) return null;
-  const name = typeof item.name === 'string' ? item.name.trim() : '';
+
+  const names = [];
+  if (Array.isArray(item.names)) {
+    item.names.forEach(name => {
+      if (typeof name === 'string') {
+        const trimmed = name.trim();
+        if (trimmed) {
+          names.push(trimmed);
+        }
+      }
+    });
+  }
+  if (typeof item.name === 'string' && item.name.trim()) {
+    names.push(item.name.trim());
+  }
+  const sanitizedNames = [];
+  const seenNames = new Set();
+  for (const raw of names) {
+    const cleaned = raw.replace(/\s+/g, '').replace(/^!+/, '');
+    if (!cleaned) continue;
+    const lower = cleaned.toLowerCase();
+    if (seenNames.has(lower)) continue;
+    seenNames.add(lower);
+    sanitizedNames.push(cleaned.toLowerCase());
+  }
   const response = typeof item.response === 'string' ? item.response.trim() : '';
-  if (!name || !response) {
+  if (!sanitizedNames.length || !response) {
     return null;
   }
-  const description = typeof item.description === 'string' ? item.description.trim() : '';
   const cooldownSeconds = Number.isFinite(Number(item.cooldownSeconds))
     ? Math.max(0, Number(item.cooldownSeconds))
     : 0;
+  const autoIntervalSeconds = Number.isFinite(Number(item.autoIntervalSeconds))
+    ? Math.max(0, Number(item.autoIntervalSeconds))
+    : 0;
+  const minUserLevel = USER_LEVEL_ORDER.has(item.minUserLevel) ? item.minUserLevel : 'everyone';
+  const responseType = RESPONSE_TYPES.includes(item.responseType) ? item.responseType : 'say';
   return {
-    name,
+    names: sanitizedNames,
     response,
-    description,
     cooldownSeconds,
+    autoIntervalSeconds,
+    minUserLevel,
+    responseType,
     enabled: item.enabled !== false
   };
+}
+
+function commandKey(command) {
+  if (!command) return '';
+  if (Array.isArray(command.names) && command.names.length) {
+    return command.names.map(name => name.toLowerCase()).sort().join('|');
+  }
+  if (typeof command.name === 'string' && command.name.trim()) {
+    return command.name.trim().toLowerCase();
+  }
+  return '';
+}
+
+function clearAutomaticCommands() {
+  for (const timer of automaticCommandTimers.values()) {
+    clearInterval(timer);
+  }
+  automaticCommandTimers.clear();
+}
+
+async function runAutomaticCommand(command) {
+  if (!command || command.enabled === false) {
+    return;
+  }
+  const targets = joinedChannels.size ? Array.from(joinedChannels) : [];
+  if (!targets.length) {
+    const fallback = getDefaultChannelName();
+    if (fallback) {
+      targets.push(fallback);
+    }
+  }
+  if (!targets.length) {
+    return;
+  }
+  for (const channel of targets) {
+    try {
+      await dispatchCommandResponse(command, {
+        channel,
+        tags: null,
+        userDisplayName: null,
+        remainder: '',
+        trigger: 'auto',
+        usedAlias: null
+      });
+    } catch (error) {
+      console.error(
+        '[twitch-chat-controller] Automatik-Befehl konnte nicht ausgeführt werden:',
+        command.names?.[0] || command.name,
+        error
+      );
+    }
+  }
+}
+
+function setupAutomaticCommands() {
+  clearAutomaticCommands();
+  const config = getCommandConfiguration();
+  const items = Array.isArray(config?.items) ? config.items : [];
+  items.forEach(command => {
+    if (!command || command.enabled === false) {
+      return;
+    }
+    const intervalSeconds = Number(command.autoIntervalSeconds || 0);
+    if (!Number.isFinite(intervalSeconds) || intervalSeconds <= 0) {
+      return;
+    }
+    const key = commandKey(command);
+    if (!key) {
+      return;
+    }
+    const intervalMs = intervalSeconds * 1000;
+    const timer = setInterval(() => {
+      const latestConfig = getCommandConfiguration();
+      const latestCommand = Array.isArray(latestConfig?.items)
+        ? latestConfig.items.find(entry => commandKey(entry) === key)
+        : null;
+      if (!latestCommand || latestCommand.enabled === false) {
+        return;
+      }
+      runAutomaticCommand(latestCommand).catch(error => {
+        console.error('[twitch-chat-controller] Automatik-Befehl fehlgeschlagen:', error);
+      });
+    }, intervalMs);
+    timer.unref?.();
+    automaticCommandTimers.set(key, timer);
+  });
 }
 
 function resetCommandCooldowns() {
@@ -266,6 +406,7 @@ function resetCommandCooldowns() {
 async function initializeRuntime() {
   await loadRuntimeState();
   scheduleTokenRefresh();
+  setupAutomaticCommands();
 }
 
 await initializeRuntime();
@@ -609,6 +750,210 @@ async function validateAccessToken(accessToken) {
   }
 }
 
+const REGULAR_BADGE_KEYS = new Set([
+  'founder',
+  'sub-gifter',
+  'bits',
+  'bits-leader',
+  'moments',
+  'predictions',
+  'predictions-leader',
+  'power-gifter'
+]);
+
+function hasBadge(badges, key) {
+  if (!badges || typeof badges !== 'object') return false;
+  return Object.prototype.hasOwnProperty.call(badges, key);
+}
+
+function getUserLevel(tags) {
+  if (!tags) {
+    return 'everyone';
+  }
+  const badges = tags.badges || {};
+  const userType = tags['user-type'];
+  if (hasBadge(badges, 'broadcaster')) {
+    return 'broadcaster';
+  }
+  if (userType && ['admin', 'staff', 'global_mod'].includes(userType)) {
+    return 'super-moderator';
+  }
+  if (tags.mod === true || tags.mod === '1' || hasBadge(badges, 'moderator')) {
+    return hasBadge(badges, 'vip') ? 'super-moderator' : 'moderator';
+  }
+  if (hasBadge(badges, 'vip')) {
+    return 'vip';
+  }
+  const isRegular = Array.from(REGULAR_BADGE_KEYS).some(key => hasBadge(badges, key));
+  if (isRegular) {
+    return 'regular';
+  }
+  if (tags.subscriber === true || tags.subscriber === '1' || hasBadge(badges, 'subscriber')) {
+    return 'subscriber';
+  }
+  return 'everyone';
+}
+
+function isUserLevelAllowed(required, actual) {
+  const requiredRank = USER_LEVEL_ORDER.get(required) ?? 0;
+  const actualRank = USER_LEVEL_ORDER.get(actual) ?? 0;
+  return actualRank >= requiredRank;
+}
+
+async function notifyInsufficientPermission(channel, tags, command, userLevel, prefix) {
+  const normalizedChannel = normalizeChannelName(channel);
+  const displayName = tags?.['display-name'] || tags?.username || 'Nutzer';
+  const primary = Array.isArray(command?.names) && command.names.length ? command.names[0] : command?.name;
+  const commandDisplay = primary ? `${prefix}${primary}` : 'diesen Befehl';
+
+  try {
+    await ensureChatClientConnected();
+  } catch (error) {
+    console.warn('[twitch-chat-controller] Whisper bei fehlender Berechtigung nicht möglich:', error?.message || error);
+  }
+  const client = getChatClient();
+  if (client && tags?.username) {
+    const whisperMessage = `Hey ${displayName}, du hast keine Berechtigung für ${commandDisplay}.`;
+    try {
+      await client.whisper(tags.username, whisperMessage);
+    } catch (error) {
+      console.warn('[twitch-chat-controller] Flüstern bei fehlender Berechtigung fehlgeschlagen:', error?.message || error);
+    }
+    if (tags.id) {
+      try {
+        await client.deletemessage(`#${normalizedChannel}`, tags.id);
+      } catch (error) {
+        console.warn('[twitch-chat-controller] Nachricht konnte nicht gelöscht werden:', error?.message || error);
+      }
+    }
+  }
+
+  broadcastToChannel(normalizedChannel, {
+    type: 'system',
+    channel: normalizedChannel,
+    message: `${displayName} hat nicht die erforderliche Berechtigung (${command?.minUserLevel || 'everyone'}) für ${commandDisplay}.`,
+    timestamp: new Date().toISOString(),
+    meta: {
+      command: Array.isArray(command?.names) ? command.names[0] : command?.name || null,
+      aliases: Array.isArray(command?.names)
+        ? command.names
+        : command?.name
+        ? [command.name]
+        : [],
+      levelRequired: command?.minUserLevel || 'everyone',
+      levelProvided: userLevel || 'everyone',
+      reason: 'insufficient_permissions'
+    }
+  });
+}
+
+async function dispatchCommandResponse(command, context) {
+  if (!command) return;
+  const {
+    channel,
+    tags,
+    userDisplayName,
+    remainder,
+    trigger,
+    usedAlias
+  } = context;
+  const normalizedChannel = normalizeChannelName(channel);
+  if (!normalizedChannel) {
+    return;
+  }
+
+  await ensureChatClientConnected();
+  const client = getChatClient();
+  if (!client) {
+    throw new Error('Chat-Client ist nicht verbunden.');
+  }
+
+  const fallbackUser =
+    userDisplayName ||
+    tags?.['display-name'] ||
+    tags?.username ||
+    (trigger === 'auto' ? normalizedChannel : 'Zuschauer');
+  const replacements = new Map([
+    ['{user}', fallbackUser],
+    ['{channel}', normalizedChannel],
+    ['{message}', remainder || '']
+  ]);
+
+  let responseMessage = command.response || '';
+  replacements.forEach((value, key) => {
+    responseMessage = responseMessage.replace(new RegExp(key, 'gi'), value);
+  });
+  responseMessage = responseMessage.trim();
+  if (!responseMessage) {
+    return;
+  }
+
+  let deliveryMode = command.responseType || 'say';
+  if ((deliveryMode === 'mention' || deliveryMode === 'reply' || deliveryMode === 'whisper') && !tags?.username) {
+    deliveryMode = 'say';
+  }
+
+  const metaAliases = Array.isArray(command.names)
+    ? command.names
+    : command.name
+    ? [command.name]
+    : [];
+  const triggeredLabel = trigger === 'auto' ? 'Automatik' : userDisplayName || null;
+  const targetChannel = `#${normalizedChannel}`;
+  let deliveredMessage = responseMessage;
+  let finalMode = deliveryMode;
+
+  if (deliveryMode === 'whisper') {
+    try {
+      await client.whisper(tags.username, responseMessage);
+    } catch (error) {
+      console.warn('[twitch-chat-controller] Whisper konnte nicht gesendet werden:', error?.message || error);
+      finalMode = 'say';
+    }
+  }
+
+  if (finalMode === 'mention') {
+    const mention = userDisplayName ? `@${userDisplayName}` : '';
+    deliveredMessage = [mention, responseMessage].filter(Boolean).join(' ').trim();
+    addPendingBotMessage(normalizedChannel, deliveredMessage);
+    await client.say(targetChannel, deliveredMessage);
+  } else if (finalMode === 'reply') {
+    if (typeof client.reply === 'function' && tags?.id) {
+      await client.reply(targetChannel, responseMessage, tags.id);
+    } else {
+      const mention = userDisplayName ? `@${userDisplayName}` : '';
+      deliveredMessage = [mention, responseMessage].filter(Boolean).join(' ').trim();
+      addPendingBotMessage(normalizedChannel, deliveredMessage);
+      await client.say(targetChannel, deliveredMessage);
+      finalMode = 'mention';
+    }
+  } else if (finalMode === 'whisper') {
+    // Whisper wurde bereits versendet
+  } else {
+    addPendingBotMessage(normalizedChannel, deliveredMessage);
+    await client.say(targetChannel, deliveredMessage);
+  }
+
+  const botUsername = TWITCH_BOT_USERNAME || 'Bot';
+
+  broadcastToChannel(normalizedChannel, {
+    type: 'outgoing',
+    channel: normalizedChannel,
+    username: botUsername,
+    message: finalMode === 'whisper' ? responseMessage : deliveredMessage,
+    timestamp: new Date().toISOString(),
+    meta: {
+      command: metaAliases[0] || null,
+      aliases: metaAliases,
+      triggeredBy: triggeredLabel,
+      trigger,
+      usedAlias,
+      responseType: finalMode,
+      targetUser: finalMode === 'whisper' ? tags?.username || null : null
+    }
+  });
+}
+
 async function handleCommandExecution(channel, tags, message) {
   const config = getCommandConfiguration();
   const prefix = config.prefix || '!';
@@ -624,56 +969,55 @@ async function handleCommandExecution(channel, tags, message) {
   if (!commandName) {
     return;
   }
-  const command = (config.items || []).find(item => item.enabled !== false && item.name.toLowerCase() === commandName);
+  const command = (config.items || []).find(item => {
+    if (!item || item.enabled === false) {
+      return false;
+    }
+    if (Array.isArray(item.names) && item.names.length) {
+      return item.names.some(name => name.toLowerCase() === commandName);
+    }
+    if (typeof item.name === 'string') {
+      return item.name.toLowerCase() === commandName;
+    }
+    return false;
+  });
   if (!command) {
     return;
   }
-  const cooldownKey = `${channel}::${command.name.toLowerCase()}`;
-  const now = Date.now();
+
+  const userLevel = getUserLevel(tags);
+  const requiredLevel = command.minUserLevel || 'everyone';
+  if (!isUserLevelAllowed(requiredLevel, userLevel)) {
+    await notifyInsufficientPermission(channel, tags, command, userLevel, prefix);
+    return;
+  }
+
+  const cooldownIdentifier = Array.isArray(command.names) && command.names.length
+    ? command.names.map(name => name.toLowerCase()).sort().join('|')
+    : command.name?.toLowerCase() || commandName;
+  const cooldownKey = `${channel}::${cooldownIdentifier}`;
   const cooldownMs = (Number(command.cooldownSeconds) || 0) * 1000;
   if (cooldownMs > 0) {
     const lastExecution = commandCooldowns.get(cooldownKey) || 0;
-    if (now - lastExecution < cooldownMs) {
+    if (Date.now() - lastExecution < cooldownMs) {
       return;
     }
-    commandCooldowns.set(cooldownKey, now);
   }
+
   const userDisplayName = tags['display-name'] || tags.username || 'Zuschauer';
-  const rawResponse = command.response || '';
-  if (!rawResponse) {
-    return;
-  }
   const remainder = args.join(' ');
-  const replacements = new Map([
-    ['{user}', userDisplayName],
-    ['{channel}', channel],
-    ['{message}', remainder]
-  ]);
-  let responseMessage = rawResponse;
-  replacements.forEach((value, key) => {
-    responseMessage = responseMessage.replace(new RegExp(key, 'gi'), value);
-  });
-  if (!responseMessage.trim()) {
-    return;
-  }
-  await ensureChatClientConnected();
-  const client = getChatClient();
-  if (!client) {
-    throw new Error('Chat-Client ist nicht verbunden.');
-  }
-  addPendingBotMessage(channel, responseMessage.trim());
-  await client.say(`#${channel}`, responseMessage.trim());
-  broadcastToChannel(channel, {
-    type: 'outgoing',
+  await dispatchCommandResponse(command, {
     channel,
-    username: TWITCH_BOT_USERNAME,
-    message: responseMessage.trim(),
-    timestamp: new Date().toISOString(),
-    meta: {
-      triggeredBy: userDisplayName,
-      command: command.name
-    }
+    tags,
+    userDisplayName,
+    remainder,
+    trigger: 'user',
+    usedAlias: commandName
   });
+
+  if (cooldownMs > 0) {
+    commandCooldowns.set(cooldownKey, Date.now());
+  }
 }
 
 function getPasswordFromRequest(req) {

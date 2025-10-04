@@ -118,8 +118,8 @@
               <div>
                 <h2>Befehlsverwaltung</h2>
                 <p class="card__hint">
-                  Lege einen Präfix und individuelle Antworten fest. Platzhalter wie <code>{user}</code> oder
-                  <code>{channel}</code> werden automatisch ersetzt.
+                  Verwalte Präfix, Aliase, automatische Ausführungen und Antworten. Platzhalter wie
+                  <code>{user}</code> oder <code>{channel}</code> werden automatisch ersetzt.
                 </p>
               </div>
               <div class="command-prefix">
@@ -139,6 +139,72 @@
         </div>
       </section>
     </main>
+
+    <div id="commandModal" class="modal" hidden>
+      <div class="modal__content" role="dialog" aria-modal="true" aria-labelledby="commandModalTitle">
+        <header class="modal__header">
+          <h3 id="commandModalTitle">Befehl bearbeiten</h3>
+          <button type="button" class="icon-button" data-command-modal-close aria-label="Schließen">×</button>
+        </header>
+        <form id="commandForm" class="modal__form">
+          <div class="modal__body">
+            <label class="switch" for="commandEnabled">
+              <input type="checkbox" id="commandEnabled" />
+              <span>Aktiver Befehl</span>
+            </label>
+
+            <div class="field">
+              <div class="field__label">Befehlsnamen</div>
+              <p class="field__hint">Mehrere Aliase möglich. Der Präfix wird automatisch ergänzt.</p>
+              <div id="commandNames" class="tag-list" role="list"></div>
+              <div class="field__row">
+                <input
+                  type="text"
+                  id="commandNameInput"
+                  placeholder="Neuer Befehlsname"
+                  autocomplete="off"
+                />
+                <button type="button" class="secondary" id="commandNameAdd">Hinzufügen</button>
+              </div>
+            </div>
+
+            <label class="field" for="commandResponse">
+              <span class="field__label">Antwort</span>
+              <textarea id="commandResponse" rows="4" required></textarea>
+            </label>
+
+            <div class="field field--split">
+              <label for="commandCooldown">
+                <span class="field__label">Cooldown (Sek.)</span>
+                <input type="number" id="commandCooldown" min="0" step="1" />
+              </label>
+              <label for="commandAutoInterval">
+                <span class="field__label">Automatik (Sek.)</span>
+                <input type="number" id="commandAutoInterval" min="0" step="1" />
+              </label>
+            </div>
+
+            <label class="field" for="commandUserLevel">
+              <span class="field__label">Benutzerstufe</span>
+              <select id="commandUserLevel"></select>
+            </label>
+
+            <label class="field" for="commandResponseType">
+              <span class="field__label">Antworttyp</span>
+              <select id="commandResponseType"></select>
+            </label>
+
+            <p id="commandModalError" class="modal__error" hidden></p>
+          </div>
+          <footer class="modal__footer">
+            <button type="button" class="danger" id="commandDelete">Befehl löschen</button>
+            <span class="modal__spacer"></span>
+            <button type="button" class="secondary" data-command-modal-cancel>Abbrechen</button>
+            <button type="submit">Speichern</button>
+          </footer>
+        </form>
+      </div>
+    </div>
 
     <template id="messageTemplate">
       <article class="chat-message">

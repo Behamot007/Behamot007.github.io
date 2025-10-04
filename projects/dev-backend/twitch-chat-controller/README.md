@@ -107,6 +107,22 @@ Alle Routen (bis auf den OAuth-Callback) verlangen das korrekte Passwort, entwed
 | `GET` | `/api/twitch/commands` | Liefert das aktuelle Befehlspräfix sowie alle konfigurierten Kommandos. |
 | `PUT` | `/api/twitch/commands` | Überschreibt Präfix und Befehle. |
 
+### Kommando-Konfiguration
+
+Die Befehlsverwaltung arbeitet mit einer Liste aus Objekten unterhalb des Schlüssels `items`. Jedes Kommando besitzt folgende Felder:
+
+| Feld | Typ | Beschreibung |
+|------|-----|--------------|
+| `names` | `string[]` | Liste aller Alias-Namen ohne Präfix. Mehrere Namen verweisen auf denselben Befehl und teilen sich Cooldown & Rechte. |
+| `response` | `string` | Nachricht, die der Bot sendet. Platzhalter wie `{user}`, `{channel}` oder `{message}` werden automatisch ersetzt. |
+| `cooldownSeconds` | `number` | Mindestabstand in Sekunden zwischen manuellen Ausführungen. |
+| `autoIntervalSeconds` | `number` | Optionales Intervall für automatische Ausführung. Der Bot sendet die Antwort in alle verbundenen Channels. |
+| `minUserLevel` | `"everyone"\|"subscriber"\|"regular"\|"vip"\|"moderator"\|"super-moderator"\|"broadcaster"` | Erforderliche Twitch-Benutzerstufe. Nutzer unterhalb der Stufe erhalten einen Whisper-Hinweis und die auslösende Nachricht wird (sofern erlaubt) gelöscht. |
+| `responseType` | `"say"\|"mention"\|"reply"\|"whisper"` | Legt fest, wie der Bot antwortet (klassische Chat-Nachricht, Erwähnung, Antwort-Thread oder Whisper). Whisper wird bei fehlenden Berechtigungen automatisch zu einer Chat-Nachricht degradiert. |
+| `enabled` | `boolean` | Steuert, ob das Kommando ausgelöst werden kann und ob automatische Intervalle aktiv sind. |
+
+Wird ein Eintrag deaktiviert oder die Rechteprüfung fehlschlägt, sendet der Bot keine Chat-Nachricht und informiert den Nutzer per Whisper über die fehlende Berechtigung. Der Chat-Bot versucht zusätzlich, die ursprüngliche Chat-Nachricht zu entfernen (`channel:moderate`-Scope erforderlich).
+
 ## Frontend-Integration
 
 Die zugehörige Weboberfläche liegt unter `projects/sites/dev/services/twitch-bot`. Sie fragt das Passwort ab, öffnet bei Bedarf den OAuth-Login, übergibt neue Tokens automatisch an das Backend und verbindet sich anschließend via SSE mit dem gewünschten Kanal. Nachrichten können direkt aus dem Browser gesendet werden und erscheinen inklusive Bot-Markierung im Verlauf. Außerdem lassen sich dort Befehlspräfix und Chat-Kommandos konfigurieren.
