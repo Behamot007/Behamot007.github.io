@@ -336,17 +336,30 @@ app.get('/api/twitch/chat/stream', async (req, res) => {
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache, no-transform',
-    Connection: 'keep-alive'
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no'
   });
+  res.flushHeaders?.();
   res.write('\n');
 
   context.watchers.add(res);
+  const heartbeat = setInterval(() => {
+    if (res.writableEnded) {
+      clearInterval(heartbeat);
+      context.watchers.delete(res);
+      return;
+    }
+    res.write(': ping\n\n');
+  }, 30_000);
+  heartbeat.unref?.();
+
   context.backlog.forEach(event => {
     res.write(serializeEvent(event));
   });
 
   req.on('close', () => {
     context.watchers.delete(res);
+    clearInterval(heartbeat);
   });
 });
 
