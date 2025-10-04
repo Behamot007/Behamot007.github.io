@@ -261,6 +261,10 @@
                   <span class="openai-summary__label">Letzter Erfolg</span>
                   <span class="openai-summary__value" id="openAiSummaryLastSuccess">—</span>
                 </div>
+                <div class="openai-summary__item">
+                  <span class="openai-summary__label">Stream-Status</span>
+                  <span class="openai-summary__value" id="openAiSummaryStreamStatus">—</span>
+                </div>
               </div>
 
               <div class="openai-summary__details">
@@ -269,6 +273,34 @@
                 <p class="openai-summary__error" id="openAiSummaryError" hidden></p>
               </div>
             </div>
+
+            <details class="openai-debug" id="openAiDebugPanel" hidden>
+              <summary class="openai-debug__summary">Debug-Details anzeigen</summary>
+              <div class="openai-debug__content">
+                <div class="openai-debug__latest">
+                  <h3>Letzte Ausführung</h3>
+                  <p class="openai-debug__meta" id="openAiDebugMeta">Keine Daten verfügbar.</p>
+                  <div class="openai-debug__screenshot" id="openAiDebugScreenshotWrapper" hidden>
+                    <img id="openAiDebugScreenshot" alt="Letzter verwendeter Screenshot" />
+                  </div>
+                  <div class="openai-debug__payloads">
+                    <div class="openai-debug__payload">
+                      <h4>API Anfrage</h4>
+                      <pre id="openAiDebugRequest" class="openai-debug__pre"></pre>
+                    </div>
+                    <div class="openai-debug__payload">
+                      <h4>API Antwort</h4>
+                      <pre id="openAiDebugResponse" class="openai-debug__pre"></pre>
+                    </div>
+                  </div>
+                </div>
+                <div class="openai-debug__history">
+                  <h3>Historie</h3>
+                  <p id="openAiDebugEmpty" class="openai-debug__empty" hidden>Keine Einträge vorhanden.</p>
+                  <ol id="openAiDebugHistory" class="openai-debug__history-list"></ol>
+                </div>
+              </div>
+            </details>
           </article>
         </div>
       </section>

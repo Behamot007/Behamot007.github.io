@@ -98,6 +98,26 @@ async function initializeDatabase() {
           CREATE INDEX IF NOT EXISTS idx_twitch_currency_balances_channel
             ON twitch_currency_balances (channel)
         `);
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS twitch_openai_history (
+            id BIGSERIAL PRIMARY KEY,
+            channel TEXT NOT NULL,
+            reason TEXT,
+            screenshot_data TEXT,
+            screenshot_bytes INTEGER,
+            request_payload JSONB,
+            response_payload JSONB,
+            message TEXT,
+            prompt_tokens INTEGER,
+            completion_tokens INTEGER,
+            total_tokens INTEGER,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          )
+        `);
+        await client.query(`
+          CREATE INDEX IF NOT EXISTS idx_twitch_openai_history_created_at
+            ON twitch_openai_history (created_at DESC)
+        `);
       });
       return;
     } catch (error) {
@@ -220,6 +240,92 @@ async function persistOpenAiConfiguration() {
   await saveSetting('openAi', config);
 }
 
+function mapOpenAiHistoryRow(row) {
+  if (!row) {
+    return null;
+  }
+  const idValue = Number(row.id);
+  return {
+    id: Number.isFinite(idValue) ? idValue : null,
+    channel: row.channel ? String(row.channel) : null,
+    reason: row.reason ? String(row.reason) : null,
+    screenshotDataUrl: row.screenshot_data || null,
+    screenshotBytes: row.screenshot_bytes != null ? Number(row.screenshot_bytes) : null,
+    requestPayload: row.request_payload || null,
+    responsePayload: row.response_payload || null,
+    message: row.message ? String(row.message) : null,
+    promptTokens: row.prompt_tokens != null ? Number(row.prompt_tokens) : null,
+    completionTokens: row.completion_tokens != null ? Number(row.completion_tokens) : null,
+    totalTokens: row.total_tokens != null ? Number(row.total_tokens) : null,
+    createdAt: row.created_at ? new Date(row.created_at).toISOString() : null
+  };
+}
+
+async function loadOpenAiHistory(limit = OPEN_AI_HISTORY_LIMIT) {
+  const safeLimit = Number.isFinite(Number(limit))
+    ? Math.max(1, Math.min(OPEN_AI_HISTORY_LIMIT, Number(limit)))
+    : OPEN_AI_HISTORY_LIMIT;
+  const result = await withDatabase(client =>
+    client.query(
+      `SELECT id, channel, reason, screenshot_data, screenshot_bytes, request_payload, response_payload, message,
+              prompt_tokens, completion_tokens, total_tokens, created_at
+         FROM twitch_openai_history
+        ORDER BY created_at DESC
+        LIMIT $1`,
+      [safeLimit]
+    )
+  );
+  return (result.rows || []).map(mapOpenAiHistoryRow).filter(Boolean);
+}
+
+async function pruneOpenAiHistory(limit = OPEN_AI_HISTORY_LIMIT) {
+  const safeLimit = Number.isFinite(Number(limit)) ? Math.max(1, Number(limit)) : OPEN_AI_HISTORY_LIMIT;
+  await withDatabase(client =>
+    client.query(
+      `DELETE FROM twitch_openai_history
+        WHERE id NOT IN (
+          SELECT id FROM twitch_openai_history
+          ORDER BY created_at DESC
+          LIMIT $1
+        )`,
+      [safeLimit]
+    )
+  );
+}
+
+async function recordOpenAiHistoryEntry(entry, options = {}) {
+  if (!entry || !entry.channel) {
+    return null;
+  }
+  const limit = Number.isFinite(Number(options.limit)) ? Math.max(1, Number(options.limit)) : OPEN_AI_HISTORY_LIMIT;
+  const payload = [
+    entry.channel,
+    entry.reason || null,
+    entry.screenshotDataUrl || null,
+    entry.screenshotBytes != null ? Number(entry.screenshotBytes) : null,
+    entry.requestPayload || null,
+    entry.responsePayload || null,
+    entry.message || null,
+    entry.promptTokens != null ? Number(entry.promptTokens) : null,
+    entry.completionTokens != null ? Number(entry.completionTokens) : null,
+    entry.totalTokens != null ? Number(entry.totalTokens) : null
+  ];
+  const result = await withDatabase(client =>
+    client.query(
+      `INSERT INTO twitch_openai_history
+         (channel, reason, screenshot_data, screenshot_bytes, request_payload, response_payload, message,
+          prompt_tokens, completion_tokens, total_tokens)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+       RETURNING id, channel, reason, screenshot_data, screenshot_bytes, request_payload, response_payload, message,
+                 prompt_tokens, completion_tokens, total_tokens, created_at`,
+      payload
+    )
+  );
+  await pruneOpenAiHistory(limit);
+  const row = result.rows?.[0];
+  return mapOpenAiHistoryRow(row);
+}
+
 const USER_LEVELS = [
   { id: 'everyone', label: 'Jeder' },
   { id: 'subscriber', label: 'Abonnenten' },
@@ -281,6 +387,7 @@ const DEFAULT_OPENAI_SYSTEM_PROMPT =
 const DEFAULT_OPENAI_INTERVAL_SECONDS = 90;
 const MIN_OPENAI_INTERVAL_SECONDS = 30;
 const MAX_OPENAI_INTERVAL_SECONDS = 3600;
+const OPEN_AI_HISTORY_LIMIT = 10;
 const TWITCH_PREVIEW_WIDTH = 640;
 const TWITCH_PREVIEW_HEIGHT = 360;
 
@@ -315,10 +422,15 @@ const openAiRuntime = {
   lastChannel: null,
   lastScreenshotBytes: 0,
   lastScreenshotAt: null,
+  lastScreenshotDataUrl: null,
+  lastRequestPayload: null,
+  lastResponsePayload: null,
   usage: null,
   consecutiveErrors: 0,
   nextRunAt: null,
-  intervalSeconds: DEFAULT_OPENAI_INTERVAL_SECONDS
+  intervalSeconds: DEFAULT_OPENAI_INTERVAL_SECONDS,
+  history: [],
+  lastStreamStatus: null
 };
 
 function createDefaultCurrencyState() {
@@ -631,11 +743,17 @@ function getOpenAiRuntimeInfo() {
     lastChannel: openAiRuntime.lastChannel,
     lastScreenshotBytes: openAiRuntime.lastScreenshotBytes,
     lastScreenshotAt: openAiRuntime.lastScreenshotAt,
+    lastScreenshotDataUrl: openAiRuntime.lastScreenshotDataUrl,
+    lastRequestPayload: openAiRuntime.lastRequestPayload,
+    lastResponsePayload: openAiRuntime.lastResponsePayload,
     usage: openAiRuntime.usage,
     consecutiveErrors: openAiRuntime.consecutiveErrors,
     nextRunAt: openAiRuntime.nextRunAt,
     intervalSeconds: config.intervalSeconds,
-    targetChannel: getOpenAiTargetChannel(config)
+    targetChannel: getOpenAiTargetChannel(config),
+    history: Array.isArray(openAiRuntime.history) ? openAiRuntime.history : [],
+    historyLimit: OPEN_AI_HISTORY_LIMIT,
+    lastStreamStatus: openAiRuntime.lastStreamStatus
   };
 }
 
@@ -711,6 +829,54 @@ function restartOpenAiScheduler() {
   scheduleOpenAiTimer(Math.min(config.intervalSeconds * 1000, 5_000));
 }
 
+async function fetchStreamLiveStatus(channel) {
+  const normalized = normalizeChannelName(channel);
+  if (!normalized) {
+    return null;
+  }
+  if (!TWITCH_CLIENT_ID) {
+    return null;
+  }
+  const accessToken = getBotAccessTokenValue();
+  if (!accessToken) {
+    return null;
+  }
+  try {
+    const response = await axios.get('https://api.twitch.tv/helix/streams', {
+      params: { user_login: normalized },
+      headers: {
+        'Client-ID': TWITCH_CLIENT_ID,
+        Authorization: `Bearer ${accessToken}`
+      },
+      timeout: 10_000
+    });
+    const stream = response.data?.data?.[0];
+    const checkedAt = new Date().toISOString();
+    if (stream && stream.type === 'live') {
+      const viewerCountValue = Number(stream.viewer_count);
+      return {
+        live: true,
+        checkedAt,
+        title: stream.title || null,
+        gameName: stream.game_name || null,
+        viewerCount: Number.isFinite(viewerCountValue) ? viewerCountValue : null,
+        startedAt: stream.started_at || null,
+        language: stream.language || null,
+        thumbnailUrl: stream.thumbnail_url || null
+      };
+    }
+    return {
+      live: false,
+      checkedAt
+    };
+  } catch (error) {
+    const status = error?.response?.status;
+    const details = error?.response?.data || error?.message;
+    console.warn('[twitch-chat-controller] Stream-Status konnte nicht abgerufen werden:', status || '', details || '');
+    return null;
+  }
+}
+
 async function fetchTwitchScreenshot(channel) {
   const normalized = normalizeChannelName(channel);
   if (!normalized) {
@@ -725,7 +891,10 @@ async function fetchTwitchScreenshot(channel) {
       headers: {
         'User-Agent':
           'Mozilla/5.0 (compatible; BehamotTwitchBot/1.0; +https://www.behamot.de)',
-        Accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
+        Accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+        'Cache-Control': 'no-cache',
+        Pragma: 'no-cache',
+        'If-Modified-Since': 'Thu, 01 Jan 1970 00:00:00 GMT'
       }
     });
     const buffer = Buffer.from(response.data);
@@ -851,7 +1020,9 @@ async function requestOpenAiViewerResponse({ systemPrompt, instruction, screensh
   return {
     message: messageText,
     usage,
-    id: response.data?.id || null
+    id: response.data?.id || null,
+    requestPayload: payload,
+    responsePayload: response.data || null
   };
 }
 
@@ -880,6 +1051,30 @@ async function runOpenAiCompanionCycle(reason = 'timer') {
     return;
   }
 
+  let streamStatus = null;
+  try {
+    streamStatus = await fetchStreamLiveStatus(channel);
+  } catch (error) {
+    console.warn('[twitch-chat-controller] Live-Status konnte nicht geprüft werden:', error);
+  }
+  if (streamStatus) {
+    openAiRuntime.lastStreamStatus = streamStatus;
+    if (!streamStatus.live) {
+      const occurredAt = streamStatus.checkedAt || new Date().toISOString();
+      openAiRuntime.lastError = {
+        message: 'Stream ist aktuell nicht live. Automatik pausiert.',
+        occurredAt
+      };
+      openAiRuntime.consecutiveErrors = 0;
+      return;
+    }
+  } else {
+    openAiRuntime.lastStreamStatus = {
+      live: null,
+      checkedAt: new Date().toISOString()
+    };
+  }
+
   openAiRuntime.running = true;
   openAiRuntime.lastRunAt = new Date().toISOString();
   openAiRuntime.lastChannel = channel;
@@ -899,6 +1094,7 @@ async function runOpenAiCompanionCycle(reason = 'timer') {
     const screenshot = await fetchTwitchScreenshot(channel);
     openAiRuntime.lastScreenshotBytes = screenshot.bytes;
     openAiRuntime.lastScreenshotAt = screenshot.fetchedAt;
+    openAiRuntime.lastScreenshotDataUrl = screenshot.dataUrl;
 
     const transcriptLines = buildChatTranscript(channel, 12);
     const transcript = transcriptLines.length
@@ -920,6 +1116,27 @@ async function runOpenAiCompanionCycle(reason = 'timer') {
     const truncatedMessage = assistantMessage.length > 280 ? `${assistantMessage.slice(0, 277)}…` : assistantMessage;
 
     const sentAt = new Date().toISOString();
+    let historyEntry = null;
+    try {
+      historyEntry = await recordOpenAiHistoryEntry(
+        {
+          channel,
+          reason,
+          screenshotDataUrl: screenshot.dataUrl,
+          screenshotBytes: screenshot.bytes,
+          requestPayload: result.requestPayload || null,
+          responsePayload: result.responsePayload || null,
+          message: truncatedMessage,
+          promptTokens: result.usage?.promptTokens ?? null,
+          completionTokens: result.usage?.completionTokens ?? null,
+          totalTokens: result.usage?.totalTokens ?? null
+        },
+        { limit: OPEN_AI_HISTORY_LIMIT }
+      );
+    } catch (historyError) {
+      console.error('[twitch-chat-controller] OpenAI-Historie konnte nicht gespeichert werden:', historyError);
+    }
+
     await sendChatMessage(channel, truncatedMessage, {
       source: 'openai-viewer',
       sentAt,
@@ -927,14 +1144,24 @@ async function runOpenAiCompanionCycle(reason = 'timer') {
       targetChannel: channel,
       promptTokens: result.usage?.promptTokens ?? null,
       completionTokens: result.usage?.completionTokens ?? null,
-      reason
+      reason,
+      historyEntryId: historyEntry?.id || null
     });
 
     openAiRuntime.lastMessage = truncatedMessage;
     openAiRuntime.lastSuccessAt = sentAt;
     openAiRuntime.usage = result.usage || null;
+    openAiRuntime.lastRequestPayload = result.requestPayload || null;
+    openAiRuntime.lastResponsePayload = result.responsePayload || null;
     openAiRuntime.lastError = null;
     openAiRuntime.consecutiveErrors = 0;
+    if (historyEntry) {
+      const existing = Array.isArray(openAiRuntime.history) ? openAiRuntime.history : [];
+      openAiRuntime.history = [historyEntry, ...existing.filter(item => item?.id !== historyEntry.id)].slice(
+        0,
+        OPEN_AI_HISTORY_LIMIT
+      );
+    }
   } catch (error) {
     const status = error?.status || error?.response?.status || null;
     const message = error?.message || 'OpenAI-Automatik fehlgeschlagen.';
@@ -1063,6 +1290,22 @@ async function loadRuntimeState() {
         ...storedOpenAi
       });
     }
+    const historyEntries = await loadOpenAiHistory(OPEN_AI_HISTORY_LIMIT);
+    openAiRuntime.history = historyEntries;
+    if (historyEntries.length) {
+      const latest = historyEntries[0];
+      openAiRuntime.lastScreenshotDataUrl = latest?.screenshotDataUrl || null;
+      openAiRuntime.lastRequestPayload = latest?.requestPayload || null;
+      openAiRuntime.lastResponsePayload = latest?.responsePayload || null;
+      openAiRuntime.lastScreenshotBytes = latest?.screenshotBytes || 0;
+      openAiRuntime.lastScreenshotAt = latest?.createdAt || null;
+    } else {
+      openAiRuntime.lastScreenshotDataUrl = null;
+      openAiRuntime.lastRequestPayload = null;
+      openAiRuntime.lastResponsePayload = null;
+      openAiRuntime.lastScreenshotBytes = 0;
+      openAiRuntime.lastScreenshotAt = null;
+    }
     if (!hasCommands) {
       await persistCommandConfiguration();
     }
@@ -1103,6 +1346,17 @@ function getBotPassword() {
   }
   if (TWITCH_BOT_OAUTH_TOKEN) {
     return normalizeOauthToken(TWITCH_BOT_OAUTH_TOKEN);
+  }
+  return null;
+}
+
+function getBotAccessTokenValue() {
+  const token = getStoredBotToken()?.accessToken;
+  if (token && typeof token === 'string') {
+    return token.replace(/^oauth:/i, '');
+  }
+  if (typeof TWITCH_BOT_OAUTH_TOKEN === 'string' && TWITCH_BOT_OAUTH_TOKEN.trim()) {
+    return TWITCH_BOT_OAUTH_TOKEN.trim().replace(/^oauth:/i, '');
   }
   return null;
 }
@@ -2196,7 +2450,9 @@ app.get('/api/twitch/status', (_req, res) => {
       lastSuccessAt: openAiRuntimeInfo.lastSuccessAt,
       nextRunAt: openAiRuntimeInfo.nextRunAt,
       lastError: openAiRuntimeInfo.lastError,
-      lastMessage: openAiRuntimeInfo.lastMessage
+      lastMessage: openAiRuntimeInfo.lastMessage,
+      lastStreamStatus: openAiRuntimeInfo.lastStreamStatus,
+      usage: openAiRuntimeInfo.usage
     }
   });
 });

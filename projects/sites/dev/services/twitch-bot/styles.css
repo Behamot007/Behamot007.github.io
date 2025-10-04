@@ -230,6 +230,146 @@ body {
   font-weight: 600;
 }
 
+.openai-debug {
+  margin-top: 1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.openai-debug[hidden] {
+  display: none;
+}
+
+.openai-debug__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.85rem 1.25rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.openai-debug__summary::-webkit-details-marker {
+  display: none;
+}
+
+.openai-debug__summary::after {
+  content: '▾';
+  font-size: 0.85rem;
+  opacity: 0.7;
+  transition: transform 0.2s ease;
+}
+
+.openai-debug[open] .openai-debug__summary::after {
+  transform: rotate(180deg);
+}
+
+.openai-debug__content {
+  padding: 1.25rem;
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.openai-debug__latest,
+.openai-debug__history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.openai-debug__meta {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.openai-debug__screenshot {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.openai-debug__screenshot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.openai-debug__payloads {
+  display: grid;
+  gap: 1rem;
+}
+
+.openai-debug__payload h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.openai-debug__pre {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.4);
+  max-height: 240px;
+  overflow: auto;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  font-family: 'Fira Code', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.openai-debug__empty {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.openai-debug__history-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.openai-debug__history-item {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.openai-debug__history-item time {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 0.35rem;
+}
+
+.openai-debug__history-item p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.openai-debug__history-meta {
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
 .command-prefix label {
   width: 160px;
 }
