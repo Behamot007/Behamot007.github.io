@@ -77,6 +77,14 @@
           label: 'Twitch Chat Steuerung',
           url: './services/twitch-bot/index.html',
           description: 'Verbinde einen Bot-Account, überwache den Chat und sende Nachrichten direkt aus dem Browser.'
+        },
+        {
+          type: 'page',
+          id: 'twitch-openai-viewer',
+          label: 'OpenAI Zuschauer',
+          url: './services/twitch-bot/index.html#openai',
+          description:
+            'Konfiguriere den automatisierten OpenAI-Zuschauer mit Screenshot-Intervall, Prompt & Ziel-Channel.'
         }
       ]
     }

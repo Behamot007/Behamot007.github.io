@@ -9,6 +9,7 @@ Dieser Service stellt eine abgesicherte API bereit, um einen Twitch-Chat über e
 - OAuth-Autorisierungs-Flow inkl. automatischer Speicherung und Refresh der Bot-Tokens
 - Konfigurierbares API-Passwort, das sowohl von der Web-Oberfläche als auch von externen Clients abgefragt wird
 - Verwaltung benutzerdefinierter Chat-Befehle (inkl. Präfix, Cooldowns & Antworten)
+- Automatischer OpenAI-Zuschauer, der anhand von Stream-Screenshots periodisch Chat-Nachrichten erzeugt
 
 ## Schnellstart
 
@@ -35,6 +36,8 @@ Der Server lauscht standardmäßig auf Port `4010`. Über einen Reverse-Proxy (z
 | `TWITCH_BOT_OAUTH_TOKEN` | (Optional) OAuth-Token im Format `oauth:...` als Initialwert. Kann später durch den OAuth-Flow ersetzt werden. |
 | `TWITCH_DEFAULT_CHANNEL` | (Optional) Kanal, der automatisch beim Start betreten werden soll. |
 | `TWITCH_STATE_FILE` | (Optional) Pfad zu einer JSON-Datei, in der Laufzeitdaten (Tokens, Befehle) persistiert werden. Standard: `runtime-state.json`. |
+| `OPENAI_API_KEY` | Secret für den automatischen Zuschauer, wird für Chat-Completions inklusive Bildanalyse benötigt. |
+| `OPENAI_DEFAULT_MODEL` | (Optional) Vorbelegtes OpenAI-Modell (z. B. `gpt-4o-mini`). |
 
 Eine minimal ausgefüllte `.env` kann z. B. wie folgt aussehen:
 
@@ -50,6 +53,8 @@ TWITCH_BOT_OAUTH_TOKEN=oauth:xxxxxxxxxxxxxxxxxxxx
 # Optional: Speicherort für Laufzeitdaten (Standard: runtime-state.json)
 # TWITCH_STATE_FILE=/app/data/twitch-state.json
 TWITCH_DEFAULT_CHANNEL=BehamotVT
+OPENAI_API_KEY=sk-...
+OPENAI_DEFAULT_MODEL=gpt-4o-mini
 ```
 
 > Achte darauf, dass ein manuell gesetztes Bot-Token mit `oauth:` beginnt – sonst lehnt Twitch die Verbindung ab.
@@ -106,6 +111,8 @@ Alle Routen (bis auf den OAuth-Callback) verlangen das korrekte Passwort, entwed
 | `POST` | `/api/twitch/oauth/apply` | Übernimmt ein frisch erhaltenes OAuth-Token und speichert es inkl. optionalem Refresh. |
 | `GET` | `/api/twitch/commands` | Liefert das aktuelle Befehlspräfix sowie alle konfigurierten Kommandos. |
 | `PUT` | `/api/twitch/commands` | Überschreibt Präfix und Befehle. |
+| `GET` | `/api/twitch/openai` | Liefert Konfiguration und Laufzeitstatus des OpenAI-Zuschauers. |
+| `PUT` | `/api/twitch/openai` | Aktualisiert Prompt, Intervall und Ziel-Channel des OpenAI-Zuschauers. |
 
 ### Kommando-Konfiguration
 
@@ -125,7 +132,7 @@ Wird ein Eintrag deaktiviert oder die Rechteprüfung fehlschlägt, sendet der Bo
 
 ## Frontend-Integration
 
-Die zugehörige Weboberfläche liegt unter `projects/sites/dev/services/twitch-bot`. Sie fragt das Passwort ab, öffnet bei Bedarf den OAuth-Login, übergibt neue Tokens automatisch an das Backend und verbindet sich anschließend via SSE mit dem gewünschten Kanal. Nachrichten können direkt aus dem Browser gesendet werden und erscheinen inklusive Bot-Markierung im Verlauf. Außerdem lassen sich dort Befehlspräfix und Chat-Kommandos konfigurieren.
+Die zugehörige Weboberfläche liegt unter `projects/sites/dev/services/twitch-bot`. Sie fragt das Passwort ab, öffnet bei Bedarf den OAuth-Login, übergibt neue Tokens automatisch an das Backend und verbindet sich anschließend via SSE mit dem gewünschten Kanal. Nachrichten können direkt aus dem Browser gesendet werden und erscheinen inklusive Bot-Markierung im Verlauf. Außerdem lassen sich dort Befehlspräfix und Chat-Kommandos konfigurieren. Ein zusätzlicher Tab steuert den OpenAI-Zuschauer (Prompt, Intervall, Ziel-Channel) und zeigt den Status des automatischen Chats an.
 
 Stelle sicher, dass der Reverse-Proxy die Pfade
 

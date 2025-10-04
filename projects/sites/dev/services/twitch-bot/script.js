@@ -5,7 +5,8 @@ const sections = {
   config: document.getElementById('view-config'),
   chat: document.getElementById('view-chat'),
   commands: document.getElementById('view-commands'),
-  currency: document.getElementById('view-currency')
+  currency: document.getElementById('view-currency'),
+  openai: document.getElementById('view-openai')
 };
 
 const connectionForm = document.getElementById('connectionForm');
@@ -57,6 +58,23 @@ const currencySummaryTotalEl = document.getElementById('currencySummaryTotal');
 const currencySummaryUsersEl = document.getElementById('currencySummaryUsers');
 const currencySummaryRateEl = document.getElementById('currencySummaryRate');
 
+const openAiForm = document.getElementById('openAiForm');
+const openAiEnabledInput = document.getElementById('openAiEnabled');
+const openAiChannelInput = document.getElementById('openAiChannel');
+const openAiIntervalInput = document.getElementById('openAiInterval');
+const openAiPromptInput = document.getElementById('openAiPrompt');
+const openAiSaveBtn = document.getElementById('openAiSave');
+const openAiResetPromptBtn = document.getElementById('openAiResetPrompt');
+const openAiStatusEl = document.getElementById('openAiStatus');
+const openAiSummaryEl = document.getElementById('openAiSummary');
+const openAiSummaryChannelEl = document.getElementById('openAiSummaryChannel');
+const openAiSummaryIntervalEl = document.getElementById('openAiSummaryInterval');
+const openAiSummaryNextRunEl = document.getElementById('openAiSummaryNextRun');
+const openAiSummaryLastSuccessEl = document.getElementById('openAiSummaryLastSuccess');
+const openAiSummaryMessageEl = document.getElementById('openAiSummaryMessage');
+const openAiSummaryTokensEl = document.getElementById('openAiSummaryTokens');
+const openAiSummaryErrorEl = document.getElementById('openAiSummaryError');
+
 const USER_LEVEL_OPTIONS = [
   { value: 'everyone', label: 'Jeder' },
   { value: 'subscriber', label: 'Abonnenten' },
@@ -78,6 +96,8 @@ const USER_LEVEL_LABEL = new Map(USER_LEVEL_OPTIONS.map(item => [item.value, ite
 const RESPONSE_TYPE_LABEL = new Map(RESPONSE_TYPES.map(item => [item.value, item.label]));
 const DEFAULT_COMMAND_RESPONSE = 'Hey {user}, dieser Befehl wurde noch nicht angepasst.';
 const NUMBER_FORMATTER = new Intl.NumberFormat('de-DE');
+const OPEN_AI_DEFAULT_PROMPT =
+  'Du bist ein Twitch Zuschauer und schaust den Stream von Behamot. Verhalte dich wie ein Standard Twitch Zuschauer. Gebe eine kurze prägnante Nachricht. Gehe potentiell auf vorherige Nachrichten oder die aktuelle Szene des Streams ein. Behamot hat folgende Emojis: Behamot1Hi Nutze die Emojis sporadisch aber nicht zwingend.';
 
 USER_LEVEL_OPTIONS.forEach(option => {
   if (!commandUserLevelSelect) return;
@@ -111,6 +131,8 @@ let commandModalState = { index: null, isNew: true };
 let commandDraft = null;
 let currencyState = null;
 let currencyLoaded = false;
+let openAiConfig = null;
+let openAiRuntimeState = null;
 
 const storedChannel = localStorage.getItem(STORAGE_KEYS.channel);
 if (storedChannel) {
@@ -123,20 +145,71 @@ if (currencySummaryEl) {
 if (currencyStatusEl) {
   currencyStatusEl.textContent = 'Bitte zuerst mit dem Backend verbinden.';
 }
-function getCurrencyName() {
-  return currencyState?.name || 'Währung';
+if (openAiSummaryEl) {
+  openAiSummaryEl.hidden = true;
+}
+if (openAiStatusEl) {
+  openAiStatusEl.textContent = 'Bitte zuerst mit dem Backend verbinden.';
+}
+if (openAiPromptInput) {
+  openAiPromptInput.value = OPEN_AI_DEFAULT_PROMPT;
+}
+
+function setActiveSection(target, { updateUrl = true } = {}) {
+  if (!target || !sections[target]) {
+    return;
+  }
+  navButtons.forEach(btn => {
+    const isTarget = btn.dataset.target === target;
+    btn.classList.toggle('is-active', isTarget);
+  });
+  Object.entries(sections).forEach(([key, section]) => {
+    if (!section) return;
+    const isTarget = key === target;
+    section.classList.toggle('is-active', isTarget);
+    if (typeof section.hidden === 'boolean') {
+      section.hidden = !isTarget;
+    }
+  });
+  if (updateUrl && typeof window !== 'undefined' && window.history?.replaceState) {
+    try {
+      const url = new URL(window.location.href);
+      url.hash = `#${target}`;
+      window.history.replaceState(null, '', url);
+    } catch (error) {
+      console.warn('Ansicht konnte nicht in der URL gespeichert werden:', error);
+    }
+  }
+}
+
+function resolveInitialSection() {
+  if (typeof window === 'undefined') {
+    return 'config';
+  }
+  const params = new URLSearchParams(window.location.search);
+  const viewParam = params.get('view');
+  if (viewParam && sections[viewParam]) {
+    return viewParam;
+  }
+  const hash = window.location.hash ? window.location.hash.replace(/^#/, '') : '';
+  if (hash && sections[hash]) {
+    return hash;
+  }
+  return 'config';
 }
 
 navButtons.forEach(button => {
   button.addEventListener('click', () => {
     const target = button.dataset.target;
-    if (!target || !sections[target]) return;
-    navButtons.forEach(btn => btn.classList.toggle('is-active', btn === button));
-    Object.entries(sections).forEach(([key, section]) => {
-      section.classList.toggle('is-active', key === target);
-    });
+    setActiveSection(target);
   });
 });
+
+setActiveSection(resolveInitialSection(), { updateUrl: false });
+
+function getCurrencyName() {
+  return currencyState?.name || 'Währung';
+}
 
 function buildUrl(path) {
   if (!path.startsWith('/')) {
@@ -225,6 +298,285 @@ function setCurrencyStatus(text, variant = '') {
   }
 }
 
+function setOpenAiStatus(text, variant = '') {
+  if (!openAiStatusEl) return;
+  openAiStatusEl.textContent = text;
+  openAiStatusEl.classList.remove('status-box--ok', 'status-box--error');
+  if (variant === 'ok') {
+    openAiStatusEl.classList.add('status-box--ok');
+  } else if (variant === 'error') {
+    openAiStatusEl.classList.add('status-box--error');
+  }
+}
+
+function enableOpenAi(enabled) {
+  if (!openAiForm) return;
+  const elements = Array.from(openAiForm.elements || []);
+  elements.forEach(element => {
+    if (!element) return;
+    if (element === openAiEnabledInput) {
+      element.disabled = !enabled;
+    } else {
+      element.disabled = !enabled;
+    }
+  });
+  if (openAiSaveBtn) {
+    openAiSaveBtn.disabled = !enabled;
+  }
+  if (!enabled) {
+    setOpenAiStatus('Bitte zuerst mit dem Backend verbinden.');
+  }
+}
+
+function resetOpenAiUi() {
+  openAiConfig = null;
+  openAiRuntimeState = null;
+  if (openAiEnabledInput) openAiEnabledInput.checked = false;
+  if (openAiChannelInput) openAiChannelInput.value = '';
+  if (openAiIntervalInput) openAiIntervalInput.value = '';
+  if (openAiPromptInput) openAiPromptInput.value = OPEN_AI_DEFAULT_PROMPT;
+  if (openAiSummaryChannelEl) openAiSummaryChannelEl.textContent = '—';
+  if (openAiSummaryIntervalEl) openAiSummaryIntervalEl.textContent = '—';
+  if (openAiSummaryNextRunEl) openAiSummaryNextRunEl.textContent = '—';
+  if (openAiSummaryLastSuccessEl) openAiSummaryLastSuccessEl.textContent = '—';
+  if (openAiSummaryMessageEl) openAiSummaryMessageEl.textContent = '—';
+  if (openAiSummaryTokensEl) openAiSummaryTokensEl.textContent = '—';
+  if (openAiSummaryErrorEl) {
+    openAiSummaryErrorEl.textContent = '';
+    openAiSummaryErrorEl.hidden = true;
+  }
+  if (openAiSummaryEl) {
+    openAiSummaryEl.hidden = true;
+  }
+  setOpenAiStatus('Bitte zuerst mit dem Backend verbinden.');
+}
+
+function formatTimestamp(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString('de-DE');
+}
+
+function updateOpenAiSummary(runtime = openAiRuntimeState, config = openAiConfig) {
+  if (!openAiSummaryEl) return;
+  if (!runtime && !config) {
+    openAiSummaryEl.hidden = true;
+    return;
+  }
+  const targetChannel =
+    runtime?.targetChannel ||
+    config?.channel ||
+    statusData?.openAi?.targetChannel ||
+    statusData?.defaultChannel ||
+    '';
+  if (openAiSummaryChannelEl) {
+    openAiSummaryChannelEl.textContent = targetChannel ? `#${targetChannel.replace(/^#/, '')}` : '—';
+  }
+  if (openAiSummaryIntervalEl) {
+    const interval = Number(config?.intervalSeconds ?? statusData?.openAi?.intervalSeconds ?? 0);
+    openAiSummaryIntervalEl.textContent = interval
+      ? `${NUMBER_FORMATTER.format(Math.max(0, Math.round(interval)))} s`
+      : '—';
+  }
+  if (openAiSummaryNextRunEl) {
+    const nextRun = runtime?.nextRunAt || statusData?.openAi?.nextRunAt || null;
+    openAiSummaryNextRunEl.textContent = formatTimestamp(nextRun);
+  }
+  if (openAiSummaryLastSuccessEl) {
+    const last =
+      runtime?.lastSuccessAt ||
+      runtime?.lastRunAt ||
+      statusData?.openAi?.lastSuccessAt ||
+      statusData?.openAi?.lastRunAt ||
+      null;
+    openAiSummaryLastSuccessEl.textContent = formatTimestamp(last);
+  }
+  if (openAiSummaryMessageEl) {
+    openAiSummaryMessageEl.textContent = runtime?.lastMessage || statusData?.openAi?.lastMessage || '—';
+  }
+  if (openAiSummaryTokensEl) {
+    const promptTokens = runtime?.usage?.promptTokens;
+    const completionTokens = runtime?.usage?.completionTokens;
+    if (promptTokens != null || completionTokens != null) {
+      const parts = [];
+      if (promptTokens != null) {
+        parts.push(`Prompt: ${NUMBER_FORMATTER.format(promptTokens)}`);
+      }
+      if (completionTokens != null) {
+        parts.push(`Completion: ${NUMBER_FORMATTER.format(completionTokens)}`);
+      }
+      openAiSummaryTokensEl.textContent = parts.length ? parts.join(' · ') : '—';
+    } else {
+      openAiSummaryTokensEl.textContent = '—';
+    }
+  }
+  if (openAiSummaryErrorEl) {
+    const error = runtime?.lastError;
+    if (error?.message) {
+      const timeLabel = formatTimestamp(error.occurredAt);
+      openAiSummaryErrorEl.textContent = `${timeLabel !== '—' ? `${timeLabel}: ` : ''}${error.message}`;
+      openAiSummaryErrorEl.hidden = false;
+    } else {
+      openAiSummaryErrorEl.textContent = '';
+      openAiSummaryErrorEl.hidden = true;
+    }
+  }
+  openAiSummaryEl.hidden = false;
+}
+
+async function loadOpenAiSettings() {
+  if (!openAiForm) return;
+  try {
+    setOpenAiStatus('Lade OpenAI-Konfiguration …');
+    if (openAiSaveBtn) {
+      openAiSaveBtn.disabled = true;
+    }
+    const data = await apiFetch('/openai');
+    const config = {
+      enabled: Boolean(data?.config?.enabled),
+      intervalSeconds: Math.max(30, Math.round(Number(data?.config?.intervalSeconds ?? 90))),
+      systemPrompt:
+        typeof data?.config?.systemPrompt === 'string' && data.config.systemPrompt.trim()
+          ? data.config.systemPrompt.trim()
+          : OPEN_AI_DEFAULT_PROMPT,
+      channel: typeof data?.config?.channel === 'string' ? data.config.channel : ''
+    };
+    openAiConfig = config;
+    openAiRuntimeState = data?.runtime || null;
+
+    if (openAiEnabledInput) openAiEnabledInput.checked = config.enabled;
+    if (openAiIntervalInput) openAiIntervalInput.value = config.intervalSeconds;
+    if (openAiPromptInput) openAiPromptInput.value = config.systemPrompt;
+    if (openAiChannelInput) openAiChannelInput.value = config.channel || '';
+
+    updateOpenAiSummary(openAiRuntimeState, config);
+
+    if (!openAiRuntimeState?.hasApiKey) {
+      setOpenAiStatus('OpenAI API-Key fehlt im Backend.', 'error');
+    } else if (!config.enabled) {
+      setOpenAiStatus('Automatik ist deaktiviert.');
+    } else {
+      const parts = [`Aktiv – alle ${NUMBER_FORMATTER.format(config.intervalSeconds)} s`];
+      if (openAiRuntimeState?.nextRunAt) {
+        parts.push(`Nächster Lauf: ${formatTimestamp(openAiRuntimeState.nextRunAt)}`);
+      }
+      setOpenAiStatus(parts.join(' · '), 'ok');
+    }
+  } catch (error) {
+    console.error('OpenAI-Konfiguration konnte nicht geladen werden', error);
+    setOpenAiStatus(`OpenAI konnte nicht geladen werden: ${error.message}`, 'error');
+    if (openAiSummaryEl) {
+      openAiSummaryEl.hidden = true;
+    }
+  } finally {
+    if (openAiSaveBtn) {
+      openAiSaveBtn.disabled = false;
+    }
+  }
+}
+
+async function saveOpenAiSettings() {
+  if (!openAiForm) return;
+  if (!apiPassword) {
+    setOpenAiStatus('Bitte zuerst mit dem Backend verbinden.', 'error');
+    return;
+  }
+  const intervalValue = Number(openAiIntervalInput?.value ?? 0);
+  if (!Number.isFinite(intervalValue) || intervalValue < 30) {
+    setOpenAiStatus('Bitte einen Intervall von mindestens 30 Sekunden angeben.', 'error');
+    return;
+  }
+  const prompt = (openAiPromptInput?.value || '').trim() || OPEN_AI_DEFAULT_PROMPT;
+  const channel = (openAiChannelInput?.value || '').trim();
+  const payload = {
+    enabled: Boolean(openAiEnabledInput?.checked),
+    intervalSeconds: Math.max(30, Math.round(intervalValue)),
+    systemPrompt: prompt,
+    channel
+  };
+
+  setOpenAiStatus('Speichere OpenAI-Konfiguration …');
+  if (openAiSaveBtn) {
+    openAiSaveBtn.disabled = true;
+  }
+  try {
+    const result = await apiFetch('/openai', { method: 'PUT', body: payload });
+    const config = {
+      enabled: Boolean(result?.config?.enabled ?? payload.enabled),
+      intervalSeconds: Math.max(30, Math.round(Number(result?.config?.intervalSeconds ?? payload.intervalSeconds))),
+      systemPrompt:
+        typeof result?.config?.systemPrompt === 'string' && result.config.systemPrompt.trim()
+          ? result.config.systemPrompt.trim()
+          : prompt,
+      channel: typeof result?.config?.channel === 'string' ? result.config.channel : channel
+    };
+    openAiConfig = config;
+    openAiRuntimeState = result?.runtime || openAiRuntimeState || null;
+
+    if (openAiEnabledInput) openAiEnabledInput.checked = config.enabled;
+    if (openAiIntervalInput) openAiIntervalInput.value = config.intervalSeconds;
+    if (openAiPromptInput) openAiPromptInput.value = config.systemPrompt;
+    if (openAiChannelInput) openAiChannelInput.value = config.channel || '';
+
+    updateOpenAiSummary(openAiRuntimeState, config);
+
+    if (!openAiRuntimeState?.hasApiKey) {
+      setOpenAiStatus('Gespeichert, aber OpenAI API-Key fehlt im Backend.', 'error');
+    } else if (!config.enabled) {
+      setOpenAiStatus('Konfiguration gespeichert. Automatik ist deaktiviert.');
+    } else {
+      setOpenAiStatus('OpenAI-Automatik gespeichert.', 'ok');
+    }
+  } catch (error) {
+    console.error('OpenAI-Konfiguration konnte nicht gespeichert werden', error);
+    setOpenAiStatus(`Speichern fehlgeschlagen: ${error.message}`, 'error');
+  } finally {
+    if (openAiSaveBtn) {
+      openAiSaveBtn.disabled = false;
+    }
+  }
+}
+
+function applyOpenAiRuntimeUpdate(meta = {}) {
+  if (!meta || meta.source !== 'openai-viewer') {
+    return;
+  }
+  if (!openAiRuntimeState) {
+    openAiRuntimeState = {};
+  }
+  const sentAt = meta.sentAt || new Date().toISOString();
+  openAiRuntimeState.lastRunAt = sentAt;
+  openAiRuntimeState.lastSuccessAt = sentAt;
+  openAiRuntimeState.lastError = null;
+  if (!openAiRuntimeState.usage) {
+    openAiRuntimeState.usage = {};
+  }
+  if (meta.promptTokens != null) {
+    openAiRuntimeState.usage.promptTokens = meta.promptTokens;
+  }
+  if (meta.completionTokens != null) {
+    openAiRuntimeState.usage.completionTokens = meta.completionTokens;
+  }
+  if (meta.targetChannel) {
+    openAiRuntimeState.targetChannel = meta.targetChannel;
+  }
+  const message = typeof meta.message === 'string' ? meta.message : null;
+  if (message) {
+    openAiRuntimeState.lastMessage = message;
+  }
+  if (meta.intervalSeconds && (!openAiConfig || openAiConfig.intervalSeconds !== meta.intervalSeconds)) {
+    openAiConfig = openAiConfig || {};
+    openAiConfig.intervalSeconds = meta.intervalSeconds;
+  }
+  updateOpenAiSummary(openAiRuntimeState, openAiConfig);
+  if (apiPassword && openAiConfig?.enabled) {
+    setOpenAiStatus('OpenAI-Antwort wurde gesendet.', 'ok');
+  }
+}
+
 function updateTokenStatus(token) {
   if (!token) {
     setTokenStatus('Noch kein Bot-Token hinterlegt.');
@@ -304,6 +656,22 @@ function appendMessage(entry) {
         ? [meta.command]
         : [];
       const info = [];
+      if (meta.source === 'openai-viewer') {
+        info.push('Quelle: OpenAI Zuschauer');
+        if (meta.intervalSeconds) {
+          info.push(`Intervall: ${NUMBER_FORMATTER.format(meta.intervalSeconds)}s`);
+        }
+        const tokenParts = [];
+        if (meta.promptTokens != null) {
+          tokenParts.push(`Prompt ${NUMBER_FORMATTER.format(meta.promptTokens)}`);
+        }
+        if (meta.completionTokens != null) {
+          tokenParts.push(`Completion ${NUMBER_FORMATTER.format(meta.completionTokens)}`);
+        }
+        if (tokenParts.length) {
+          info.push(`Tokens: ${tokenParts.join(' / ')}`);
+        }
+      }
       if (names.length) {
         info.push(`Befehl: ${names.map(name => `${prefix}${name}`).join(', ')}`);
       }
@@ -324,6 +692,9 @@ function appendMessage(entry) {
         hint.className = 'command-meta';
         hint.textContent = info.join(' · ');
         article.appendChild(hint);
+      }
+      if (meta.source === 'openai-viewer') {
+        applyOpenAiRuntimeUpdate({ ...meta, message });
       }
     }
   } else {
@@ -421,12 +792,16 @@ async function refreshStatus() {
     updateTokenStatus(statusData.botToken);
     enableCommands(true);
     enableCurrency(true);
+    enableOpenAi(true);
     if (!commandsLoaded) {
       await loadCommands();
     } else {
       updateCommandStatusSummary();
     }
     await loadCurrencySettings();
+    if (openAiForm) {
+      await loadOpenAiSettings();
+    }
   } catch (error) {
     setStatus(`Fehler: ${error.message}`, 'error');
     oauthButton.disabled = true;
@@ -434,6 +809,8 @@ async function refreshStatus() {
     updateTokenStatus(null);
     enableCommands(false);
     enableCurrency(false);
+    enableOpenAi(false);
+    resetOpenAiUi();
     throw error;
   }
 }
@@ -1056,6 +1433,8 @@ clearPasswordBtn.addEventListener('click', () => {
   updateCurrencySummary(null);
   updateCommandCostLabel();
   setCurrencyStatus('Bitte zuerst mit dem Backend verbinden.');
+  enableOpenAi(false);
+  resetOpenAiUi();
 });
 
 connectChannelBtn.addEventListener('click', async () => {
@@ -1189,6 +1568,34 @@ if (currencyForm) {
   });
 }
 
+if (openAiForm) {
+  openAiForm.addEventListener('submit', async event => {
+    event.preventDefault();
+    await saveOpenAiSettings();
+  });
+}
+
+if (openAiResetPromptBtn) {
+  openAiResetPromptBtn.addEventListener('click', () => {
+    if (!openAiPromptInput) return;
+    openAiPromptInput.value = OPEN_AI_DEFAULT_PROMPT;
+    if (apiPassword) {
+      setOpenAiStatus('Standard-Prompt wiederhergestellt. Speichern nicht vergessen.');
+    }
+  });
+}
+
+if (openAiEnabledInput) {
+  openAiEnabledInput.addEventListener('change', () => {
+    if (!apiPassword) return;
+    if (openAiEnabledInput.checked) {
+      setOpenAiStatus('Automatik wird nach dem Speichern aktiviert.');
+    } else {
+      setOpenAiStatus('Automatik wird nach dem Speichern deaktiviert.');
+    }
+  });
+}
+
 if (commandDeleteBtn) {
   commandDeleteBtn.addEventListener('click', () => {
     if (!commandsEditable || commandModalState.isNew || typeof commandModalState.index !== 'number') {
@@ -1228,6 +1635,8 @@ enableCommands(false);
 updateTokenStatus(null);
 
 setCommandStatus('Befehle noch nicht geladen.');
+enableOpenAi(false);
+resetOpenAiUi();
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') {

@@ -16,7 +16,9 @@ const {
   TWITCH_BOT_OAUTH_TOKEN,
   TWITCH_DEFAULT_CHANNEL,
   TWITCH_API_PASSWORD,
-  TWITCH_STATE_FILE
+  TWITCH_STATE_FILE,
+  OPENAI_API_KEY,
+  OPENAI_DEFAULT_MODEL
 } = process.env;
 
 if (!TWITCH_API_PASSWORD) {
@@ -93,7 +95,24 @@ const DEFAULT_CURRENCY_CONFIG = {
   }
 };
 
+const DEFAULT_OPENAI_SYSTEM_PROMPT =
+  'Du bist ein Twitch Zuschauer und schaust den Stream von Behamot. Verhalte dich wie ein Standard Twitch Zuschauer. Gebe eine kurze prägnante Nachricht. Gehe potentiell auf vorherige Nachrichten oder die aktuelle Szene des Streams ein. Behamot hat folgende Emojis: Behamot1Hi Nutze die Emojis sporadisch aber nicht zwingend.';
+const DEFAULT_OPENAI_INTERVAL_SECONDS = 90;
+const MIN_OPENAI_INTERVAL_SECONDS = 30;
+const MAX_OPENAI_INTERVAL_SECONDS = 3600;
+const TWITCH_PREVIEW_WIDTH = 640;
+const TWITCH_PREVIEW_HEIGHT = 360;
+
 const NUMBER_FORMATTER = new Intl.NumberFormat('de-DE');
+
+function createDefaultOpenAiConfig() {
+  return {
+    enabled: false,
+    intervalSeconds: DEFAULT_OPENAI_INTERVAL_SECONDS,
+    systemPrompt: DEFAULT_OPENAI_SYSTEM_PROMPT,
+    channel: ''
+  };
+}
 
 const runtimeState = {
   botToken: null,
@@ -101,7 +120,24 @@ const runtimeState = {
     prefix: '!',
     items: DEFAULT_COMMANDS.map(item => ({ ...item }))
   },
-  currency: createDefaultCurrencyState()
+  currency: createDefaultCurrencyState(),
+  openAiCompanion: createDefaultOpenAiConfig()
+};
+
+const openAiRuntime = {
+  timer: null,
+  running: false,
+  lastRunAt: null,
+  lastSuccessAt: null,
+  lastError: null,
+  lastMessage: null,
+  lastChannel: null,
+  lastScreenshotBytes: 0,
+  lastScreenshotAt: null,
+  usage: null,
+  consecutiveErrors: 0,
+  nextRunAt: null,
+  intervalSeconds: DEFAULT_OPENAI_INTERVAL_SECONDS
 };
 
 function createDefaultCurrencyState() {
@@ -333,6 +369,411 @@ async function applyCurrencyConfiguration(update) {
   return serializeCurrencyConfig(runtimeState.currency);
 }
 
+function normalizeOpenAiConfig(config = {}) {
+  const base = createDefaultOpenAiConfig();
+  const enabled = config.enabled === true || config.enabled === 'true';
+  const intervalSource = config.intervalSeconds ?? config.interval ?? base.intervalSeconds;
+  const intervalValue = Number(intervalSource);
+  const intervalSeconds = Number.isFinite(intervalValue)
+    ? Math.min(
+        MAX_OPENAI_INTERVAL_SECONDS,
+        Math.max(MIN_OPENAI_INTERVAL_SECONDS, Math.round(intervalValue))
+      )
+    : base.intervalSeconds;
+  const prompt =
+    typeof config.systemPrompt === 'string' && config.systemPrompt.trim()
+      ? config.systemPrompt.trim()
+      : base.systemPrompt;
+  const channel = typeof config.channel === 'string' ? config.channel.trim() : '';
+  return {
+    enabled,
+    intervalSeconds,
+    systemPrompt: prompt,
+    channel
+  };
+}
+
+function getOpenAiConfiguration() {
+  runtimeState.openAiCompanion = normalizeOpenAiConfig(runtimeState.openAiCompanion);
+  return runtimeState.openAiCompanion;
+}
+
+function serializeOpenAiConfig(config = getOpenAiConfiguration()) {
+  return {
+    enabled: Boolean(config.enabled),
+    intervalSeconds: Number.isFinite(Number(config.intervalSeconds))
+      ? Number(config.intervalSeconds)
+      : DEFAULT_OPENAI_INTERVAL_SECONDS,
+    systemPrompt: config.systemPrompt || DEFAULT_OPENAI_SYSTEM_PROMPT,
+    channel: typeof config.channel === 'string' ? config.channel : ''
+  };
+}
+
+function getOpenAiTargetChannel(config = getOpenAiConfiguration()) {
+  const normalized = normalizeChannelName(config.channel);
+  if (normalized) {
+    return normalized;
+  }
+  return getDefaultChannelName();
+}
+
+async function applyOpenAiConfiguration(update) {
+  const current = getOpenAiConfiguration();
+  const merged = {
+    ...current,
+    ...(update || {})
+  };
+  const normalized = normalizeOpenAiConfig(merged);
+  runtimeState.openAiCompanion = normalized;
+  await persistRuntimeState();
+  restartOpenAiScheduler();
+  return normalized;
+}
+
+function getOpenAiRuntimeInfo() {
+  const config = getOpenAiConfiguration();
+  return {
+    hasApiKey: Boolean(OPENAI_API_KEY),
+    running: openAiRuntime.running,
+    lastRunAt: openAiRuntime.lastRunAt,
+    lastSuccessAt: openAiRuntime.lastSuccessAt,
+    lastError: openAiRuntime.lastError,
+    lastMessage: openAiRuntime.lastMessage,
+    lastChannel: openAiRuntime.lastChannel,
+    lastScreenshotBytes: openAiRuntime.lastScreenshotBytes,
+    lastScreenshotAt: openAiRuntime.lastScreenshotAt,
+    usage: openAiRuntime.usage,
+    consecutiveErrors: openAiRuntime.consecutiveErrors,
+    nextRunAt: openAiRuntime.nextRunAt,
+    intervalSeconds: config.intervalSeconds,
+    targetChannel: getOpenAiTargetChannel(config)
+  };
+}
+
+function clearOpenAiTimer() {
+  if (openAiRuntime.timer) {
+    clearTimeout(openAiRuntime.timer);
+    openAiRuntime.timer = null;
+  }
+  openAiRuntime.nextRunAt = null;
+}
+
+function scheduleOpenAiTimer(delayMs) {
+  clearOpenAiTimer();
+  const config = getOpenAiConfiguration();
+  if (!config.enabled) {
+    return;
+  }
+  const targetChannel = getOpenAiTargetChannel(config);
+  if (!targetChannel) {
+    openAiRuntime.lastError = {
+      message: 'Kein Ziel-Channel für den OpenAI-Zuschauer konfiguriert.',
+      occurredAt: new Date().toISOString()
+    };
+    return;
+  }
+  const intervalMs = Math.max(MIN_OPENAI_INTERVAL_SECONDS * 1000, Math.round(config.intervalSeconds * 1000));
+  const baseDelay = Number.isFinite(Number(delayMs)) && delayMs > 0 ? Number(delayMs) : intervalMs;
+  const errorMultiplier = openAiRuntime.consecutiveErrors > 0 ? Math.min(4, openAiRuntime.consecutiveErrors + 1) : 1;
+  const delay = Math.min(baseDelay * errorMultiplier, MAX_OPENAI_INTERVAL_SECONDS * 1000);
+  openAiRuntime.nextRunAt = new Date(Date.now() + delay).toISOString();
+  openAiRuntime.lastChannel = targetChannel;
+  openAiRuntime.intervalSeconds = config.intervalSeconds;
+  openAiRuntime.timer = setTimeout(() => {
+    openAiRuntime.timer = null;
+    runOpenAiCompanionCycle('timer')
+      .catch(error => {
+        console.error('[twitch-chat-controller] OpenAI-Zuschauerlauf fehlgeschlagen:', error);
+      })
+      .finally(() => {
+        const latest = getOpenAiConfiguration();
+        if (latest.enabled) {
+          scheduleOpenAiTimer();
+        } else {
+          openAiRuntime.nextRunAt = null;
+        }
+      });
+  }, delay);
+  openAiRuntime.timer.unref?.();
+}
+
+function restartOpenAiScheduler() {
+  clearOpenAiTimer();
+  const config = getOpenAiConfiguration();
+  if (!config.enabled) {
+    return;
+  }
+  if (!OPENAI_API_KEY) {
+    openAiRuntime.lastError = {
+      message: 'OPENAI_API_KEY ist nicht gesetzt.',
+      occurredAt: new Date().toISOString()
+    };
+    return;
+  }
+  const targetChannel = getOpenAiTargetChannel(config);
+  if (!targetChannel) {
+    openAiRuntime.lastError = {
+      message: 'Kein Ziel-Channel für den OpenAI-Zuschauer konfiguriert.',
+      occurredAt: new Date().toISOString()
+    };
+    return;
+  }
+  openAiRuntime.consecutiveErrors = 0;
+  scheduleOpenAiTimer(Math.min(config.intervalSeconds * 1000, 5_000));
+}
+
+async function fetchTwitchScreenshot(channel) {
+  const normalized = normalizeChannelName(channel);
+  if (!normalized) {
+    throw new Error('Kein Channel für Screenshot angegeben.');
+  }
+  const cacheBust = Date.now();
+  const url = `https://static-cdn.jtvnw.net/previews-ttv/live_user_${normalized}-${TWITCH_PREVIEW_WIDTH}x${TWITCH_PREVIEW_HEIGHT}.jpg?${cacheBust}`;
+  try {
+    const response = await axios.get(url, {
+      responseType: 'arraybuffer',
+      timeout: 10_000,
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (compatible; BehamotTwitchBot/1.0; +https://www.behamot.de)',
+        Accept: 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8'
+      }
+    });
+    const buffer = Buffer.from(response.data);
+    if (!buffer.length) {
+      throw new Error('Screenshot war leer.');
+    }
+    const contentType = response.headers['content-type'] || 'image/jpeg';
+    return {
+      dataUrl: `data:${contentType};base64,${buffer.toString('base64')}`,
+      bytes: buffer.length,
+      fetchedAt: new Date().toISOString()
+    };
+  } catch (error) {
+    const status = error?.response?.status || error.status;
+    const message =
+      status === 404
+        ? 'Stream-Vorschau nicht verfügbar (Stream eventuell offline).'
+        : error?.message || 'Screenshot konnte nicht geladen werden.';
+    const err = new Error(message);
+    if (status) {
+      err.status = status;
+    }
+    throw err;
+  }
+}
+
+function buildChatTranscript(channel, limit = 12) {
+  const context = getOrCreateChannelContext(channel);
+  if (!context || !Array.isArray(context.backlog)) {
+    return [];
+  }
+  const relevantTypes = new Set(['message', 'self', 'outgoing']);
+  return context.backlog
+    .filter(entry => relevantTypes.has(entry.type) && typeof entry.message === 'string' && entry.message.trim())
+    .slice(-limit)
+    .map(entry => {
+      const username =
+        entry.username ||
+        entry.userId ||
+        (entry.type === 'outgoing' ? TWITCH_BOT_USERNAME || 'Bot' : 'Unbekannt');
+      return `${username}: ${entry.message}`;
+    });
+}
+
+function extractAssistantMessage(message) {
+  if (!message) {
+    return '';
+  }
+  const content = message.content;
+  if (typeof content === 'string') {
+    return content.trim();
+  }
+  if (Array.isArray(content)) {
+    const parts = content
+      .map(part => {
+        if (!part) return '';
+        if (typeof part.text === 'string') {
+          return part.text;
+        }
+        if (typeof part.value === 'string') {
+          return part.value;
+        }
+        if (part?.type === 'output_text' && typeof part?.text === 'string') {
+          return part.text;
+        }
+        return '';
+      })
+      .filter(Boolean);
+    return parts.join(' ').replace(/\s+/g, ' ').trim();
+  }
+  return '';
+}
+
+async function requestOpenAiViewerResponse({ systemPrompt, instruction, screenshotDataUrl }) {
+  if (!OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY ist nicht gesetzt.');
+  }
+  const model = OPENAI_DEFAULT_MODEL || 'gpt-4o-mini';
+  const userContent = [{ type: 'text', text: instruction }];
+  if (screenshotDataUrl) {
+    userContent.push({
+      type: 'image_url',
+      image_url: {
+        url: screenshotDataUrl,
+        detail: 'low'
+      }
+    });
+  }
+  const payload = {
+    model,
+    messages: [
+      {
+        role: 'system',
+        content: [{ type: 'text', text: systemPrompt }]
+      },
+      {
+        role: 'user',
+        content: userContent
+      }
+    ],
+    temperature: 0.9,
+    max_tokens: 200
+  };
+
+  const response = await axios.post('https://api.openai.com/v1/chat/completions', payload, {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${OPENAI_API_KEY}`
+    },
+    timeout: 30_000
+  });
+
+  const choice = response.data?.choices?.[0];
+  const messageText = extractAssistantMessage(choice?.message);
+  const usage = response.data?.usage
+    ? {
+        promptTokens: response.data.usage.prompt_tokens ?? null,
+        completionTokens: response.data.usage.completion_tokens ?? null,
+        totalTokens: response.data.usage.total_tokens ?? null
+      }
+    : null;
+
+  return {
+    message: messageText,
+    usage,
+    id: response.data?.id || null
+  };
+}
+
+async function runOpenAiCompanionCycle(reason = 'timer') {
+  const config = getOpenAiConfiguration();
+  if (!config.enabled) {
+    return;
+  }
+  if (openAiRuntime.running) {
+    return;
+  }
+  if (!OPENAI_API_KEY) {
+    openAiRuntime.lastError = {
+      message: 'OPENAI_API_KEY ist nicht gesetzt.',
+      occurredAt: new Date().toISOString()
+    };
+    return;
+  }
+
+  const channel = getOpenAiTargetChannel(config);
+  if (!channel) {
+    openAiRuntime.lastError = {
+      message: 'Kein Ziel-Channel für den OpenAI-Zuschauer konfiguriert.',
+      occurredAt: new Date().toISOString()
+    };
+    return;
+  }
+
+  openAiRuntime.running = true;
+  openAiRuntime.lastRunAt = new Date().toISOString();
+  openAiRuntime.lastChannel = channel;
+  openAiRuntime.intervalSeconds = config.intervalSeconds;
+
+  try {
+    await ensureChatClientConnected();
+    const client = getChatClient();
+    if (!client) {
+      throw new Error('Chat-Client ist nicht verbunden.');
+    }
+    if (!joinedChannels.has(channel)) {
+      await client.join(`#${channel}`);
+      joinedChannels.add(channel);
+    }
+
+    const screenshot = await fetchTwitchScreenshot(channel);
+    openAiRuntime.lastScreenshotBytes = screenshot.bytes;
+    openAiRuntime.lastScreenshotAt = screenshot.fetchedAt;
+
+    const transcriptLines = buildChatTranscript(channel, 12);
+    const transcript = transcriptLines.length
+      ? `Letzte Chatnachrichten (neueste zuletzt):\n${transcriptLines.join('\n')}`
+      : 'Der Chat war zuletzt ruhig. Erzeuge eine neue Nachricht, die zur aktuellen Szene passt.';
+    const instruction = `${transcript}\n\nFormuliere eine einzige Twitch-Chat-Nachricht auf Deutsch (max. 220 Zeichen). Greife, wenn möglich, die Szene aus dem Screenshot auf und bleibe locker.`;
+
+    const result = await requestOpenAiViewerResponse({
+      systemPrompt: config.systemPrompt || DEFAULT_OPENAI_SYSTEM_PROMPT,
+      instruction,
+      screenshotDataUrl: screenshot.dataUrl
+    });
+
+    const assistantMessage = (result.message || '').replace(/\s+/g, ' ').trim();
+    if (!assistantMessage) {
+      throw new Error('Die OpenAI-Antwort war leer.');
+    }
+
+    const truncatedMessage = assistantMessage.length > 280 ? `${assistantMessage.slice(0, 277)}…` : assistantMessage;
+
+    const sentAt = new Date().toISOString();
+    await sendChatMessage(channel, truncatedMessage, {
+      source: 'openai-viewer',
+      sentAt,
+      intervalSeconds: config.intervalSeconds,
+      targetChannel: channel,
+      promptTokens: result.usage?.promptTokens ?? null,
+      completionTokens: result.usage?.completionTokens ?? null,
+      reason
+    });
+
+    openAiRuntime.lastMessage = truncatedMessage;
+    openAiRuntime.lastSuccessAt = sentAt;
+    openAiRuntime.usage = result.usage || null;
+    openAiRuntime.lastError = null;
+    openAiRuntime.consecutiveErrors = 0;
+  } catch (error) {
+    const status = error?.status || error?.response?.status || null;
+    const message = error?.message || 'OpenAI-Automatik fehlgeschlagen.';
+    const errorEntry = {
+      message,
+      occurredAt: new Date().toISOString()
+    };
+    if (status) {
+      errorEntry.status = status;
+    }
+    const detailsSource = error?.response?.data?.error || error?.response?.data || error?.details;
+    if (detailsSource && typeof detailsSource === 'object') {
+      const details = {};
+      if (detailsSource.message) details.message = detailsSource.message;
+      if (detailsSource.code) details.code = detailsSource.code;
+      if (detailsSource.type) details.type = detailsSource.type;
+      if (Object.keys(details).length) {
+        errorEntry.details = details;
+      }
+    }
+    openAiRuntime.lastError = errorEntry;
+    openAiRuntime.consecutiveErrors += 1;
+    throw error;
+  } finally {
+    openAiRuntime.running = false;
+  }
+}
+
 const currencyActivity = new Map();
 
 function getCurrencyActivityStore(channel) {
@@ -425,6 +866,12 @@ async function loadRuntimeState() {
         ...runtimeState.currency,
         ...data.currency,
         balances: data.currency.balances || runtimeState.currency.balances
+      });
+    }
+    if (data.openAiCompanion) {
+      runtimeState.openAiCompanion = normalizeOpenAiConfig({
+        ...runtimeState.openAiCompanion,
+        ...data.openAiCompanion
       });
     }
   } catch (error) {
@@ -716,6 +1163,7 @@ async function initializeRuntime() {
   await loadRuntimeState();
   scheduleTokenRefresh();
   setupAutomaticCommands();
+  restartOpenAiScheduler();
 }
 
 await initializeRuntime();
@@ -1528,6 +1976,8 @@ app.get('/api/twitch/status', (_req, res) => {
   const commands = getCommandConfiguration();
   const currencyConfig = serializeCurrencyConfig();
   const currencySummary = getCurrencySummary();
+  const openAiConfig = serializeOpenAiConfig();
+  const openAiRuntimeInfo = getOpenAiRuntimeInfo();
   res.json({
     ready: chatClientReady,
     joinedChannels: Array.from(joinedChannels),
@@ -1550,6 +2000,17 @@ app.get('/api/twitch/status', (_req, res) => {
       name: currencyConfig.name,
       accrual: currencyConfig.accrual,
       summary: currencySummary
+    },
+    openAi: {
+      enabled: openAiConfig.enabled,
+      intervalSeconds: openAiConfig.intervalSeconds,
+      targetChannel: openAiRuntimeInfo.targetChannel,
+      hasApiKey: openAiRuntimeInfo.hasApiKey,
+      lastRunAt: openAiRuntimeInfo.lastRunAt,
+      lastSuccessAt: openAiRuntimeInfo.lastSuccessAt,
+      nextRunAt: openAiRuntimeInfo.nextRunAt,
+      lastError: openAiRuntimeInfo.lastError,
+      lastMessage: openAiRuntimeInfo.lastMessage
     }
   });
 });
@@ -1601,6 +2062,60 @@ app.put('/api/twitch/currency', async (req, res) => {
     res.status(400).json({ error: error.message || 'Währungskonfiguration konnte nicht gespeichert werden.' });
   }
 });
+
+app.get('/api/twitch/openai', (_req, res) => {
+  const config = serializeOpenAiConfig();
+  const runtime = getOpenAiRuntimeInfo();
+  res.json({ config, runtime });
+});
+
+app.put('/api/twitch/openai', async (req, res) => {
+  try {
+    const config = await applyOpenAiConfiguration(req.body || {});
+    const runtime = getOpenAiRuntimeInfo();
+    res.json({ success: true, config: serializeOpenAiConfig(config), runtime });
+  } catch (error) {
+    console.error('[twitch-chat-controller] OpenAI-Konfiguration konnte nicht aktualisiert werden:', error);
+    res.status(400).json({ error: error.message || 'OpenAI-Konfiguration konnte nicht gespeichert werden.' });
+  }
+});
+
+async function sendChatMessage(channel, message, meta = null) {
+  const normalizedChannel = normalizeChannelName(channel);
+  if (!normalizedChannel) {
+    throw new Error('Channel fehlt oder ist ungültig.');
+  }
+  const text = typeof message === 'string' ? message.trim() : '';
+  if (!text) {
+    throw new Error('Nachricht ist leer.');
+  }
+
+  await ensureChatClientConnected();
+  const client = getChatClient();
+  if (!client) {
+    throw new Error('Chat-Client ist nicht verbunden.');
+  }
+  if (!joinedChannels.has(normalizedChannel)) {
+    await client.join(`#${normalizedChannel}`);
+    joinedChannels.add(normalizedChannel);
+  }
+
+  addPendingBotMessage(normalizedChannel, text);
+  await client.say(`#${normalizedChannel}`, text);
+
+  const payload = {
+    type: 'outgoing',
+    channel: normalizedChannel,
+    username: TWITCH_BOT_USERNAME,
+    message: text,
+    timestamp: new Date().toISOString()
+  };
+  if (meta && typeof meta === 'object' && Object.keys(meta).length > 0) {
+    payload.meta = meta;
+  }
+  broadcastToChannel(normalizedChannel, payload);
+  return text;
+}
 
 app.get('/api/twitch/chat/stream', async (req, res) => {
   const channel = normalizeChannelName(req.query.channel);
@@ -1662,7 +2177,7 @@ app.get('/api/twitch/chat/history', (req, res) => {
 });
 
 app.post('/api/twitch/chat/send', async (req, res) => {
-  const channel = normalizeChannelName(req.body?.channel || TWITCH_DEFAULT_CHANNEL);
+  const channel = req.body?.channel || TWITCH_DEFAULT_CHANNEL;
   const message = req.body?.message;
   if (!channel) {
     return res.status(400).json({ error: 'Channel fehlt in der Anfrage.' });
@@ -1671,21 +2186,7 @@ app.post('/api/twitch/chat/send', async (req, res) => {
     return res.status(400).json({ error: 'Nachricht ist leer.' });
   }
   try {
-    await ensureChatClientConnected();
-    const client = getChatClient();
-    if (!joinedChannels.has(channel)) {
-      await client.join(`#${channel}`);
-      joinedChannels.add(channel);
-    }
-    addPendingBotMessage(channel, message.trim());
-    await client.say(`#${channel}`, message.trim());
-    broadcastToChannel(channel, {
-      type: 'outgoing',
-      channel,
-      username: TWITCH_BOT_USERNAME,
-      message: message.trim(),
-      timestamp: new Date().toISOString()
-    });
+    await sendChatMessage(channel, message);
     res.json({ success: true });
   } catch (error) {
     console.error('[twitch-chat-controller] Nachricht konnte nicht gesendet werden:', error);
