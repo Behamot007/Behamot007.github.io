@@ -80,6 +80,8 @@ services:
       - POSTGRES_USER=${TWITCH_POSTGRES_USER:-app}
       - POSTGRES_PASSWORD=${TWITCH_POSTGRES_PASSWORD:-change-me}
       - POSTGRES_SSL=${TWITCH_POSTGRES_SSL:-false}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+
     networks:
       - internal
     expose:
