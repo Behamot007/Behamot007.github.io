@@ -20,53 +20,123 @@
       </nav>
     </header>
 
-    <main class="app-grid">
-      <section class="card">
-        <h2>Backend-Verbindung</h2>
-        <form id="connectionForm" class="form-grid">
-          <label>
-            <span>API-Basis-URL</span>
-            <input id="apiBase" type="url" placeholder="https://www.behamot.de/api/twitch" required />
-          </label>
-          <label>
-            <span>API-Passwort</span>
-            <input id="apiPassword" type="password" autocomplete="current-password" required />
-          </label>
-          <div class="form-actions">
-            <button type="submit">Verbinden</button>
-            <button type="button" id="clearPassword" class="secondary">Passwort löschen</button>
-          </div>
-        </form>
-        <div id="connectionStatus" class="status-box">Nicht verbunden</div>
-      </section>
+    <main class="app-main">
+      <nav class="page-nav" aria-label="Bereiche">
+        <button type="button" class="page-nav__link is-active" data-target="config" id="nav-config">
+          Konfiguration
+        </button>
+        <button type="button" class="page-nav__link" data-target="chat" id="nav-chat">
+          Chat-Ansicht
+        </button>
+        <button type="button" class="page-nav__link" data-target="commands" id="nav-commands">
+          Befehle
+        </button>
+      </nav>
 
-      <section class="card">
-        <h2>OAuth-Test</h2>
-        <p>
-          Öffnet den Twitch-Login in einem Pop-up. Nach erfolgreicher Anmeldung sendet das Pop-up die Tokens an diese Seite zurück.
-        </p>
-        <div class="oauth-grid">
-          <button id="oauthStart" disabled>OAuth starten</button>
-          <div class="status-box" id="oauthInfo">Noch kein Token angefordert.</div>
+      <section class="page-section is-active" id="view-config" aria-labelledby="nav-config">
+        <div class="cards-grid">
+          <article class="card">
+            <h2>Backend-Verbindung</h2>
+            <form id="connectionForm" class="form-grid" method="post" autocomplete="on">
+              <label>
+                <span>API Benutzername (optional)</span>
+                <input
+                  id="apiUser"
+                  name="username"
+                  type="text"
+                  placeholder="z. B. bot-admin"
+                  autocomplete="username"
+                />
+              </label>
+              <label>
+                <span>API-Passwort</span>
+                <input
+                  id="apiPassword"
+                  name="password"
+                  type="password"
+                  autocomplete="current-password"
+                  required
+                />
+              </label>
+              <div class="form-actions">
+                <button type="submit">Verbinden</button>
+                <button type="button" id="clearPassword" class="secondary">Passwort löschen</button>
+              </div>
+            </form>
+            <div id="connectionStatus" class="status-box">Nicht verbunden</div>
+          </article>
+
+          <article class="card">
+            <h2>OAuth für Bot-Token</h2>
+            <p>
+              Startet den Twitch-Login in einem Pop-up. Nach erfolgreicher Anmeldung wird das neue Bot-Token automatisch im
+              Backend gespeichert und bei Bedarf erneuert.
+            </p>
+            <div class="oauth-grid">
+              <button id="oauthStart" disabled>OAuth starten</button>
+              <div class="status-box" id="oauthInfo">Noch kein Token angefordert.</div>
+            </div>
+          </article>
+
+          <article class="card">
+            <h2>Token-Status</h2>
+            <div id="tokenStatus" class="status-box">Noch kein Bot-Token hinterlegt.</div>
+            <p class="card__hint">
+              Tipp: Für automatische Verlängerung muss beim OAuth-Login das Häkchen für <code>chat:read</code> und
+              <code>chat:edit</code> gesetzt sein.
+            </p>
+          </article>
         </div>
       </section>
 
-      <section class="card card--wide">
-        <div class="card-header">
-          <h2>Chat-Ansicht</h2>
-          <div class="channel-form">
-            <label>
-              <span>Channel</span>
-              <input id="channelInput" type="text" placeholder="beispielkanal" />
-            </label>
-            <button id="connectChannel" disabled>Chat abonnieren</button>
-          </div>
+      <section class="page-section" id="view-chat" aria-labelledby="nav-chat">
+        <div class="cards-grid">
+          <article class="card card--wide">
+            <div class="card-header">
+              <h2>Chat-Ansicht</h2>
+              <div class="channel-form">
+                <label>
+                  <span>Channel</span>
+                  <input id="channelInput" type="text" placeholder="beispielkanal" />
+                </label>
+                <button id="connectChannel" disabled>Chat abonnieren</button>
+              </div>
+            </div>
+            <div id="chatLog" class="chat-log" aria-live="polite"></div>
+            <form id="messageForm" class="message-form">
+              <textarea id="messageInput" rows="2" placeholder="Nachricht schreiben..." required></textarea>
+              <button type="submit" disabled>Senden</button>
+            </form>
+          </article>
         </div>
-        <div id="chatLog" class="chat-log" aria-live="polite"></div>
-        <form id="messageForm" class="message-form">
-          <textarea id="messageInput" rows="2" placeholder="Nachricht schreiben..." required></textarea>
-          <button type="submit" disabled>Senden</button>
-        </form>
+      </section>
+
+      <section class="page-section" id="view-commands" aria-labelledby="nav-commands">
+        <div class="cards-grid">
+          <article class="card card--wide">
+            <div class="card-header">
+              <div>
+                <h2>Befehlsverwaltung</h2>
+                <p class="card__hint">
+                  Lege einen Präfix und individuelle Antworten fest. Platzhalter wie <code>{user}</code> oder
+                  <code>{channel}</code> werden automatisch ersetzt.
+                </p>
+              </div>
+              <div class="command-prefix">
+                <label>
+                  <span>Befehlspräfix</span>
+                  <input id="commandPrefix" type="text" maxlength="5" />
+                </label>
+              </div>
+            </div>
+            <div id="commandList" class="command-list" aria-live="polite"></div>
+            <div class="command-actions">
+              <button type="button" id="addCommand" class="secondary">Neuen Befehl hinzufügen</button>
+              <button type="button" id="saveCommands">Änderungen speichern</button>
+            </div>
+            <div id="commandStatus" class="status-box">Befehle noch nicht geladen.</div>
+          </article>
+        </div>
       </section>
     </main>
 

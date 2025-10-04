@@ -6,8 +6,9 @@ Dieser Service stellt eine abgesicherte API bereit, um einen Twitch-Chat über e
 
 - Server-Sent-Events Stream für Chatnachrichten (inkl. Outgoing-Messages des Bots)
 - Versand von Chatnachrichten über einen hinterlegten Bot-Account
-- OAuth-Autorisierungs-Flow zur Erzeugung von Test-Tokens (mit Popup-Rückmeldung)
+- OAuth-Autorisierungs-Flow inkl. automatischer Speicherung und Refresh der Bot-Tokens
 - Konfigurierbares API-Passwort, das sowohl von der Web-Oberfläche als auch von externen Clients abgefragt wird
+- Verwaltung benutzerdefinierter Chat-Befehle (inkl. Präfix, Cooldowns & Antworten)
 
 ## Schnellstart
 
@@ -31,8 +32,9 @@ Der Server lauscht standardmäßig auf Port `4010`. Über einen Reverse-Proxy (z
 | `TWITCH_CLIENT_SECRET` | (Optional) Client-Secret der Twitch Application für OAuth. Ohne diesen Wert nutzt der Server automatisch den Authorization-Code-Flow mit PKCE. |
 | `TWITCH_REDIRECT_URI` | Redirect-URL, die in der Twitch Application hinterlegt ist (z. B. `https://www.behamot.de/api/twitch/oauth/callback`). |
 | `TWITCH_BOT_USERNAME` | Benutzername des Bot-Accounts, der den Chat steuert. |
-| `TWITCH_BOT_OAUTH_TOKEN` | OAuth-Token im Format `oauth:...`, das vom Bot-Account generiert wurde. |
+| `TWITCH_BOT_OAUTH_TOKEN` | (Optional) OAuth-Token im Format `oauth:...` als Initialwert. Kann später durch den OAuth-Flow ersetzt werden. |
 | `TWITCH_DEFAULT_CHANNEL` | (Optional) Kanal, der automatisch beim Start betreten werden soll. |
+| `TWITCH_STATE_FILE` | (Optional) Pfad zu einer JSON-Datei, in der Laufzeitdaten (Tokens, Befehle) persistiert werden. Standard: `runtime-state.json`. |
 
 Eine minimal ausgefüllte `.env` kann z. B. wie folgt aussehen:
 
@@ -43,13 +45,18 @@ TWITCH_CLIENT_ID=deine-client-id
 TWITCH_CLIENT_SECRET=dein-client-secret
 TWITCH_REDIRECT_URI=https://www.behamot.de/api/twitch/oauth/callback
 TWITCH_BOT_USERNAME=deinbotname
+# Optional: Anfangstoken, wird durch den OAuth-Flow überschrieben
 TWITCH_BOT_OAUTH_TOKEN=oauth:xxxxxxxxxxxxxxxxxxxx
+# Optional: Speicherort für Laufzeitdaten (Standard: runtime-state.json)
+# TWITCH_STATE_FILE=/app/data/twitch-state.json
 TWITCH_DEFAULT_CHANNEL=BehamotVT
 ```
 
-> Achte darauf, dass das Bot-Token tatsächlich mit `oauth:` beginnt – sonst lehnt Twitch die Verbindung ab.
+> Achte darauf, dass ein manuell gesetztes Bot-Token mit `oauth:` beginnt – sonst lehnt Twitch die Verbindung ab.
 
 > Hinweis: Das API-Passwort muss im Frontend eingegeben werden. Für Streaming-Endpunkte kann das Passwort als `apiPassword` Query-Parameter gesetzt werden, damit EventSource-Verbindungen funktionieren.
+
+> Laufzeitdaten (z. B. gespeicherte Bot-Tokens und Befehle) werden standardmäßig in `runtime-state.json` neben dem Server abgelegt. Mit `TWITCH_STATE_FILE` lässt sich der Speicherort in einen persistenten Pfad verlagern.
 
 ### Zugangsdaten beschaffen
 
@@ -60,8 +67,8 @@ TWITCH_DEFAULT_CHANNEL=BehamotVT
    - Kopiere die Werte „Client ID" und – falls du kein PKCE nutzen möchtest – „Client Secret" in `TWITCH_CLIENT_ID` bzw. `TWITCH_CLIENT_SECRET` deiner `.env`.
 2. **Bot-Account vorbereiten**
    - Lege (falls noch nicht vorhanden) ein separates Twitch-Konto an, das den Chat steuern soll.
-   - Erzeuge ein Chat-OAuth-Token für dieses Konto, z. B. über <https://twitchapps.com/tmi/> oder ein eigenes Skript mit dem Scope `chat:read chat:edit`.
-   - Trage den Benutzernamen in `TWITCH_BOT_USERNAME` und das generierte Token im Format `oauth:…` in `TWITCH_BOT_OAUTH_TOKEN` ein.
+   - Erzeuge ein Chat-OAuth-Token für dieses Konto, z. B. über <https://twitchapps.com/tmi/> oder den integrierten OAuth-Flow der Weboberfläche mit den Scopes `chat:read chat:edit`.
+   - Trage den Benutzernamen in `TWITCH_BOT_USERNAME` und – sofern du ein Start-Token nutzt – das generierte Token im Format `oauth:…` in `TWITCH_BOT_OAUTH_TOKEN` ein.
 3. **API-Passwort festlegen**
    - Wähle ein beliebiges starkes Passwort und setze es als `TWITCH_API_PASSWORD`. Dieses Passwort muss anschließend im Frontend eingegeben werden, damit Buttons (z. B. „OAuth starten“) freigeschaltet werden.
 
@@ -96,10 +103,13 @@ Alle Routen (bis auf den OAuth-Callback) verlangen das korrekte Passwort, entwed
 | `POST` | `/api/twitch/chat/send` | Sendet eine Nachricht in den angegebenen Channel. |
 | `GET` | `/api/twitch/oauth/authorize` | Erstellt eine OAuth-Login-URL samt State. |
 | `GET` | `/api/twitch/oauth/callback` | Ziel-URL für Twitch nach erfolgreichem Login. Antwortet mit einer HTML-Seite, die Tokens an das ursprüngliche Fenster meldet. |
+| `POST` | `/api/twitch/oauth/apply` | Übernimmt ein frisch erhaltenes OAuth-Token und speichert es inkl. optionalem Refresh. |
+| `GET` | `/api/twitch/commands` | Liefert das aktuelle Befehlspräfix sowie alle konfigurierten Kommandos. |
+| `PUT` | `/api/twitch/commands` | Überschreibt Präfix und Befehle. |
 
 ## Frontend-Integration
 
-Die zugehörige Weboberfläche liegt unter `projects/sites/dev/services/twitch-bot`. Sie fragt das Passwort ab, öffnet bei Bedarf den OAuth-Login und verbindet sich anschließend via SSE mit dem gewünschten Kanal. Nachrichten können direkt aus dem Browser gesendet werden und erscheinen inklusive Bot-Markierung im Verlauf.
+Die zugehörige Weboberfläche liegt unter `projects/sites/dev/services/twitch-bot`. Sie fragt das Passwort ab, öffnet bei Bedarf den OAuth-Login, übergibt neue Tokens automatisch an das Backend und verbindet sich anschließend via SSE mit dem gewünschten Kanal. Nachrichten können direkt aus dem Browser gesendet werden und erscheinen inklusive Bot-Markierung im Verlauf. Außerdem lassen sich dort Befehlspräfix und Chat-Kommandos konfigurieren.
 
 Stelle sicher, dass der Reverse-Proxy die Pfade
 
