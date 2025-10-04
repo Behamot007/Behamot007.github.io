@@ -279,6 +279,12 @@ function normalizeChannelName(channel) {
   return channel.replace(/^#/, '').trim().toLowerCase();
 }
 
+const NORMALIZED_DEFAULT_CHANNEL = normalizeChannelName(TWITCH_DEFAULT_CHANNEL);
+
+function getDefaultChannelName() {
+  return NORMALIZED_DEFAULT_CHANNEL;
+}
+
 const joinedChannels = new Set();
 const channelContexts = new Map();
 const oauthStates = new Map();
@@ -391,6 +397,37 @@ function broadcastToChannel(channel, payload) {
   });
 }
 
+function attemptDefaultChannelJoin(client, attempt = 0) {
+  const defaultChannel = getDefaultChannelName();
+  if (!client || !defaultChannel) {
+    return;
+  }
+
+  const formatted = `#${defaultChannel}`;
+  const channelList = typeof client.getChannels === 'function' ? client.getChannels() : [];
+  const alreadyJoined = Array.isArray(channelList)
+    ? channelList.map(ch => normalizeChannelName(ch)).includes(defaultChannel)
+    : false;
+
+  if (alreadyJoined || joinedChannels.has(defaultChannel)) {
+    joinedChannels.add(defaultChannel);
+    return;
+  }
+
+  client
+    .join(formatted)
+    .then(() => {
+      joinedChannels.add(defaultChannel);
+      console.log(`[twitch-chat-controller] Lausche auf Standard-Channel #${defaultChannel}.`);
+    })
+    .catch(error => {
+      const retryDelay = Math.min(120_000, 30_000 * Math.max(1, attempt + 1));
+      console.error('[twitch-chat-controller] Standard-Channel konnte nicht betreten werden:', error);
+      const timer = setTimeout(() => attemptDefaultChannelJoin(client, attempt + 1), retryDelay);
+      timer.unref?.();
+    });
+}
+
 async function ensureChatClientConnected() {
   if (!TWITCH_BOT_USERNAME) {
     throw new Error('Bot Benutzername ist nicht gesetzt.');
@@ -441,6 +478,7 @@ function createChatClient() {
   client.on('connected', (_address, _port) => {
     chatClientReady = true;
     console.log('[twitch-chat-controller] Mit Twitch verbunden.');
+    attemptDefaultChannelJoin(client);
   });
 
   client.on('reconnect', () => {
@@ -478,6 +516,7 @@ function createChatClient() {
   client.on('join', (channel, username, self) => {
     if (!self) return;
     const normalized = normalizeChannelName(channel);
+    joinedChannels.add(normalized);
     broadcastToChannel(normalized, {
       type: 'system',
       channel: normalized,
@@ -499,10 +538,9 @@ function createChatClient() {
   });
 
   client.on('connected', async () => {
-    if (TWITCH_DEFAULT_CHANNEL) {
-      const normalized = normalizeChannelName(TWITCH_DEFAULT_CHANNEL);
-      joinedChannels.add(normalized);
-    }
+    const defaultChannel = getDefaultChannelName();
+    if (!defaultChannel) return;
+    joinedChannels.add(defaultChannel);
   });
 
   return client;
@@ -980,6 +1018,38 @@ setInterval(() => {
   }
 }, 60 * 1000).unref?.();
 
+async function ensurePersistentDefaultChannelConnection() {
+  const defaultChannel = getDefaultChannelName();
+  if (!defaultChannel) {
+    return;
+  }
+
+  const attemptConnection = async () => {
+    const scheduleRetry = () => {
+      const retryDelay = 30_000;
+      const timer = setTimeout(attemptConnection, retryDelay);
+      timer.unref?.();
+    };
+
+    try {
+      if (!TWITCH_BOT_USERNAME || !getBotPassword()) {
+        console.warn('[twitch-chat-controller] Standard-Channel kann nicht verbunden werden: Bot-Zugangsdaten fehlen.');
+        scheduleRetry();
+        return;
+      }
+      await ensureChatClientConnected();
+      attemptDefaultChannelJoin(getChatClient());
+    } catch (error) {
+      console.error('[twitch-chat-controller] Standard-Channel konnte nicht dauerhaft verbunden werden:', error);
+      scheduleRetry();
+    }
+  };
+
+  attemptConnection();
+}
+
 app.listen(PORT, () => {
   console.log(`[twitch-chat-controller] Server läuft auf Port ${PORT}`);
 });
+
+ensurePersistentDefaultChannelConnection();
